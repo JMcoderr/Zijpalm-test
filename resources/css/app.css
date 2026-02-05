@@ -1,0 +1,106 @@
+@import url('https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,100..900;1,100..900&display=swap');
+@import 'tailwindcss';
+@import '../../vendor/livewire/flux/dist/flux.css';
+
+@source "../views";
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../vendor/livewire/flux-pro/stubs/**/*.blade.php';
+@source '../../vendor/livewire/flux/stubs/**/*.blade.php';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+body {
+    font-family: 'Public Sans', sans-serif;
+}
+
+@theme {
+    --font-sans: 'Public Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+
+    --color-zinc-50: #fafafa;
+    --color-zinc-100: #f5f5f5;
+    --color-zinc-200: #e5e5e5;
+    --color-zinc-300: #d4d4d4;
+    --color-zinc-400: #a3a3a3;
+    --color-zinc-500: #737373;
+    --color-zinc-600: #525252;
+    --color-zinc-700: #404040;
+    --color-zinc-800: #262626;
+    --color-zinc-900: #171717;
+    --color-zinc-950: #0a0a0a;
+
+    --color-accent: var(--color-neutral-800);
+    --color-accent-content: var(--color-neutral-800);
+    --color-accent-foreground: var(--color-white);
+
+    /* Custom blue colours generated based on the median colour (apart from black/whites/greys) in the logo */
+    --color-zijpalm-50:  rgb(230, 243, 250);  
+    --color-zijpalm-100: rgb(200, 230, 245);  
+    --color-zijpalm-200: rgb(150, 200, 230);  
+    --color-zijpalm-300: rgb(100, 170, 215);  
+    --color-zijpalm-400: rgb(50, 140, 190);  
+    --color-zijpalm-500: rgb(20, 110, 160);  
+    --color-zijpalm-600: rgb(5, 77, 124); /* Base median colour */  
+    --color-zijpalm-700: rgb(4, 60, 100);  
+    --color-zijpalm-800: rgb(3, 45, 75);  
+    --color-zijpalm-900: rgb(2, 30, 50);  
+    --color-zijpalm-950: rgb(1, 15, 25);  
+}
+
+@layer theme {
+    .dark {
+        --color-accent: var(--color-white);
+        --color-accent-content: var(--color-white);
+        --color-accent-foreground: var(--color-neutral-800);
+    }
+}
+
+@layer base {
+
+    *,
+    ::after,
+    ::before,
+    ::backdrop,
+    ::file-selector-button {
+        border-color: var(--color-gray-200, currentColor);
+    }
+
+    h1 {
+        font-size: var(--text-3xl);
+    }
+    h2 {
+        font-size: var(--text-2xl);
+    }
+    h3 {
+        font-size: var(--text-xl);
+    }
+    h4 {
+        font-size: var(--text-lg);
+    }
+    h5 {
+        font-size: var(--text-base);
+    }
+    h6 {
+        font-size: var(--text-sm);
+    }
+    h1, h2, h3, h4, h5, h6 {
+        @apply font-bold;
+    }
+}
+
+[data-flux-field] {
+    @apply grid gap-2;
+}
+
+[data-flux-label] {
+    @apply !mb-0 !leading-tight;
+}
+
+input:focus[data-flux-control],
+textarea:focus[data-flux-control],
+select:focus[data-flux-control] {
+    @apply outline-hidden ring-2 ring-accent ring-offset-2 ring-offset-accent-foreground;
+}
+
+/* \[:where(&)\]:size-4 {
+    @apply size-4;
+} */

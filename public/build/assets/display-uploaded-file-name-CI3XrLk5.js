@@ -1,0 +1,1 @@
+window.displayUploadedFileName=i;function i(a){const e=document.getElementById(a.id+"-file-name");e.classList.replace("text-zinc-500","text-zijpalm-300"),e.classList.add("font-semibold"),e.innerHTML=a.files[0].name}

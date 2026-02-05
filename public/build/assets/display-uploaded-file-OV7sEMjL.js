@@ -1,0 +1,1 @@
+window.displayUploadedFile=o;function o(l,d){const e=document.getElementById(d);if(l.files&&l.files[0]){const s=new FileReader;s.onload=function(a){e.src=a.target.result+"#toolbar=0",e.style.display="block"},s.readAsDataURL(l.files[0])}else e.src="",e.style.display="none"}

@@ -1,0 +1,1 @@
+window.toggleRequiredTooltip=e;window.toggleInformationTooltip=o;function e(t){t.id==="editorjs-data"&&(t.id=t.getAttribute("name")),new MutationObserver(function(i){document.getElementById(`${t.id}tooltip`).classList.toggle("hidden",!t.required)}).observe(t,{attributes:!0,attributeFilter:["required"]})}function o(t){}
