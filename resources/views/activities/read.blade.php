@@ -163,7 +163,7 @@
                                     </div>
                                     {{-- Cancellation period --}}
                                     <div class="flex flex-col">
-                                        <span class="text-lg font-bold">Afmelden t/m</span>
+                                        <span class="text-lg font-bold">Kosteloos annuleren kan t/m</span>
                                         <span> {{$activity->formattedDatesAndTimes->cancellation->end->date}}</span>
                                     </div>
                                 @endif

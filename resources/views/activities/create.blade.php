@@ -67,7 +67,7 @@
                         <x-input-field type="date" label="Start Aanmeldperiode" id="registrationStart" required/>
                         <x-input-field type="date" label="Eind Aanmeldperiode" id="registrationEnd" required/>
                         <x-input-field type="checkbox" label="Herhalend" id="recurring" action="toggleRecurringOnChecked(this, document.getElementById('times').querySelectorAll('input'))"/>
-                        <x-input-field type="date" label="Annuleren t/m" id="cancellationEnd" required/>
+                        <x-input-field type="date" label="Kosteloos annuleren kan t/m" id="cancellationEnd" required/>
                     </x-input-group>
 
                     <flux:separator class="my-2 lg:hidden" variant="subtle"/>
