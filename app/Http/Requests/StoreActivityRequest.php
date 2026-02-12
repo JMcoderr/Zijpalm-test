@@ -38,10 +38,10 @@ class StoreActivityRequest extends FormRequest
             'start-time' => ['nullable', 'date_format:H:i'],
             'end-date' => ['nullable', 'date', 'after_or_equal:start-date'],
             'end-time' => ['nullable', 'date_format:H:i'],
-            'registrationStart' => ['nullable', 'date', 'before_or_equal:start-date'],
-            'registrationEnd' => ['nullable', 'date', 'after_or_equal:registrationStart', 'before_or_equal:start-date'],
-            'cancellationEnd' => ['nullable', 'date', 'after_or_equal:registrationStart', 'before_or_equal:start-date'],
-            
+            'registrationStart' => ['nullable', 'date'],
+            'registrationEnd' => ['nullable', 'date', 'after_or_equal:registrationStart', 'before_or_equal:end-date'],
+            'cancellationEnd' => ['nullable', 'date', 'after_or_equal:registrationStart', 'before_or_equal:end-date'],
+
             // Questions
             'questions' => ['nullable', 'array'],
             'questions.*.type' => ['required_if:questions,array', 'in:select,text,number,checkbox'],
@@ -84,15 +84,14 @@ class StoreActivityRequest extends FormRequest
 
             // Registration Period
             'registrationStart.date' => 'De startdatum van de inschrijving moet een geldige datum zijn.',
-            'registrationStart.before_or_equal' => 'De startdatum van de inschrijving moet op of vóór de startdatum van de activiteit liggen.',
             'registrationEnd.date' => 'De einddatum van de inschrijving moet een geldige datum zijn.',
             'registrationEnd.after_or_equal' => 'De einddatum van de inschrijving moet op of na de startdatum van de inschrijving liggen.',
-            'registrationEnd.before_or_equal' => 'De einddatum van de inschrijving moet op of vóór de startdatum van de activiteit liggen.',
+            'registrationEnd.before_or_equal' => 'De einddatum van de inschrijving moet op of vóór de einddatum van de activiteit liggen.',
 
             // Cancellation date
             'cancellationEnd.date' => 'De annuleringsdatum moet een geldige datum zijn.',
             'cancellationEnd.after_or_equal' => 'De annuleringsdatum moet op of na de startdatum van de inschrijving liggen.',
-            'cancellationEnd.before_or_equal' => 'De annuleringsdatum moet op of vóór de startdatum van de activiteit liggen.',
+            'cancellationEnd.before_or_equal' => 'De annuleringsdatum moet op of vóór de einddatum van de activiteit liggen.',
 
             // Questions
             'questions.*.prijs.regex' => 'De prijs van een vraag moet in het formaat "0.00" zijn.',
