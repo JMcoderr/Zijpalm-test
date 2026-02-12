@@ -79,7 +79,9 @@ class Activity extends Model
         return (object)[
             // startOfDay() and endOfDay() are redundant, as activity creation should set these properly, but I am insecure
             'registration' => now()->between($this->registrationStart->startOfDay(), $this->registrationEnd->endOfDay()),
-            'cancellation' => now()->between($this->registrationStart->startOfDay(), $this->cancellationEnd->endOfDay()),
+            'cancellation' => $this->cancellationEnd
+                ? now()->between($this->registrationStart->startOfDay(), $this->cancellationEnd->endOfDay())
+                : false,
             'activity' => now()->between($this->start, $this->end),
         ];
     }
