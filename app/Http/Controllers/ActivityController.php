@@ -300,8 +300,8 @@ class ActivityController extends Controller
         // Create a temporary new controller to call static methods on applications
         $controller = new ApplicationController;
 
-        // Update all application, update the activity type and save the instance
-        $activity->applications->each(fn($application) => $controller->destroy($application));
+        // Update all applications with admin override, update the activity type and save the instance
+        $activity->applications->each(fn($application) => $controller->destroy($application, true));
 //        $activity->update(['type' => ActivityType::Cancelled->value]);
         $activity->type = ActivityType::Cancelled;
         $activity->save();

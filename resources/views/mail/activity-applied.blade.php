@@ -146,5 +146,9 @@
         </x-mail.button>
     @endif
 
-    <p>Kosteloos annuleren kan tot en met: {{formatDate($activity->cancellationEnd)}}</p>
+    @if($activity->cancellationEnd)
+        <p>Kosteloos annuleren kan tot en met: {{formatDate($activity->cancellationEnd)}}</p>
+    @else
+        <p>Annuleren is niet mogelijk.</p>
+    @endif
 </x-layouts.mail.header>

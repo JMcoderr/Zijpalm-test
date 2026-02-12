@@ -171,12 +171,22 @@ class ApplicationController extends Controller
 
     /**
      * Softly delete the specified resource from storage.
+     * Admins can always cancel applications. Participants can only cancel within the cancellation period.
      */
-    public function destroy(Application $application)
+    public function destroy(Application $application, bool $adminOverride = false)
     {
-        // Check if the cancellation period has passed.
-        if( now()->gt(Carbon::parse($application->activity->cancellationEnd))){
-            return redirect()->back()->with('error', 'The afmeldingperiode is verstreken. Neem contact op met het bestuur met verdere vragen.');
+        // Allow admins to bypass the cancellation period check.
+        // Regular participants can only cancel if a cancellation date is set and we are still within that period.
+        if (!$adminOverride && !auth()->user()?->isAdmin()) {
+            // If no cancellation date is set (checkbox "Kosteloos annuleren is niet mogelijk" is checked), block cancellation.
+            if (!$application->activity->cancellationEnd) {
+                return redirect()->back()->with('error', 'Annuleren is niet mogelijk voor deze activiteit. Neem contact op met het bestuur met verdere vragen.');
+            }
+
+            // If the cancellation period has passed, block cancellation.
+            if (now()->gt(Carbon::parse($application->activity->cancellationEnd)->endOfDay())) {
+                return redirect()->back()->with('error', 'De afmeldperiode is verstreken. Neem contact op met het bestuur met verdere vragen.');
+            }
         }
 
         $application->update(['status' => ApplicationStatus::Cancelled]);
