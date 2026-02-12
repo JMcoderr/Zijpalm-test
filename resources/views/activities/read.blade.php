@@ -31,12 +31,12 @@
                 @endif
 
                 {{-- If the user is an admin, show the update activity button --}}
-                @if(auth()->user()?->isAdmin() && $activity->start?->isFuture())
+                @if(auth()->user()?->isAdmin() && !$activity->end?->isPast())
 {{--                    <x-zijpalm-button :href="route('activity.update', $activity)" label="Bewerk activiteit" variant="obvious"/>--}}
                     <x-zijpalm-button label="Verstuur aankondiging" type="action" x-on:click="announcementMailModal = true" variant="obvious"/>
                     <x-zijpalm-modal text="Activiteit aankondiging" livewire include="activity-announcement-mail" modal="announcementMailModal" :variables="['activity' => $activity, 'errors' => $errors->announcementMail->all()]"/>
-                    {{-- If the activity has not started --}}
-                    @if($activity->start?->isFuture())
+                    {{-- If the activity has not ended --}}
+                    @if(!$activity->end?->isPast())
                         <form id="activity-destroy" method="POST" action="{{route('activity.destroy', $activity)}}" onsubmit="return confirm('Je staat op het punt de activiteit {{$activity->title}} te annuleren. Alle ingeschreven leden krijgen hun inschrijvingskosten teruggestort.')">
                             @csrf
                             @method('delete')
