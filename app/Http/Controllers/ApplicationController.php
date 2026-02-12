@@ -51,13 +51,16 @@ class ApplicationController extends Controller
         // Count participants, 1 is the user, and we add all the non-empty guests
         $participants = 1 + $guests->count();
 
-        // Store as reserve or not, depending on if the max participants of the activity is reached
+        // Determine the application status based on capacity and whether the activity has any cost
         if($activity->maxParticipants > 0 && (($activity->participants->all->count() + $participants) > $activity->maxParticipants)){
+            // No more spots available, place on reserve list regardless of price
             $status = ApplicationStatus::Reserve;
         }
-        elseif($activity->price <= 0.0){
+        elseif(!$activity->hasAnyCost()){
+            // Activity is entirely free (no base price, no question prices, no option prices)
             $status = ApplicationStatus::Active;
         } else {
+            // Activity has a cost somewhere, set to pending until payment is completed
             $status = ApplicationStatus::Pending;
         }
 
@@ -128,20 +131,18 @@ class ApplicationController extends Controller
 
         $application->activity->updateApplications();
 
-        // If the user is put on the reserve list, send them an email with that information
         if($status === ApplicationStatus::Reserve) {
+            // Reserve: send confirmation email and redirect back
             Mail::to(config('mail.bestuur.address'), config('mail.bestuur.name'))->send(new ActivityApplied($activity, $application->user, true));
-        }
-
-        if($status === ApplicationStatus::Active && $totalCost <= 0.0) {
-            Mail::to(config('mail.bestuur.address'), config('mail.bestuur.name'))->send(new ActivityApplied($activity, $request->user()));
-            return redirect()->route('activity.show', $activity)->with('success', "U bent succesvol ingeschreven als voor '{$activity->title}'");
-        } elseif($status === ApplicationStatus::Pending){
-            // Create a payment for the application
+            return redirect()->route('activity.show', $activity)->with('success', "U bent succesvol ingeschreven als reserve voor '{$activity->title}'");
+        } elseif($totalCost > 0.0){
+            // There is a cost to pay: create iDEAL payment via Mollie and redirect to checkout
             return redirect(Mollie::api()->payments->get(Payment::generatePayment((float) $totalCost, "Inschrijving van {$application->user->name} voor '{$activity->title}'", $application->id)->mollieId)->_links->checkout->href, 303);
         } else {
-            // Otherwise, return to the activity page with a confirmation that you signed up as a reserve
-            return redirect()->route('activity.show', $activity)->with('success', "U bent succesvol ingeschreven als reserve voor '{$activity->title}'");
+            // Entirely free (or no paid options selected): activate immediately without payment
+            $application->update(['status' => ApplicationStatus::Active]);
+            Mail::to(config('mail.bestuur.address'), config('mail.bestuur.name'))->send(new ActivityApplied($activity, $request->user()));
+            return redirect()->route('activity.show', $activity)->with('success', "U bent succesvol ingeschreven voor '{$activity->title}'");
         }
     }
 
