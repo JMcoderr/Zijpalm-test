@@ -176,10 +176,12 @@ class Activity extends Model
         // Get all reserve applications, ordered by created_at, check if they can be upgraded to pending
         foreach($this->applications()->where('status', ApplicationStatus::Reserve)->orderBy('created_at')->get() as $reserve){
             if(($currentParticipants + $reserve->participants + $addedParticipants) <= $this->maxParticipants){
-                // Check if the cost of the activity is 0, if that's the case no need to set the it pending.
-                if($this->price <= 0.0){
+                // Check if the activity has any cost at all (base price, question prices, or option prices)
+                if(!$this->hasAnyCost()){
+                    // Entirely free activity: activate immediately without payment
                     $reserve->update(['status' => ApplicationStatus::Active]);
                 } else {
+                    // Activity has a cost: set to pending, user will receive a payment link
                     $reserve->update(['status' => ApplicationStatus::Pending]);
                 }
                 $updatedApplications[] = $reserve;
