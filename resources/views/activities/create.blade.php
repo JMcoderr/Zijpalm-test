@@ -56,14 +56,11 @@
 
                 <div class="grid lg:grid-cols-2 grid-cols-1 gap-x-2 relative">
                     <x-input-group id="times" title="Tijden" height="h-max" grid="grid grid-cols-2">
-                        <div class="flex">
-                            <x-input-field type="date" label="Startdatum" id="start-date" width="w-3/5" required/>
-                            <x-input-field type="time" label="Starttijd" id="start-time" width="w-2/5" required/>
-                        </div>
-                        <div class="flex">
-                            <x-input-field type="date" label="Einddatum" id="end-date" width="w-3/5"/>
-                            <x-input-field type="time" label="Eindtijd" id="end-time" width="w-2/5"/>
-                        </div>
+                        <x-input-field type="date" label="Startdatum" id="start-date" required/>
+                        <x-input-field type="date" label="Einddatum" id="end-date"/>
+                        {{-- Standaard tijdwaarden zodat de backend correct blijft werken --}}
+                        <input type="hidden" name="start-time" value="00:00"/>
+                        <input type="hidden" name="end-time" value="23:59"/>
                         <x-input-field type="date" label="Start Aanmeldperiode" id="registrationStart" required/>
                         <x-input-field type="date" label="Eind Aanmeldperiode" id="registrationEnd" required/>
                         <x-input-field type="checkbox" label="Herhalend" id="recurring" action="toggleRecurringOnChecked(this, document.getElementById('times').querySelectorAll('input'))"/>
