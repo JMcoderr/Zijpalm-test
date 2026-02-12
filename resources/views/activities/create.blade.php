@@ -42,7 +42,8 @@
                         <x-input-field type="text" label="Organisator(en)" id="organizer" value="{{auth()->user()?->name}}" required/>
                         <x-input-field type="number" label="Max. Deelnemers" id="maxParticipants"/>
                         <x-input-field type="number" label="Aantal Intro's (p.p.)" id="maxGuests"/>
-                        <x-input-field type="price" label="Prijs" id="price"/>
+                        {{-- Price is optional: leave empty for free activities --}}
+                        <x-input-field type="price" label="Prijs" id="price" placeholder="Laat leeg voor gratis"/>
                         <x-input-field type="text" label="WhatsApp Groep Link" id="whatsappUrl" information="whatsapp-info"/>
                     </x-input-group>
                     {{-- TO DO: Replace with Text Editor instead of Textarea --}}
