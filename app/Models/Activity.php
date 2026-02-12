@@ -135,6 +135,32 @@ class Activity extends Model
         return $this->report()->first();
     }
 
+    // Checks if the activity has any associated cost (base price, question prices, or option prices)
+    // Returns true if a payment should be created, false if the activity is entirely free
+    public function hasAnyCost(): bool
+    {
+        // Check if the base price per participant is greater than 0
+        if ($this->price > 0.0) {
+            return true;
+        }
+
+        // Check if any question has a price greater than 0
+        foreach ($this->questions as $question) {
+            if ($question->price > 0.0) {
+                return true;
+            }
+
+            // Check if any select option has a price greater than 0
+            foreach ($question->selectOptions as $option) {
+                if ($option->price > 0.0) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
     // Update the applications, changing reserve applications to pending if there are spots available
     public function updateApplications()
     {
