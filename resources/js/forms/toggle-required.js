@@ -7,6 +7,30 @@ window.toggleRequired = toggleRequired;
 
 window.toggleRecurringOnChecked = toggleRecurringOnChecked;
 
+window.toggleCancellationField = toggleCancellationField;
+
+/**
+ * Toggles the visibility of the cancellation date field based on the checkbox state.
+ * When checked: hides the date field (cancellation is not possible)
+ * When unchecked: shows the date field (cancellation date can be set)
+ */
+function toggleCancellationField(checkbox) {
+    const cancellationInput = document.getElementById('cancellationEnd');
+    if (!cancellationInput) return;
+
+    // The input is nested inside the component wrapper: input > div > div (x-input-field component)
+    const fieldWrapper = cancellationInput.parentElement.parentElement;
+
+    if (checkbox.checked) {
+        // Hide the date field and clear its value
+        fieldWrapper.classList.add('hidden');
+        cancellationInput.value = '';
+    } else {
+        // Show the date field
+        fieldWrapper.classList.remove('hidden');
+    }
+}
+
 function toggleRecurringOnChecked(checkbox, inputs) {
     // Check if given checkbox is valid
     if(!(checkbox instanceof HTMLInputElement) && checkbox.type !== 'checkbox'){
