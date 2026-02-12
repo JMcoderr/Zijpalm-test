@@ -40,6 +40,7 @@ class StoreActivityRequest extends FormRequest
             'end-time' => ['nullable', 'date_format:H:i'],
             'registrationStart' => ['nullable', 'date'],
             'registrationEnd' => ['nullable', 'date', 'after_or_equal:registrationStart', 'before_or_equal:end-date'],
+            'noCancellation' => ['nullable'],
             'cancellationEnd' => ['nullable', 'date', 'after_or_equal:registrationStart', 'before_or_equal:end-date'],
 
             // Questions

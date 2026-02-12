@@ -227,7 +227,7 @@ class ActivityController extends Controller
             'end' => $end,
             'registrationStart' => $data['registrationStart'],
             'registrationEnd' => $data['registrationEnd'],
-            'cancellationEnd' => $data['cancellationEnd'],
+            'cancellationEnd' => isset($data['noCancellation']) ? null : ($data['cancellationEnd'] ?? null),
         ]);
 
         // If there are questions, and they're a valid array, loop through each
