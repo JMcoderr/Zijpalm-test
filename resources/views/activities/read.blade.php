@@ -100,7 +100,8 @@
                             <div class="flex flex-col self-stretch">
                                 <span class="font-bold text-xl">Prijs</span>
                                 <div class="flex flex-col flex-wrap bg-[rgba(0,0,0,0.1)] rounded-xl p-4 gap-x-2 flex-1">
-                                    <span> {{formatPrice($activity->price)}} </span>
+                                    {{-- Show 'Gratis' if price is 0, otherwise show the formatted price --}}
+                                    <span> {{ $activity->price > 0 ? formatPrice($activity->price) : 'Gratis' }} </span>
                                 </div>
                             </div>
                             @else
@@ -133,10 +134,10 @@
                                     @endif
 
 
-                                    {{-- Price per participant --}}
+                                    {{-- Price per participant: show 'Gratis' if price is 0 --}}
                                     <div class="flex flex-col">
                                         <span class="font-bold">Prijs per deelnemer</span>
-                                        <span> {{formatPrice($activity->price)}} </span>
+                                        <span> {{ $activity->price > 0 ? formatPrice($activity->price) : 'Gratis' }} </span>
                                     </div>
                                 </div>
                             </div>
