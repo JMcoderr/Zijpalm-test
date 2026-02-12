@@ -163,8 +163,12 @@
                                     </div>
                                     {{-- Cancellation period --}}
                                     <div class="flex flex-col">
-                                        <span class="text-lg font-bold">Kosteloos annuleren kan t/m</span>
-                                        <span> {{$activity->formattedDatesAndTimes->cancellation->end->date}}</span>
+                                        @if($activity->cancellationEnd)
+                                            <span class="text-lg font-bold">Kosteloos annuleren kan t/m</span>
+                                            <span> {{$activity->formattedDatesAndTimes->cancellation->end->date}}</span>
+                                        @else
+                                            <span class="text-lg font-bold">Annuleren is niet mogelijk.</span>
+                                        @endif
                                     </div>
                                 @endif
                             </div>
