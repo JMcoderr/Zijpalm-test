@@ -137,7 +137,9 @@
                                     {{-- Price per participant: show 'Gratis' if price is 0 --}}
                                     <div class="flex flex-col">
                                         <span class="font-bold">Prijs per deelnemer</span>
-                                        <span> {{ $activity->price > 0 ? formatPrice($activity->price) : 'Gratis' }} </span>
+                                        @if($activity->hasAnyCost())
+                                            <span>{{ $activity->price > 0 ? formatPrice($activity->price) : '' }}</span>
+                                        @endif
                                     </div>
                                 </div>
                             </div>
