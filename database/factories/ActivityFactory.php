@@ -55,7 +55,7 @@ class ActivityFactory extends Factory
             'cancellationEnd' => $cancellationEnd,
             'location' => fake()->city(),
             'organizer' => fake()->name(),
-            'imagePath' => 'images/hans.webp', // Moet in storage/app/public/images/hans.webp staan
+            'imagePath' => 'images/hans.webp',
             'price' => fake()->randomFloat(2, 0, 100),
             'maxParticipants' => fake()->boolean(50) ? null : fake()->numberBetween(1, 100),
             'maxGuests' => fake()->numberBetween(0, 3),

@@ -13,16 +13,14 @@
                 </div>
 
                 {{-- Text fields --}}
-                <div class="w-full grid grid-cols-1 sm:grid-cols-2">
+                <div class="w-full grid grid-cols-1 sm:grid-cols-2 gap-x-2">
                     <x-input-field :attributes="$this->inputAttributes($guest['id'],'text','voornaam', 'firstName')"/>
-                    <x-input-field :attributes="$this->inputAttributes($guest['id'],'text','achternaam', 'lastName')"/>
+                    <div class="flex items-center">
+                        <x-input-field :attributes="$this->inputAttributes($guest['id'],'text','achternaam', 'lastName')"/>
+                        <x-input-field :attributes="$this->inputAttributes($guest['id'],'checkbox','18+', 'adult')" class="ml-2"/>
+                    </div>
                     <x-input-field :attributes="$this->inputAttributes($guest['id'],'text','telefoonnummer', 'phone')"/>
                     <x-input-field :attributes="$this->inputAttributes($guest['id'],'text','email', 'email')"/>
-                </div>
-
-                {{-- 18+ Checkbox --}}
-                <div class="pt-3">
-                    <x-input-field :attributes="$this->inputAttributes($guest['id'],'checkbox','18+', 'adult')"/>
                 </div>
             </div>
         </x-zijpalm-div>
