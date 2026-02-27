@@ -28,6 +28,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             ContentSeeder::class,
             ProductSeeder::class,
+            JordyMeijerSeeder::class,
         ]);
 
         // Only run this in local environment

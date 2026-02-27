@@ -4,7 +4,7 @@ export default defineConfig({
     plugins: [tailwindcss()],
     build: {
         rollupOptions: {
-            input: ['styles.css', 'scripts.js'],
+            // input: ['styles.css', 'scripts.js'], // Bestanden bestaan niet, dus verwijderen
             output: {
                 assetFileNames: '[name][extname]',
                 entryFileNames: '[name].js',
