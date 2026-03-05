@@ -48,8 +48,8 @@ class ApplicationController extends Controller
         // Assign valid guests to a variable
         $guests = collect($request->input('guests', []))->filter(fn($guest)=>collect($guest)->filter()->isNotEmpty());
 
-        // Count participants, 1 is the user, and we add all the non-empty guests
-        $participants = 1 + $guests->count();
+        // Count participants: if user signs up with an intro, count as 2 participants
+        $participants = ($guests->count() > 0) ? 2 : 1;
 
         // Determine the application status based on capacity and whether the activity has any cost
         if($activity->maxParticipants > 0 && (($activity->participants->all->count() + $participants) > $activity->maxParticipants)){

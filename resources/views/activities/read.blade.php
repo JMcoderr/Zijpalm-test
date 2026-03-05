@@ -183,7 +183,9 @@
             {{-- Registrations for the Activity, Admin Only --}}
             @if(auth()->user()?->isAdmin() && $activity->type !== \App\ActivityType::Weekly)
                 {{-- Registrations --}}
-                <x-zijpalm-div :editable="false" color="light" title="Aanmeldingen ({{$activity->participants->all->count()}}{{$activity->maxParticipants ? '/' . $activity->maxParticipants : ''}})" width="w-full lg:max-w-1/2" class="flex flex-col flex-1 self-stretch max-h-[40rem] md:h-[40rem]">
+                <x-zijpalm-div :editable="false" color="light" 
+                    title="Aanmeldingen ({{ $applications->reduce(function($carry, $application) { return $carry + 1 + $application->guests->count(); }, 0) }}{{$activity->maxParticipants ? '/' . $activity->maxParticipants : ''}})" 
+                    width="w-full lg:max-w-1/2" class="flex flex-col flex-1 self-stretch max-h-[40rem] md:h-[40rem]">
                     @if($applications->isNotEmpty())
                         <div class="absolute top-2 right-2 flex items-center gap-2">
                             <!-- remindermailModal and button are linked together-->
