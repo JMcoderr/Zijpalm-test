@@ -91,6 +91,13 @@ class ApplicationController extends Controller
 
         $totalCost = (float) $activity->price;
 
+        // Pas de prijsberekening aan: als organisator gratis is, alleen introducees betalen
+        if ($canRegisterFree) {
+            $totalCost = $guests->count() * (float) $activity->price;
+        } else {
+            $totalCost = $participants * (float) $activity->price;
+        }
+
         // Create the application
         $application = Application::create([
             'activity_id' => $activity->id,
@@ -143,9 +150,10 @@ class ApplicationController extends Controller
                     'phone' => $guestData['phone'],
                     'adult' => array_key_exists('adult', $guestData) && (bool)$guestData['adult'] //$guestData['adult'] ? true : false, //TODO GUEST ERROR: null
                 ]);
-
-                // Add the price of the guest to the total cost
-                $totalCost += $activity->price;
+                // Only add the price of the guest if the organizer is not free
+                if(!$canRegisterFree) {
+                    $totalCost += $activity->price;
+                }
             }
         }
 
@@ -157,8 +165,8 @@ class ApplicationController extends Controller
             return redirect()->route('activity.show', $activity)->with('success', "U bent succesvol ingeschreven als reserve voor '{$activity->title}'");
         }
 
-        // Organizer free registration: always activate and never redirect to Mollie
-        if($canRegisterFree) {
+        // Organizer free registration: always activate and never redirect to Mollie, except if the organizer brings a guest
+        if($canRegisterFree && $guests->count() == 0) {
             $application->update(['status' => ApplicationStatus::Active]);
             Mail::to(config('mail.bestuur.address'), config('mail.bestuur.name'))->send(new ActivityApplied($activity, $request->user()));
             return redirect()->route('activity.show', $activity)->with('success', "Je bent succesvol en gratis als organisator aangemeld voor '{$activity->title}'.");

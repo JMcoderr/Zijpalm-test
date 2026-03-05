@@ -71,7 +71,30 @@ class ApplicationForm extends Component{
 
     // Update the base cost, based on the activity's price and the number of participants
     public function updateBaseCost(){
-        $this->costs['base'] = $this->activity->price * $this->participants;
+        // Check if the user is an organizer and can register for free
+        // Check if the user is an organizer and can register for free
+        $isOrganizer = false;
+        if (auth()->user() && $this->activity->organizer) {
+            $isOrganizer = str_contains($this->activity->organizer, auth()->user()->name);
+        }
+        $activeFreeOrganizers = $this->activity->applications
+            ->where('status', \App\ApplicationStatus::Active)
+            ->filter(function($app) {
+                return str_contains($this->activity->organizer, $app->user->name);
+            })->count();
+        $canRegisterFree = $isOrganizer && ($activeFreeOrganizers < $this->activity->free_organizer_count);
+
+        // Show €0 if the organizer is free and there are no guests
+        if($canRegisterFree && $this->participants == 1) {
+            $this->costs['base'] = 0;
+        } elseif($canRegisterFree && $this->participants > 1) {
+            // Only guests pay: base = number of guests * price
+            $guestCount = $this->participants - 1;
+            $this->costs['base'] = max(0, $guestCount) * $this->activity->price;
+        } else {
+            // Everyone pays: base = participants * price
+            $this->costs['base'] = $this->activity->price * $this->participants;
+        }
         $this->updateTotalCost();
     }
 
@@ -120,6 +143,9 @@ class ApplicationForm extends Component{
     }
 
     public function render(){
-        return view('livewire.application-form');
+        return view('livewire.application-form', [
+            // Pass a flag to the view to show '€,-' if the organizer is free
+            'showFreeOrganizerBase' => ($canRegisterFree ?? false)
+        ]);
     }
 }

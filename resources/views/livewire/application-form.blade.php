@@ -60,7 +60,13 @@
             {{-- Costs --}}
             <x-input-group id="payment" title="Te Betalen" grid="grid grid-cols-3 p-2">
                 <div class="flex flex-col">
-                    <span class="rounded-sm shadow-sm h-7 text-black font-medium bg-zinc-100 px-1 py-0.5" wire:model="costs.base">{{formatPrice($costs['base'])}}</span>
+                    <span class="rounded-sm shadow-sm h-7 text-black font-medium bg-zinc-100 px-1 py-0.5" wire:model="costs.base">
+                        @if(isset($showFreeOrganizerBase) && $showFreeOrganizerBase && $participants == 1)
+                            &euro;,-
+                        @else
+                            {{formatPrice($costs['base'])}}
+                        @endif
+                    </span>
                     <span class="font-bold">Basis</span>
                 </div>
                 <div class="flex flex-col">
