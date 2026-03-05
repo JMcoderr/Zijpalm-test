@@ -51,10 +51,30 @@ class ApplicationController extends Controller
         // Count participants: if user signs up with an intro, count as 2 participants
         $participants = ($guests->count() > 0) ? 2 : 1;
 
-        // Determine the application status based on capacity and whether the activity has any cost
+        // Check if the logged-in user is an organizer (name comparison in PHP)
+        $isOrganizer = false;
+        if (auth()->user() && $activity->organizer) {
+            $isOrganizer = str_contains($activity->organizer, auth()->user()->name);
+        }
+
+        // Count active free organizers in PHP
+        $activeFreeOrganizers = $activity->applications
+            ->where('status', ApplicationStatus::Active)
+            ->filter(function($app) use ($activity) {
+                return str_contains($activity->organizer, $app->user->name);
+            })->count();
+
+        // Determine if this user can register for free
+        $canRegisterFree = $isOrganizer && ($activeFreeOrganizers < $activity->free_organizer_count);
+
+        // Determine the application status based on capacity and cost
         if($activity->maxParticipants > 0 && (($activity->participants->all->count() + $participants) > $activity->maxParticipants)){
             // No more spots available, place on reserve list regardless of price
             $status = ApplicationStatus::Reserve;
+        }
+        elseif($canRegisterFree){
+            // Organizer can register for free
+            $status = ApplicationStatus::Active;
         }
         elseif(!$activity->hasAnyCost()){
             // Activity is entirely free (no base price, no question prices, no option prices)
@@ -132,11 +152,20 @@ class ApplicationController extends Controller
         $application->activity->updateApplications();
 
         if($status === ApplicationStatus::Reserve) {
-            // Reserve: send confirmation email and redirect back
+            // Reserve: confirmation mail and redirect
             Mail::to(config('mail.bestuur.address'), config('mail.bestuur.name'))->send(new ActivityApplied($activity, $application->user, true));
             return redirect()->route('activity.show', $activity)->with('success', "U bent succesvol ingeschreven als reserve voor '{$activity->title}'");
-        } elseif($totalCost > 0.0){
-            // There is a cost to pay: create iDEAL payment via Mollie and redirect to checkout
+        }
+
+        // Organizer free registration: always activate and never redirect to Mollie
+        if($canRegisterFree) {
+            $application->update(['status' => ApplicationStatus::Active]);
+            Mail::to(config('mail.bestuur.address'), config('mail.bestuur.name'))->send(new ActivityApplied($activity, $request->user()));
+            return redirect()->route('activity.show', $activity)->with('success', "Je bent succesvol en gratis als organisator aangemeld voor '{$activity->title}'.");
+        }
+
+        if($totalCost > 0.0){
+            // Payment required: create Mollie payment and redirect
             return redirect(Mollie::api()->payments->get(Payment::generatePayment((float) $totalCost, "Inschrijving van {$application->user->name} voor '{$activity->title}'", $application->id)->mollieId)->_links->checkout->href, 303);
         } else {
             // Entirely free (or no paid options selected): activate immediately without payment

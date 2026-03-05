@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('activities', function (Blueprint $table) {
-            $table->integer('free_organizer_count')->default(0)->after('id'); // aantal gratis organisatoren
+            $table->integer('free_organizer_count')->default(0)->after('id');
         });
     }
 

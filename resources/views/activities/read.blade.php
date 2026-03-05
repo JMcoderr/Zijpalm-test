@@ -91,6 +91,15 @@
                                     <span class="text-lg font-bold"> Locatie </span>
                                     <span class="text-wrap"> {{$activity->location}} </span>
                                 </div>
+                                <div class="flex flex-col">
+                                    <span class="text-lg font-bold"> Gratis organisator plekken </span>
+                                    @php
+                                        $usedFreeOrganizers = $activity->applications->where('status', App\ApplicationStatus::Active)->filter(function($app) use ($activity) {
+                                            return stripos($activity->organizer, $app->user->name) !== false;
+                                        })->count();
+                                    @endphp
+                                    <span>{{ $usedFreeOrganizers }} / {{ $activity->free_organizer_count }}</span>
+                                </div>
                             </div>
                         </div>
 

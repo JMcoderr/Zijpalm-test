@@ -44,6 +44,7 @@
                         <x-input-field type="number" label="Aantal Intro's (p.p.)" id="maxGuests"/>
                         {{-- Price is optional: leave empty for free activities --}}
                         <x-input-field type="price" label="Prijs" id="price" placeholder="Laat leeg voor gratis"/>
+                        <x-input-field type="number" label="Aantal gratis organisatoren" id="free_organizer_count" name="free_organizer_count" min="0" value="0"/>
                         <x-input-field type="text" label="WhatsApp Groep Link" id="whatsappUrl" information="whatsapp-info"/>
                     </x-input-group>
                     {{-- TO DO: Replace with Text Editor instead of Textarea --}}

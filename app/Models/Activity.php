@@ -38,7 +38,8 @@ class Activity extends Model
         'registrationEnd',
         'cancellationEnd',
         'imagePath',
-        'type'
+        'type',
+        'free_organizer_count'
     ];
 
     protected $casts = [

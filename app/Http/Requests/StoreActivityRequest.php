@@ -32,6 +32,7 @@ class StoreActivityRequest extends FormRequest
             'maxGuests' => ['nullable', 'integer', 'min:0'],
             'price' => ['nullable', 'regex:/^\d+([.,]\d{2})?$/'],
             'whatsappUrl' => ['nullable', 'url'],
+            'free_organizer_count' => ['required', 'integer', 'min:0'],
 
             // Times
             'start-date' => ['nullable', 'date'],
