@@ -254,7 +254,7 @@
 
             {{-- Activity Description --}}
             <x-zijpalm-div title="Beschrijving" :editable="false" width="w-full" class="">
-                <div class="bg-[rgba(0,0,0,0.15)] rounded-md flex flex-col p-2">
+                <div class="bg-[rgba(0,0,0,0.15)] rounded-md flex flex-col p-2 text-left">
                     {!!$activity->descriptionHTML!!}
                 </div>
             </x-zijpalm-div>
