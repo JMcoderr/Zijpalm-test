@@ -1,5 +1,3 @@
-@extends('layouts.app')
-
 @section('content')
     <x-page-wrapper page="Bewerk Activiteit">
         <x-zijpalm-div title="Bewerk Activiteit" color="transparent" :editable="false"/>
@@ -29,9 +27,12 @@
 
                     <flux:separator variant="subtle"/>
 
+
                     {{-- Times --}}
                     <div class="grid lg:grid-cols-2 grid-cols-1 gap-x-2 relative">
                         <x-input-group id="times" title="Tijden" height="h-max" grid="grid grid-cols-2">
+                            <x-input-field type="date" label="Startdatum" id="start-date" name="start-date" value="{{ old('start-date', $activity->start ? $activity->start->format('Y-m-d') : '') }}" required/>
+                            <x-input-field type="date" label="Einddatum" id="end-date" name="end-date" value="{{ old('end-date', $activity->end ? $activity->end->format('Y-m-d') : '') }}"/>
                             <x-input-field type="date" label="Start Aanmeldperiode" id="registrationStart" name="registrationStart" value="{{ old('registrationStart', $activity->registrationStart ? $activity->registrationStart->format('Y-m-d') : '') }}" required/>
                             <x-input-field type="date" label="Eind Aanmeldperiode" id="registrationEnd" name="registrationEnd" value="{{ old('registrationEnd', $activity->registrationEnd ? $activity->registrationEnd->format('Y-m-d') : '') }}" required/>
                             <x-input-field type="checkbox" label="Herhalend" id="recurring" name="recurring" :checked="old('recurring', $activity->type === \App\ActivityType::Weekly)"/>
@@ -41,10 +42,9 @@
                     </div>
 
                     <flux:separator class="my-2 lg:hidden" variant="subtle"/>
-
-                    <x-zijpalm-button type="submit" label="Opslaan" center="horizontal" variant="obvious"/>
+                    <x-zijpalm-button label="Opslaan" center="horizontal" variant="obvious"/>
                 </form>
             </x-zijpalm-div>
         </div>
     </x-page-wrapper>
-@endsection
+
