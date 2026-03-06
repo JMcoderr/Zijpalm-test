@@ -281,7 +281,8 @@ class ActivityController extends Controller
      * Show the form for editing the specified resource.
      */
     public function edit(Activity $activity){
-        //
+        // Show the edit form with the current activity data
+        return view('activities.edit', compact('activity'));
     }
 
     /**
