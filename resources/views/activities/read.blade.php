@@ -98,7 +98,11 @@
                                             return stripos($activity->organizer, $app->user->name) !== false;
                                         })->count();
                                     @endphp
-                                    <span>{{ $usedFreeOrganizers }} / {{ $activity->free_organizer_count }}</span>
+                                    @if($activity->free_organizer_count)
+                                        <span>{{ $usedFreeOrganizers }} / {{ $activity->free_organizer_count }}</span>
+                                    @else
+                                        <span></span>
+                                    @endif
                                 </div>
                             </div>
                         </div>
