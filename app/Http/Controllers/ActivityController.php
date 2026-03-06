@@ -289,10 +289,48 @@ class ActivityController extends Controller
      * Update the specified resource in storage.
      */
     public function update(UpdateActivityRequest $request, Activity $activity){
-        // Handle changes
+        // Collect data from request
+        $data = $request->all();
 
-        // Return success
-        return redirect()->route('activity.show', $activity)->with('success', 'Activiteit succesvol aangepast!');
+        // Determine activity type
+        $type = ActivityType::OneDay;
+        if(isset($data['recurring'])){
+            $type = ActivityType::Weekly;
+        } elseif(isset($data['start-date'], $data['end-date']) && $data['start-date'] !== $data['end-date']){
+            $type = ActivityType::MultiDay;
+        }
+
+        // Combine start and end time
+        $start = isset($data['start-date']) && $type !== ActivityType::Weekly ? $data['start-date'] . ' ' . ($data['start-time'] ?? '00:00') : null;
+        $end = isset($data['end-date']) && $type !== ActivityType::Weekly ? $data['end-date'] . ' ' . ($data['end-time'] ?? '23:59') : null;
+
+        // Update activity
+        $activity->update([
+            'type' => $type,
+            'title' => $data['title'] ?? $activity->title,
+            'location' => $data['location'] ?? $activity->location,
+            'description' => isset($data['description']) ? decodeEditorData($data['description']) : $activity->description,
+            'organizer' => $data['organizer'] ?? $activity->organizer,
+            'maxParticipants' => $data['maxParticipants'] ?? $activity->maxParticipants,
+            'maxGuests' => $data['maxGuests'] ?? $activity->maxGuests,
+            'price' => isset($data['price']) ? formatPriceForDb($data['price']) : $activity->price,
+            'whatsappUrl' => $data['whatsappUrl'] ?? $activity->whatsappUrl,
+            'start' => $start,
+            'end' => $end,
+            'registrationStart' => $data['registrationStart'] ?? $activity->registrationStart,
+            'registrationEnd' => $data['registrationEnd'] ?? $activity->registrationEnd,
+            'cancellationEnd' => isset($data['noCancellation']) ? null : ($data['cancellationEnd'] ?? $activity->cancellationEnd),
+            'free_organizer_count' => $data['free_organizer_count'] ?? $activity->free_organizer_count,
+        ]);
+
+        // Upload image if present
+        if($request->hasFile('image-upload')){
+            $filePath = uploadImage($request->file('image-upload'), 'images/activities/');
+            $activity->update(['imagePath' => $filePath]);
+        }
+
+        return redirect()->route('activity.show', $activity)
+            ->with('success', 'De activiteit is succesvol bijgewerkt!');
     }
 
     /**

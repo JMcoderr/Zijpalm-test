@@ -11,7 +11,8 @@ class UpdateActivityRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return false;
+        // Only admins can update
+        return auth()->check() && auth()->user()->is_admin;
     }
 
     /**
