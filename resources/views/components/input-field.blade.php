@@ -410,7 +410,7 @@
                 style="cursor: pointer;"
             >
                 <span id="{{$id}}-file-name" class="truncate text-zinc-500 my-auto"> Kies een {{lcfirst($label)}} </span>
-                <button class="group/file duration-300 transition-colors cursor-pointer bg-linear-to-t from-zijpalm-400 to-zijpalm-200 inset-shadow-zijpalm-100 border-l border-[rgba(0,0,0,0.55)] rounded-e-sm justify-items-center w-min px-2.5 text-zinc-100 focus:outline-0 focus:from-zijpalm-600 focus:to-zijpalm-400 focus:inset-shadow-300 hover:from-zijpalm-600 hover:to-zijpalm-400 hover:inset-shadow-300">
+                <button type="button" tabindex="-1" class="group/file duration-300 transition-colors cursor-pointer bg-linear-to-t from-zijpalm-400 to-zijpalm-200 inset-shadow-zijpalm-100 border-l border-[rgba(0,0,0,0.55)] rounded-e-sm justify-items-center w-min px-2.5 text-zinc-100 focus:outline-0 focus:from-zijpalm-600 focus:to-zijpalm-400 focus:inset-shadow-300 hover:from-zijpalm-600 hover:to-zijpalm-400 hover:inset-shadow-300">
                     <flux:icon.arrow-up-tray class="group-hover/file:scale-110 group-focus/file:scale-110 group-focus/file:brightness-110 duration-300 size-4.5 stroke-3"/>
                 </button>
             </div>
