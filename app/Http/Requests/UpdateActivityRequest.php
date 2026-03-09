@@ -23,7 +23,39 @@ class UpdateActivityRequest extends FormRequest
     public function rules(): array
     {
         return [
-            //
+            // General details
+            'title' => ['nullable', 'string', 'max:255'],
+            'description' => ['nullable'],
+            'image-upload' => ['nullable', 'image'], // Optional for updates
+            'location' => ['nullable', 'string', 'max:255'],
+            'organizer' => ['nullable', 'string', 'max:255'],
+            'maxParticipants' => ['nullable', 'integer', 'min:1'],
+            'maxGuests' => ['nullable', 'integer', 'min:0'],
+            'price' => ['nullable', 'regex:/^\d+([.,]\d{2})?$/'],
+            'whatsappUrl' => ['nullable', 'url'],
+            'free_organizer_count' => ['nullable', 'integer', 'min:0'],
+
+            // Times
+            'start-date' => ['nullable', 'date'],
+            'start-time' => ['nullable', 'date_format:H:i'],
+            'end-date' => ['nullable', 'date', 'after_or_equal:start-date'],
+            'end-time' => ['nullable', 'date_format:H:i'],
+            'registrationStart' => ['nullable', 'date'],
+            'registrationEnd' => ['nullable', 'date', 'after_or_equal:registrationStart', 'before_or_equal:end-date'],
+            'noCancellation' => ['nullable'],
+            'cancellationEnd' => ['nullable', 'date', 'after_or_equal:registrationStart', 'before_or_equal:end-date'],
+
+            // Questions
+            'questions' => ['nullable', 'array'],
+            'questions.*.type' => ['required_if:questions,array', 'in:select,text,number,checkbox'],
+            'questions.*.vraag' => ['required_if:questions,array', 'string', 'max:255'],
+            'questions.*.prijs' => ['nullable', 'regex:/^\d+([.,]\d{2})?$/'],
+            'questions.*.max' => ['nullable', 'integer', 'min:1'],
+
+            // Select question's options
+            'questions.*.options' => ['required_if:questions.*.type,select', 'array', 'min:2'],
+            'questions.*.options.*.optie' => ['required_with:questions.*.options', 'string', 'max:255'],
+            'questions.*.options.*.prijs' => ['nullable', 'regex:/^\d+([.,]\d{2})?$/'],
         ];
     }
 }

@@ -323,6 +323,31 @@ class ActivityController extends Controller
             'free_organizer_count' => $data['free_organizer_count'] ?? $activity->free_organizer_count,
         ]);
 
+        // Handle questions - first delete all old questions, then create new ones
+        $activity->questions()->delete();
+        
+        // If there are questions, and they're a valid array, loop through each
+        if(isset($data['questions']) && is_array($data['questions'])){
+            foreach ($data['questions'] as $questionData) {
+                $question = $activity->questions()->create([
+                    'type' => $questionData['type'],
+                    'query' => $questionData['vraag'],
+                    'price' => formatPriceForDb($questionData['prijs'] ?? 0),
+                    'max_amount' => $questionData['type'] === 'number' && isset($questionData['max']) ? $questionData['max'] : null,
+                ]);
+
+                // Handle select options if the question type is 'select'
+                if($questionData['type'] === 'select' && isset($questionData['options']) && is_array($questionData['options'])){
+                    foreach ($questionData['options'] as $optionData){
+                        $question->selectOptions()->create([
+                            'option' => $optionData['optie'],
+                            'price' => formatPriceForDb($optionData['prijs'] ?? 0),
+                        ]);
+                    }
+                }
+            }
+        }
+
         // Upload image if present
         if($request->hasFile('image-upload')){
             $filePath = uploadImage($request->file('image-upload'), 'images/activities/');
