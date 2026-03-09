@@ -51,6 +51,7 @@ class NewActivity extends Mailable
             'activity' => $this->activity,
             'user' => null,
             'content' => $this->content,
+            'description' => $this->activity->descriptionHTML,
         ])->render();
 
         $jsonBody = json_encode([
