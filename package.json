@@ -10,6 +10,13 @@
         "watch": "vite build --watch"
     },
     "dependencies": {
+        "@editorjs/editorjs": "^2.31.4",
+        "@editorjs/header": "^2.8.8",
+        "@editorjs/inline-code": "^1.5.2",
+        "@editorjs/list": "^2.0.9",
+        "@editorjs/marker": "^1.4.0",
+        "@editorjs/table": "^2.4.5",
+        "@editorjs/underline": "^1.2.1",
         "alpinejs": "^3.14.9",
         "shiki": "^3.13.0",
         "tailwindcss": "^4.1.12",

@@ -33,6 +33,8 @@ class StoreActivityRequest extends FormRequest
             'price' => ['nullable', 'regex:/^\d+([.,]\d{2})?$/'],
             'whatsappUrl' => ['nullable', 'url'],
             'free_organizer_count' => ['required', 'integer', 'min:0'],
+            'personalConfirmationEnabled' => ['nullable'],
+            'personalConfirmation' => ['nullable', 'required_if:personalConfirmationEnabled,on'],
 
             // Times
             'start-date' => ['nullable', 'date'],
@@ -74,6 +76,7 @@ class StoreActivityRequest extends FormRequest
             'maxParticipants.integer' => 'Het maximum aantal deelnemers moet een geldig getal zijn.',
             'price.regex' => 'Het prijsformaat is ongeldig. Prijzen dienen opgeschreven te worden als "0.00"',
             'whatsappUrl.url' => 'De WhatsApp-URL moet een geldige URL zijn.',
+            'personalConfirmation.required_if' => 'Persoonlijke bevestiging is verplicht wanneer deze optie aan staat.',
 
             // Times
             'start-date.date' => 'De startdatum moet een geldige datum zijn.',

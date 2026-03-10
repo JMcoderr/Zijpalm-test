@@ -1,54 +1,45 @@
 {
   "resources/css/app.css": {
-    "file": "assets/app-DfB6ZmP3.css",
+    "file": "css.css",
     "src": "resources/css/app.css",
-    "isEntry": true
+    "isEntry": true,
+    "names": [
+      "css.css"
+    ]
   },
   "resources/js/app.js": {
-    "file": "assets/app-l0sNRNKZ.js",
+    "file": "app.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true
   },
   "resources/js/component-addons/toggle-tooltips.js": {
-    "file": "assets/toggle-tooltips-BwUIfi78.js",
-    "name": "toggle-tooltips",
+    "file": "toggleTooltips.js",
+    "name": "toggleTooltips",
     "src": "resources/js/component-addons/toggle-tooltips.js",
     "isEntry": true
   },
   "resources/js/editor/editorjs.js": {
-    "file": "assets/editorjs-_eJhvUuZ.js",
+    "file": "editorjs.js",
     "name": "editorjs",
     "src": "resources/js/editor/editorjs.js",
     "isEntry": true
   },
   "resources/js/forms/display-uploaded-file-name.js": {
-    "file": "assets/display-uploaded-file-name-CI3XrLk5.js",
-    "name": "display-uploaded-file-name",
+    "file": "displayUploadedFileName.js",
+    "name": "displayUploadedFileName",
     "src": "resources/js/forms/display-uploaded-file-name.js",
     "isEntry": true
   },
   "resources/js/forms/display-uploaded-file.js": {
-    "file": "assets/display-uploaded-file-OV7sEMjL.js",
-    "name": "display-uploaded-file",
+    "file": "displayUploadedFile.js",
+    "name": "displayUploadedFile",
     "src": "resources/js/forms/display-uploaded-file.js",
     "isEntry": true
   },
-  "resources/js/forms/enter-key-behaviour.js": {
-    "file": "assets/enter-key-behaviour-CjGqz3r6.js",
-    "name": "enter-key-behaviour",
-    "src": "resources/js/forms/enter-key-behaviour.js",
-    "isEntry": true
-  },
-  "resources/js/forms/format-price.js": {
-    "file": "assets/format-price-l0sNRNKZ.js",
-    "name": "format-price",
-    "src": "resources/js/forms/format-price.js",
-    "isEntry": true
-  },
   "resources/js/forms/toggle-required.js": {
-    "file": "assets/toggle-required-D3JwQeS8.js",
-    "name": "toggle-required",
+    "file": "toggleRequired.js",
+    "name": "toggleRequired",
     "src": "resources/js/forms/toggle-required.js",
     "isEntry": true
   }

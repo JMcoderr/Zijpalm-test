@@ -6,50 +6,69 @@ import Table from '@editorjs/table'
 import Underline from '@editorjs/underline';
 import Marker from '@editorjs/marker';
 
-// Hidden input field to store the editor data
-const editorInput = document.getElementById('editorjs-data');
+window.initializeEditorJsHolders = function () {
+  const editorHolders = document.querySelectorAll('[data-editor-holder][data-editor-input]');
 
-// Save the editor data to the hidden input field
-function saveEditorData() {
-  editor.save().then((outputData) => {
-    editorInput.value = JSON.stringify(outputData);
-  }).catch((error) => {
-    console.error('Saving failed:', error);
-  });
-}
+  editorHolders.forEach((holderElement) => {
+    if (holderElement.dataset.editorInitialized === 'true') {
+      return;
+    }
 
-const editor = new EditorJS({
-  holder: 'editorjs',
-  minHeight: 0,
-  minWidth: 0,
-  placeholder: "Voeg hier uw tekst toe",
-  // Set the data property to the old data if it exists
-  // This will allow you to edit the existing data
-  data: window.editordata ?? {},
-  inlineToolbar: ['bold', 'italic', 'underline', 'marker', 'link'],
-  tools: {
-    header: Header,
-    list: {
-      class: EditorjsList,
-      inlineToolbar: true,
-      config: {
-          defaultStyle: 'unordered'
+    if (holderElement.offsetParent === null) {
+      return;
+    }
+
+    const holderId = holderElement.dataset.editorHolder;
+    const inputId = holderElement.dataset.editorInput;
+    const editorInput = document.getElementById(inputId);
+
+    if (!holderId || !editorInput) {
+      return;
+    }
+
+    const initialData = window.editorDataRegistry?.[holderId] ?? {};
+
+    const editor = new EditorJS({
+      holder: holderId,
+      minHeight: 0,
+      minWidth: 0,
+      placeholder: 'Voeg hier uw tekst toe',
+      data: initialData,
+      inlineToolbar: ['bold', 'italic', 'underline', 'marker', 'link'],
+      tools: {
+        header: Header,
+        list: {
+          class: EditorjsList,
+          inlineToolbar: true,
+          config: {
+            defaultStyle: 'unordered'
+          },
         },
+        inlineCode: {
+          class: InlineCode,
+        },
+        table: {
+          class: Table,
+          config: {
+            rows: 2,
+            cols: 2,
+          },
+        },
+        underline: Underline,
+        marker: Marker,
       },
-    inlineCode: {
-      class: InlineCode,
-    },
-    table: {
-      class: Table,
-      config: {
-        rows: 2,
-        cols: 2,
+      onChange: function () {
+        editor.save().then((outputData) => {
+          editorInput.value = JSON.stringify(outputData);
+        }).catch((error) => {
+          console.error('Saving failed:', error);
+        });
       },
-    },
-    underline: Underline,
-    marker: Marker
-  },
-  onChange: function () {
-    saveEditorData();
-  },
-})
+    });
+
+    holderElement.dataset.editorInitialized = 'true';
+    holderElement.editorInstance = editor;
+  });
+};
+
+window.initializeEditorJsHolders();

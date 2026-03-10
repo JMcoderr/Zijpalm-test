@@ -54,6 +54,27 @@
                     </x-input-group>
                 </x-input-group>
 
+                <x-input-group id="personal-confirmation-group" title="Bevestigingsmail" grid="grid grid-cols-1">
+                    <p class="text-sm text-zinc-600">
+                        Zet dit alleen aan als je voor deze activiteit een persoonlijke bevestigingsmail wilt versturen. Laat je dit uit, dan wordt de standaard bevestigingsmail gebruikt.
+                    </p>
+                    <x-input-field
+                        type="checkbox"
+                        label="Persoonlijke bevestigingsmail gebruiken"
+                        id="personalConfirmationEnabled"
+                        :checked="old('personalConfirmationEnabled')"
+                        action="togglePersonalConfirmationField(this)"
+                    />
+                    <x-input-field
+                        label="Tekst persoonlijke bevestigingsmail"
+                        id="personalConfirmation"
+                        type="editor"
+                        height="h-64"
+                        :value="old('personalConfirmation')"
+                        :hidden="!old('personalConfirmationEnabled')"
+                    />
+                </x-input-group>
+
                 <flux:separator variant="subtle"/>
 
                 <div class="grid lg:grid-cols-2 grid-cols-1 gap-x-2 relative">
@@ -84,5 +105,29 @@
         <span class="text-red-500 font-black">*</span> Verplichte velden
     </p>
     <x-zijpalm-button form="activity-create" type="submit" label="Aanmaken" variant="obvious" center="horizontal"/>
+
+    <script>
+        function togglePersonalConfirmationField(checkbox) {
+            const wrapper = document.getElementById('personalConfirmation-wrapper');
+
+            if (!wrapper) {
+                return;
+            }
+
+            wrapper.classList.toggle('hidden', !checkbox.checked);
+
+            if (checkbox.checked && window.initializeEditorJsHolders) {
+                requestAnimationFrame(() => window.initializeEditorJsHolders());
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const checkbox = document.getElementById('personalConfirmationEnabled');
+
+            if (checkbox) {
+                togglePersonalConfirmationField(checkbox);
+            }
+        });
+    </script>
 
 </x-page-wrapper>

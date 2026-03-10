@@ -218,6 +218,10 @@ class ActivityController extends Controller
             'title' => $data['title'],
             'location' => $data['location'],
             'description' => decodeEditorData($data['description']),
+            'personal_confirmation_enabled' => isset($data['personalConfirmationEnabled']),
+            'personal_confirmation' => isset($data['personalConfirmationEnabled']) && isset($data['personalConfirmation'])
+                ? decodeEditorData($data['personalConfirmation'])
+                : null,
             'organizer' => $data['organizer'],
             'maxParticipants' => $data['maxParticipants'],
             'maxGuests' => $data['maxGuests'],
@@ -310,6 +314,10 @@ class ActivityController extends Controller
             'title' => $data['title'] ?? $activity->title,
             'location' => $data['location'] ?? $activity->location,
             'description' => isset($data['description']) ? decodeEditorData($data['description']) : $activity->description,
+            'personal_confirmation_enabled' => isset($data['personalConfirmationEnabled']),
+            'personal_confirmation' => isset($data['personalConfirmationEnabled']) && isset($data['personalConfirmation'])
+                ? decodeEditorData($data['personalConfirmation'])
+                : null,
             'organizer' => $data['organizer'] ?? $activity->organizer,
             'maxParticipants' => $data['maxParticipants'] ?? $activity->maxParticipants,
             'maxGuests' => $data['maxGuests'] ?? $activity->maxGuests,
