@@ -6,6 +6,10 @@
     <x-zijpalm-div title="Bewerk Activiteit" color="transparent" :editable="false"/>
     <div class="flex flex-col">
         <x-zijpalm-div color="light" :editable=false width="w-full" form>
+            <div class="mb-3 px-3 py-2 rounded-lg border border-red-200 bg-white/90 text-sm font-medium text-zinc-800 shadow-sm w-max max-w-full mx-auto">
+                <span class="text-red-500 font-black text-base align-middle">*</span>
+                <span class="align-middle">Verplichte velden</span>
+            </div>
             <form id="activity-edit" class="mx-auto p-3 flex flex-col gap-y-2.5" enctype="multipart/form-data" autocomplete="off" method="POST" action="{{ route('activity.update', $activity) }}">
                 @csrf
                 @method('PUT')
@@ -180,9 +184,6 @@
             </form>
         </x-zijpalm-div>
     </div>
-    <p class="text-sm text-zinc-600 mt-2 px-1">
-        <span class="text-red-500 font-black">*</span> Verplichte velden
-    </p>
     <x-zijpalm-button form="activity-edit" type="submit" label="Opslaan" variant="obvious" center="horizontal"/>
 </x-page-wrapper>
 
