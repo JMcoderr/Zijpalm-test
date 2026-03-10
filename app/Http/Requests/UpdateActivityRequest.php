@@ -38,7 +38,7 @@ class UpdateActivityRequest extends FormRequest
             // Times
             'start-date' => ['nullable', 'date'],
             'start-time' => ['nullable', 'date_format:H:i'],
-            'end-date' => ['nullable', 'date', 'after_or_equal:start-date'],
+            'end-date' => ['required', 'date', 'after_or_equal:start-date'],
             'end-time' => ['nullable', 'date_format:H:i'],
             'registrationStart' => ['nullable', 'date'],
             'registrationEnd' => ['nullable', 'date', 'after_or_equal:registrationStart', 'before_or_equal:end-date'],
