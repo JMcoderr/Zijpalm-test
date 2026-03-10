@@ -5,6 +5,9 @@
 ])
 
 @php
+    $holderId = $id . '-editor';
+    $inputId = $id . '-data';
+
     $editorClasses = [
         $size,
         'font-normal',
@@ -19,7 +22,11 @@
         'overflow-y-auto',
     ];
 
-    $editorAttributes = $attributes->except(['id', 'class'])->merge(['class' => implode(' ', $editorClasses)]);
+    $editorAttributes = $attributes->except(['id', 'class'])->merge([
+        'class' => implode(' ', $editorClasses),
+        'data-editor-holder' => $holderId,
+        'data-editor-input' => $inputId,
+    ]);
 
     $editorDataHTMLSafe = $editordata;
 
@@ -31,8 +38,8 @@
 
 @push('scripts')
     <script>
-        // Sending the data to the editor as a JSON Object
-        window.editordata = @json($editordata);
+        window.editorDataRegistry = window.editorDataRegistry || {};
+        window.editorDataRegistry[@json($holderId)] = @json($editordata);
     </script>
     @vite('resources/js/editor/editorjs.js')
 @endpush
@@ -55,8 +62,8 @@
 @endpush
 
 {{-- Hidden input field --}}
-<input type="hidden" id="editorjs-data" name="{{$id}}" {{$editorAttributes['required'] ? 'required' : ''}} value="{{$editorDataHTMLSafe}}" />
+<input type="hidden" id="{{$inputId}}" name="{{$id}}" {{$editorAttributes['required'] ? 'required' : ''}} value="{{$editorDataHTMLSafe}}" />
 
 {{-- Editor input --}}
-<div id="editorjs" {{$editorAttributes->except(['value'])}}></div>
+<div id="{{$holderId}}" {{$editorAttributes->except(['value'])}}></div>
 

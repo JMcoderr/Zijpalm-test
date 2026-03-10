@@ -36,12 +36,14 @@ function getAnswerPrice($answer): float {
         case QuestionType::Text:
             return 0.0;
         case QuestionType::Checkbox:
-            return $answer->answer ? $answer->question->price : 0.0;
+            return in_array($answer->answer, [true, 1, '1', 'Ja', 'ja', 'true'], true)
+                ? (float) ($answer->question->price ?? 0)
+                : 0.0;
         case QuestionType::Number:
-            return $answer->answer * $answer->question->price;
+            return (float) $answer->answer * (float) ($answer->question->price ?? 0);
         case QuestionType::Select:
             $option = $answer->question->selectOptions->firstWhere('option', $answer->answer);
-            return isset($option->price) ? $option->price : 0.0;
+            return isset($option->price) ? (float) $option->price : 0.0;
         default:
             return 0.0;
     }

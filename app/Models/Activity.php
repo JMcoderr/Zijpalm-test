@@ -27,6 +27,8 @@ class Activity extends Model
         'title',
         'location',
         'description',
+        'personal_confirmation_enabled',
+        'personal_confirmation',
         'organizer',
         'maxParticipants',
         'maxGuests',
@@ -49,6 +51,7 @@ class Activity extends Model
         'registrationStart' => 'datetime',
         'registrationEnd' => 'datetime',
         'cancellationEnd' => 'datetime',
+        'personal_confirmation_enabled' => 'boolean',
     ];
 
     public function applications()
@@ -109,6 +112,15 @@ class Activity extends Model
     {
         return Attribute::make(
             get: fn () => EditorPhp::make($this->description)->toHtml()
+        );
+    }
+
+    protected function personalConfirmationHTML(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => $this->personal_confirmation
+                ? EditorPhp::make($this->personal_confirmation)->toHtml()
+                : null
         );
     }
 

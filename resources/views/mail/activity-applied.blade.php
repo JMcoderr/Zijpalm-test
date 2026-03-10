@@ -32,9 +32,12 @@
 <x-layouts.mail.header :user="$user">
     @if($reserve)
         {!! $reserveContent->textHTML !!}
+        {!! $content->textHTML !!}
+    @elseif($activity->personal_confirmation_enabled && $activity->personalConfirmationHTML)
+        {!! $activity->personalConfirmationHTML !!}
+    @else
+        {!! $content->textHTML !!}
     @endif
-
-    {!! $content->textHTML !!}
 
 
     <table style="margin-top: 10px; margin-bottom: 10px; width: 100%;">

@@ -48,6 +48,51 @@
                     </x-input-group>
                 </x-input-group>
 
+                @php
+                    $personalConfirmationValue = old('personalConfirmation', $activity->personal_confirmation ?? '');
+                    $decodedPersonalConfirmation = is_string($personalConfirmationValue)
+                        ? json_decode(html_entity_decode($personalConfirmationValue, ENT_QUOTES, 'UTF-8'), true)
+                        : null;
+
+                    if (!blank($personalConfirmationValue) && (!is_array($decodedPersonalConfirmation) || !array_key_exists('blocks', $decodedPersonalConfirmation))) {
+                        $personalConfirmationValue = json_encode([
+                            'time' => now()->timestamp * 1000,
+                            'blocks' => [
+                                [
+                                    'type' => 'paragraph',
+                                    'data' => ['text' => (string) ($activity->personal_confirmation ?? '')],
+                                ],
+                            ],
+                            'version' => '2.31.0',
+                        ], JSON_UNESCAPED_UNICODE);
+                    } elseif (is_array($decodedPersonalConfirmation) && array_key_exists('blocks', $decodedPersonalConfirmation)) {
+                        $personalConfirmationValue = json_encode($decodedPersonalConfirmation, JSON_UNESCAPED_UNICODE);
+                    }
+                @endphp
+
+                <x-input-group id="personal-confirmation-group" title="Bevestigingsmail" grid="grid grid-cols-1">
+                    <p class="text-sm text-zinc-600">
+                        Zet dit alleen aan als je voor deze activiteit een afwijkende bevestigingsmail wilt versturen. Laat je dit uit, dan wordt de standaard bevestigingsmail gebruikt.
+                    </p>
+                    <x-input-field
+                        type="checkbox"
+                        label="Persoonlijke bevestigingsmail gebruiken"
+                        id="personalConfirmationEnabled"
+                        name="personalConfirmationEnabled"
+                        :checked="old('personalConfirmationEnabled', $activity->personal_confirmation_enabled)"
+                        action="togglePersonalConfirmationField(this)"
+                    />
+                    <x-input-field
+                        label="Tekst persoonlijke bevestigingsmail"
+                        id="personalConfirmation"
+                        name="personalConfirmation"
+                        type="editor"
+                        height="h-64"
+                        :value="$personalConfirmationValue"
+                        :hidden="!old('personalConfirmationEnabled', $activity->personal_confirmation_enabled)"
+                    />
+                </x-input-group>
+
                 <flux:separator variant="subtle"/>
 
                 <div class="grid lg:grid-cols-2 grid-cols-1 gap-x-2 relative">
@@ -75,6 +120,7 @@
                     var timesGroup = document.getElementById('times');
                     var recurring = document.getElementById('recurring');
                     var noCancel = document.getElementById('noCancellation');
+                    var personalConfirmationEnabled = document.getElementById('personalConfirmationEnabled');
 
                     if(!timesGroup || !recurring) {
                         return;
@@ -109,7 +155,27 @@
                     }
 
                     applyVisibility();
+
+                    if (personalConfirmationEnabled) {
+                        togglePersonalConfirmationField(personalConfirmationEnabled);
+                    }
                 });
+
+                function togglePersonalConfirmationField(checkbox) {
+                    var wrapper = document.getElementById('personalConfirmation-wrapper');
+
+                    if(!wrapper) {
+                        return;
+                    }
+
+                    wrapper.classList.toggle('hidden', !checkbox.checked);
+
+                    if (checkbox.checked && window.initializeEditorJsHolders) {
+                        requestAnimationFrame(function () {
+                            window.initializeEditorJsHolders();
+                        });
+                    }
+                }
                 </script>
             </form>
         </x-zijpalm-div>

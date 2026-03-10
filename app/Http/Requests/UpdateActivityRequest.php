@@ -34,6 +34,8 @@ class UpdateActivityRequest extends FormRequest
             'price' => ['nullable', 'regex:/^\d+([.,]\d{2})?$/'],
             'whatsappUrl' => ['nullable', 'url'],
             'free_organizer_count' => ['nullable', 'integer', 'min:0'],
+            'personalConfirmationEnabled' => ['nullable'],
+            'personalConfirmation' => ['nullable', 'required_if:personalConfirmationEnabled,on'],
 
             // Times
             'start-date' => ['nullable', 'date'],
@@ -56,6 +58,14 @@ class UpdateActivityRequest extends FormRequest
             'questions.*.options' => ['required_if:questions.*.type,select', 'array', 'min:2'],
             'questions.*.options.*.optie' => ['required_with:questions.*.options', 'string', 'max:255'],
             'questions.*.options.*.prijs' => ['nullable', 'regex:/^\d+([.,]\d{2})?$/'],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'end-date.required' => 'De einddatum is verplicht.',
+            'personalConfirmation.required_if' => 'Persoonlijke bevestiging is verplicht wanneer deze optie aan staat.',
         ];
     }
 }
