@@ -167,7 +167,7 @@
             <div @class($detailClasses)>
                 @if($type === 'activity')
                     <div class="flex flex-col w-1/2">
-                        <span @class($textClasses)>Datum & Tijd</span>
+                        <span @class($textClasses)>Wanneer</span>
                         <span class="text-wrap">
                             {{$content->formattedDatesAndTimes->activity->full}}
                         </span>

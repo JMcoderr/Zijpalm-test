@@ -4,6 +4,7 @@ namespace App\Mail;
 
 use App\Models\Payment;
 use App\Models\User;
+use App\Models\Content as ContentModel;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
@@ -17,6 +18,7 @@ class PaymentFailed extends Mailable
 
     public Payment $payment;
     public User $user;
+    public ContentModel $content;
 
     /**
      * Create a new message instance.
@@ -25,6 +27,7 @@ class PaymentFailed extends Mailable
     {
         $this->payment = $payment;
         $this->user = $user;
+        $this->content = getFromCache('email-betaling-mislukt');
     }
 
     /**
@@ -45,11 +48,12 @@ class PaymentFailed extends Mailable
         $renderedContent = view('mail.payment-failed', [
             'payment' => $this->payment,
             'user' => $this->user,
+            'content' => $this->content,
         ])->render();
 
         $jsonBody = json_encode([
             'email' => $this->user->email,
-            'subject' => 'Betaling voor ' . $this->payment->description . ' is mislukt',
+            'subject' => ($this->content->title ?: 'Betaling mislukt') . ': ' . $this->payment->description,
             'body' => $renderedContent,
         ], JSON_PRETTY_PRINT);
 

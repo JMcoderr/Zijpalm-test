@@ -328,6 +328,15 @@ class ContentSeeder extends Seeder
 
         Content::create([
             'type' => 'email',
+            'name' => 'email-betaling-mislukt',
+            'title' => 'Betaling mislukt',
+            'text' => '{"time":1763000000000,"blocks":[{"type":"paragraph","data":{"text":"Uw betaling is helaas mislukt."}},{"type":"paragraph","data":{"text":"Probeer het alstublieft opnieuw via de betaallink."}}],"version":"2.31.0"}',
+            'filePath' => null,
+            'fileType' => null,
+        ]);
+
+        Content::create([
+            'type' => 'email',
             'name' => 'email-activiteit-aangemeld',
             'title' => 'Bevestiging aanmelding',
             'text' => '{"time":1750075440441,"blocks":[{"id":"xnNwYZd4RN","type":"paragraph","data":{"text":"Leuk dat jij je hebt aangemeld. Hierbij bevestigen wij dat jouw aanmelding is binnengekomen."}},{"id":"UIZfWpOyZC","type":"paragraph","data":{"text":"Zie de details van uw aanmelding hieronder:"}}],"version":"2.31.0-rc.7"}',

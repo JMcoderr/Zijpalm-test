@@ -7,8 +7,7 @@
     <p>U kunt inschrijven voor deze activiteit vanaf {{formatDate($activity->registrationStart)}} tot en met {{formatDate($activity->registrationEnd)}}
 
     <p>
-        <strong>Startdatum- en tijd:</strong> {{ formatDate($activity->start) }} om {{ formatTime($activity->start) }} uur<br>
-        <strong>Einddatum- en tijd:</strong> {{ formatDate($activity->end) }} om {{ formatTime($activity->end) }} uur<br>
+        <strong>Wanneer:</strong> {{ formatDate($activity->start) }} om {{ formatTime($activity->start) }} uur t/m {{ formatDate($activity->end) }} om {{ formatTime($activity->end) }} uur<br>
         <strong>Locatie:</strong> {{ $activity->location }}<br>
         <strong>Organisator(en):</strong> {{$activity->organizer}}
     </p>

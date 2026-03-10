@@ -78,7 +78,7 @@
                 <flux:separator variant="subtle"/>
 
                 <div class="grid lg:grid-cols-2 grid-cols-1 gap-x-2 relative">
-                    <x-input-group id="times" title="Tijden" height="h-max" grid="grid grid-cols-2">
+                    <x-input-group id="times" title="Wanneer" height="h-max" grid="grid grid-cols-2">
                         <x-input-field type="date" label="Startdatum" id="start-date" required/>
                         <x-input-field type="date" label="Einddatum" id="end-date" required/>
                         {{-- Standaard tijdwaarden zodat de backend correct blijft werken --}}

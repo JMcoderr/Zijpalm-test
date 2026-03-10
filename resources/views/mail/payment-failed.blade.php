@@ -1,5 +1,5 @@
 <x-layouts.mail.header :user="$user">
-    <p style="margin-top: 0px;">Uw betaling voor {{$payment->description}} is gefaald</p>
+    {!! $content->textHTML !!}
 
-    <p style="margin-top: 0px;">Probeer het alstublieft opnieuw</p>
+    <p style="margin-top: 0px;">Betreft: {{$payment->description}}</p>
 </x-layouts.mail.header>

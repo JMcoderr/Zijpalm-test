@@ -162,12 +162,12 @@
                         {{-- Start & End times and dates --}}
                         <div class="flex flex-col lg:flex-1 self-stretch">
                             {{-- Title --}}
-                            <span class="text-xl font-bold">Datums & Tijden</span>
+                            <span class="text-xl font-bold">Wanneer</span>
 
                             <div class="flex justify-evenly items-center flex-wrap bg-[rgba(0,0,0,0.1)] rounded-xl p-1 gap-x-2 flex-1">
                                 {{-- Start and end dates/times --}}
                                 <div class="flex flex-col">
-                                    <span class="text-lg font-bold">Start- en Eindtijd</span>
+                                    <span class="text-lg font-bold">Datum</span>
                                     <span> {{$activity->formattedDatesAndTimes->activity->full}}</span>
                                 </div>
 

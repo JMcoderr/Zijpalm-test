@@ -96,7 +96,7 @@
                 <flux:separator variant="subtle"/>
 
                 <div class="grid lg:grid-cols-2 grid-cols-1 gap-x-2 relative">
-                    <x-input-group id="times" title="Tijden" height="h-max" grid="grid grid-cols-2">
+                    <x-input-group id="times" title="Wanneer" height="h-max" grid="grid grid-cols-2">
                         <x-input-field type="date" label="Startdatum" id="start-date" name="start-date" value="{{ old('start-date', $activity->start ? $activity->start->format('Y-m-d') : '') }}" required/>
                         <x-input-field type="date" label="Einddatum" id="end-date" name="end-date" value="{{ old('end-date', $activity->end ? $activity->end->format('Y-m-d') : '') }}" required/>
                         <input type="hidden" name="start-time" value="00:00"/>
