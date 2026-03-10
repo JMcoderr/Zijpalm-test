@@ -383,8 +383,8 @@ class Activity extends Model
 
                 $sheet->setCellValue([1, $row], 'Lid');
                 $sheet->setCellValue([2, $row], $application->user->name);
-                $sheet->setCellValue([3, $row], $application->user->email);
-                $sheet->setCellValue([4, $row], formatPhoneNumber($application->user->phone));
+                $sheet->setCellValue([3, $row], $application->email ?: $application->user?->email);
+                $sheet->setCellValue([4, $row], formatPhoneNumber($application->phone ?: $application->user?->phone));
                 $sheet->setCellValue([5, $row], $application->comment);
 
                 // Add answers to the questions
