@@ -37,7 +37,7 @@ class StoreActivityRequest extends FormRequest
             // Times
             'start-date' => ['nullable', 'date'],
             'start-time' => ['nullable', 'date_format:H:i'],
-            'end-date' => ['nullable', 'date', 'after_or_equal:start-date'],
+            'end-date' => ['required', 'date', 'after_or_equal:start-date'],
             'end-time' => ['nullable', 'date_format:H:i'],
             'registrationStart' => ['nullable', 'date'],
             'registrationEnd' => ['nullable', 'date', 'after_or_equal:registrationStart', 'before_or_equal:end-date'],
@@ -80,6 +80,7 @@ class StoreActivityRequest extends FormRequest
             'start-time.date_format' => 'De starttijd moet in het formaat HH:MM zijn.',
 
             // End times
+            'end-date.required' => 'De einddatum is verplicht.',
             'end-date.date' => 'De einddatum moet een geldige datum zijn.',
             'end-date.after_or_equal' => 'De einddatum moet gelijk zijn aan of na de startdatum.',
             'end-time.date_format' => 'De eindtijd moet in het formaat HH:MM zijn.',

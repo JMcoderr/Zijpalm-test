@@ -53,7 +53,7 @@
                 <div class="grid lg:grid-cols-2 grid-cols-1 gap-x-2 relative">
                     <x-input-group id="times" title="Tijden" height="h-max" grid="grid grid-cols-2">
                         <x-input-field type="date" label="Startdatum" id="start-date" name="start-date" value="{{ old('start-date', $activity->start ? $activity->start->format('Y-m-d') : '') }}" required/>
-                        <x-input-field type="date" label="Einddatum" id="end-date" name="end-date" value="{{ old('end-date', $activity->end ? $activity->end->format('Y-m-d') : '') }}"/>
+                        <x-input-field type="date" label="Einddatum" id="end-date" name="end-date" value="{{ old('end-date', $activity->end ? $activity->end->format('Y-m-d') : '') }}" required/>
                         <input type="hidden" name="start-time" value="00:00"/>
                         <input type="hidden" name="end-time" value="23:59"/>
                         <x-input-field type="date" label="Start Aanmeldperiode" id="registrationStart" name="registrationStart" value="{{ old('registrationStart', $activity->registrationStart ? $activity->registrationStart->format('Y-m-d') : '') }}" required/>
@@ -114,6 +114,9 @@
             </form>
         </x-zijpalm-div>
     </div>
+    <p class="text-sm text-zinc-600 mt-2 px-1">
+        <span class="text-red-500 font-black">*</span> Verplichte velden
+    </p>
     <x-zijpalm-button form="activity-edit" type="submit" label="Opslaan" variant="obvious" center="horizontal"/>
 </x-page-wrapper>
 
