@@ -174,7 +174,7 @@
                     </div>
                     <div class="flex flex-col w-1/2">
                         <span @class($textClasses)>Locatie</span>
-                        <span class="truncate">{{$description}}</span>
+                        <span class="text-wrap break-words">{{$description}}</span>
                     </div>
                 @endif
 

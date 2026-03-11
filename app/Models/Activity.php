@@ -81,12 +81,15 @@ class Activity extends Model
 
         // Return object, $activity->period->periodName will result in a true or false
         return (object)[
-            // startOfDay() and endOfDay() are redundant, as activity creation should set these properly, but I am insecure
-            'registration' => now()->between($this->registrationStart->startOfDay(), $this->registrationEnd->endOfDay()),
-            'cancellation' => $this->cancellationEnd
+            'registration' => $this->registrationStart && $this->registrationEnd
+                ? now()->between($this->registrationStart->startOfDay(), $this->registrationEnd->endOfDay())
+                : false,
+            'cancellation' => $this->registrationStart && $this->cancellationEnd
                 ? now()->between($this->registrationStart->startOfDay(), $this->cancellationEnd->endOfDay())
                 : false,
-            'activity' => now()->between($this->start, $this->end),
+            'activity' => $this->start && $this->end
+                ? now()->between($this->start, $this->end)
+                : false,
         ];
     }
 
