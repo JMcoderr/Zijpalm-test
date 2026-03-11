@@ -26,7 +26,7 @@
         <x-input-group id="contact-info" title="Contactgegevens" grid="grid md:grid-cols-2 grid-cols-1">
             <x-input-field type="text" label="Voornaam" id="first-name" value="{{auth()->user()->firstName}}" required disabled/>
             <x-input-field type="text" label="Achternaam" id="last-name" value="{{auth()->user()->lastName}}" required disabled/>
-            <x-input-field type="text" label="Telefoonnummer" id="phone" value="{{formatPhoneNumber(auth()->user()->phone)}}" required tooltip="Voer alstublieft het nummer in waar u tijdens de activiteit op gecontacteerd kunt worden"/>
+            <x-input-field type="text" label="Telefoonnummer" id="phone" value="{{ formatPhoneNumber(auth()->user()->phone ?? '') }}" required tooltip="Voer alstublieft het nummer in waar u tijdens de activiteit op gecontacteerd kunt worden"/>
             <x-input-field type="email" label="E-mail" id="email" value="{{auth()->user()->email}}" required/>
         </x-input-group>
 
