@@ -52,7 +52,7 @@ class QuestionBuilder extends Component{
 
         // If questions are given, assign them to the array and refresh
         if($questions){
-            $this->questions = collect($questions)->map(fn($item, $key) => array_merge(['id' => $key], $item))->all();
+            $this->questions = collect($questions)->map(fn($item, $key) => array_merge(['id' => $key], is_array($item) ? $item : $item->toArray()))->all();
             // dd($this->questions);
         }
     }
