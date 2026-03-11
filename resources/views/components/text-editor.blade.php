@@ -67,3 +67,17 @@
 {{-- Editor input --}}
 <div id="{{$holderId}}" {{$editorAttributes->except(['value'])}}></div>
 
+{{-- Re-initialize editors when rendered inside Livewire (e.g. modals/popups) --}}
+<script>
+    (function () {
+        function tryInit() {
+            if (typeof window.initializeEditorJsHolders === 'function') {
+                window.initializeEditorJsHolders();
+            } else {
+                setTimeout(tryInit, 100);
+            }
+        }
+        tryInit();
+    })();
+</script>
+
