@@ -6,6 +6,8 @@ Om de app te draaien zijn er een aantal dependencies die je installeert met de v
 `composer install`  
 `npm install`
 
+Voor het live zetten via FileZilla/Strato, gebruik de checklist in `DEPLOYMENT.md`.
+
 Voor het live draaien is het belangrijk dat er een npm build wordt gedaan:  
 `npm run build`  
 

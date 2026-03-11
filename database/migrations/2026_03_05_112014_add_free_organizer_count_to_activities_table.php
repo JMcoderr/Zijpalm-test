@@ -11,9 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('activities', function (Blueprint $table) {
-            $table->integer('free_organizer_count')->default(0)->after('id');
-        });
+        if (!Schema::hasColumn('activities', 'free_organizer_count')) {
+            Schema::table('activities', function (Blueprint $table) {
+                $table->integer('free_organizer_count')->default(0)->after('id');
+            });
+        }
     }
 
     /**
