@@ -52,7 +52,23 @@ class QuestionBuilder extends Component{
 
         // If questions are given, assign them to the array and refresh
         if($questions){
-            $this->questions = collect($questions)->map(fn($item, $key) => array_merge(['id' => $key], is_array($item) ? $item : $item->toArray()))->all();
+            $this->questions = collect($questions)->map(function($item, $key) {
+                if(is_array($item)){
+                    return array_merge(['id' => $key], $item);
+                }
+                // Map Question model to the array structure the blade expects
+                return [
+                    'id'      => $key,
+                    'type'    => $item->type instanceof \BackedEnum ? $item->type->value : $item->type,
+                    'vraag'   => $item->query,
+                    'prijs'   => $item->price,
+                    'max'     => $item->max_amount,
+                    'options' => $item->selectOptions->map(fn($o) => [
+                        'optie' => $o->option,
+                        'prijs' => $o->price,
+                    ])->toArray(),
+                ];
+            })->all();
             // dd($this->questions);
         }
     }
