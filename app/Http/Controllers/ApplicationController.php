@@ -150,10 +150,6 @@ class ApplicationController extends Controller
                     'phone' => $guestData['phone'],
                     'adult' => array_key_exists('adult', $guestData) && (bool)$guestData['adult'] //$guestData['adult'] ? true : false, //TODO GUEST ERROR: null
                 ]);
-                // Only add the price of the guest if the organizer is not free
-                if(!$canRegisterFree) {
-                    $totalCost += $activity->price;
-                }
             }
         }
 
