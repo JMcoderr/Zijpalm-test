@@ -14,6 +14,7 @@ use App\PaymentStatus;
 use Illuminate\Http\Request;
 use App\Http\Requests\StoreApplicationRequest;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Mollie\Laravel\Facades\Mollie;
 
@@ -89,14 +90,13 @@ class ApplicationController extends Controller
             return redirect()->route('activity.show', $activity)->with('error', 'U heeft zich al ingeschreven voor deze activiteit.');
         }
 
-        $totalCost = (float) $activity->price;
+        // Compute base cost once to avoid accidental double counting.
+        $baseCost = $canRegisterFree
+            ? ($guests->count() * (float) $activity->price)
+            : ($participants * (float) $activity->price);
 
-        // Pas de prijsberekening aan: als organisator gratis is, alleen introducees betalen
-        if ($canRegisterFree) {
-            $totalCost = $guests->count() * (float) $activity->price;
-        } else {
-            $totalCost = $participants * (float) $activity->price;
-        }
+        // Collect option/question costs separately, then combine once at the end.
+        $optionsCost = 0.0;
 
         // Create the application
         $application = Application::create([
@@ -109,24 +109,23 @@ class ApplicationController extends Controller
             'status' => $status,
         ]);
 
-        // For each question, add the costs to the total for payment later, and add answers to every question
+        // For each question, calculate option costs and store answers
         foreach($activity->questions as $question){
+            $inputValue = $request->input("questions.$question->id");
 
-            // Continue if question actually has a price
-            if($question->price || $question->type->value === 'select'){
+            if($question->type->value === 'number' && $question->price){
+                $amount = is_numeric($inputValue) ? (int) $inputValue : 0;
+                $optionsCost += (float) $question->price * $amount;
+            }
 
-                // Numbers and checkbox simply multiply by value (checkbox gives a 1 or 0 with (int))
-                if($question->type->value === 'number' || $question->type->value === 'checkbox'){
-                    $totalCost += $question->price * (is_numeric($request->input("questions.$question->id")) ? (int)$request->input("questions.$question->id") : (int)(bool)$request->input("questions.$question->id"));
-                }
+            if($question->type->value === 'checkbox' && $question->price){
+                $optionsCost += $inputValue ? (float) $question->price : 0.0;
+            }
 
-                // If the question is of type select, check for selected option's price
-                if($question->type->value === 'select' && ($selected = $request->input("questions.$question->id"))){
-                    foreach($question->selectOptions as $option){
-                        if($option['option'] == $selected && !empty($option['price'])){
-                            $totalCost += $option['price'];
-                        }
-                    }
+            if($question->type->value === 'select' && $inputValue){
+                $selectedOption = $question->selectOptions->firstWhere('option', $inputValue);
+                if($selectedOption && !empty($selectedOption->price)){
+                    $optionsCost += (float) $selectedOption->price;
                 }
             }
 
@@ -139,6 +138,19 @@ class ApplicationController extends Controller
                 'answer' => $answer,
             ]);
         }
+
+        $totalCost = $baseCost + $optionsCost;
+
+        Log::debug('[ApplicationController] Payment breakdown', [
+            'application_id' => $application->id,
+            'activity_id' => $activity->id,
+            'participants' => $participants,
+            'guest_count' => $guests->count(),
+            'base_cost' => $baseCost,
+            'options_cost' => $optionsCost,
+            'total_cost' => $totalCost,
+            'can_register_free' => $canRegisterFree,
+        ]);
 
         // Create guests and bind them to application
         if($participants > 1){
