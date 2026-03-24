@@ -41,7 +41,6 @@
             </flux:link>
         </div>
 
-
         <div class="flex items-center justify-end">
             <flux:button variant="primary" type="submit" class="w-full">{{ __('Log in') }}</flux:button>
         </div>
