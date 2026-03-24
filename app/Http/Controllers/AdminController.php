@@ -26,6 +26,8 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
 use Maatwebsite\Excel\Facades\Excel;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx as XlsxWriter;
 
 class AdminController extends Controller
 {
@@ -108,42 +110,49 @@ class AdminController extends Controller
             ->orderBy('firstName')
             ->get();
 
-        $fileName = 'ledenlijst_' . now()->format('Ymd_His') . '.csv';
+        $fileName = 'ledenlijst_' . now()->format('Ymd_His') . '.xlsx';
 
-        return response()->streamDownload(function () use ($users) {
-            $output = fopen('php://output', 'w');
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Leden');
 
-            // UTF-8 BOM for Excel compatibility.
-            fwrite($output, "\xEF\xBB\xBF");
+        $headers = [
+            'First name',
+            'Last name',
+            'Email',
+            'Phone',
+            'Type',
+            'Employee number',
+            'Contribution',
+            'Is admin',
+        ];
 
-            fputcsv($output, [
-                'First name',
-                'Last name',
-                'Email',
-                'Phone',
-                'Type',
-                'Employee number',
-                'Contribution',
-                'Is admin',
-            ], ';');
+        $sheet->fromArray($headers, null, 'A1');
 
-            foreach ($users as $user) {
-                fputcsv($output, [
-                    $user->firstName,
-                    $user->lastName,
-                    $user->email,
-                    $user->phone,
-                    $user->type->value,
-                    $user->employee_number,
-                    number_format((float) $user->contribution, 2, '.', ''),
-                    $user->is_admin ? 'yes' : 'no',
-                ], ';');
-            }
+        $row = 2;
+        foreach ($users as $user) {
+            $sheet->fromArray([
+                $user->firstName,
+                $user->lastName,
+                $user->email,
+                $user->phone,
+                $user->type->value,
+                $user->employee_number,
+                number_format((float) $user->contribution, 2, '.', ''),
+                $user->is_admin ? 'yes' : 'no',
+            ], null, 'A' . $row);
+            $row++;
+        }
 
-            fclose($output);
-        }, $fileName, [
-            'Content-Type' => 'text/csv; charset=UTF-8',
-        ]);
+        foreach (range('A', 'H') as $column) {
+            $sheet->getColumnDimension($column)->setAutoSize(true);
+        }
+
+        $writer = new XlsxWriter($spreadsheet);
+        $tempFile = tempnam(sys_get_temp_dir(), 'members_');
+        $writer->save($tempFile);
+
+        return response()->download($tempFile, $fileName)->deleteFileAfterSend(true);
     }
 
     public function reports()
