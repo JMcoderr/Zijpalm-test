@@ -82,7 +82,10 @@ class ApplicationForm extends Component{
             ->filter(function($app) {
                 return str_contains($this->activity->organizer, $app->user->name);
             })->count();
-        $canRegisterFree = $isOrganizer && ($activeFreeOrganizers < $this->activity->free_organizer_count);
+        $freeOrganizerCount = max(0, (int) $this->activity->free_organizer_count);
+        $canRegisterFree = $isOrganizer
+            && $freeOrganizerCount > 0
+            && ($activeFreeOrganizers < $freeOrganizerCount);
 
         // Show €0 if the organizer is free and there are no guests
         if($canRegisterFree && $this->participants == 1) {

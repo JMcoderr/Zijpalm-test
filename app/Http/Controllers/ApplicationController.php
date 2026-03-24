@@ -65,8 +65,12 @@ class ApplicationController extends Controller
                 return str_contains($activity->organizer, $app->user->name);
             })->count();
 
+        $freeOrganizerCount = max(0, (int) $activity->free_organizer_count);
+
         // Determine if this user can register for free
-        $canRegisterFree = $isOrganizer && ($activeFreeOrganizers < $activity->free_organizer_count);
+        $canRegisterFree = $isOrganizer
+            && $freeOrganizerCount > 0
+            && ($activeFreeOrganizers < $freeOrganizerCount);
 
         // Determine the application status based on capacity and cost
         if($activity->maxParticipants > 0 && (($activity->participants->all->count() + $participants) > $activity->maxParticipants)){

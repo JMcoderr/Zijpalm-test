@@ -232,7 +232,7 @@ class ActivityController extends Controller
             'registrationStart' => $data['registrationStart'],
             'registrationEnd' => $data['registrationEnd'],
             'cancellationEnd' => isset($data['noCancellation']) ? null : ($data['cancellationEnd'] ?? null),
-            'free_organizer_count' => $data['free_organizer_count'],
+            'free_organizer_count' => max(0, (int) ($data['free_organizer_count'] ?? 0)),
         ]);
 
         // If there are questions, and they're a valid array, loop through each
@@ -328,7 +328,7 @@ class ActivityController extends Controller
             'registrationStart' => $data['registrationStart'] ?? $activity->registrationStart,
             'registrationEnd' => $data['registrationEnd'] ?? $activity->registrationEnd,
             'cancellationEnd' => isset($data['noCancellation']) ? null : ($data['cancellationEnd'] ?? $activity->cancellationEnd),
-            'free_organizer_count' => $data['free_organizer_count'] ?? $activity->free_organizer_count,
+            'free_organizer_count' => max(0, (int) ($data['free_organizer_count'] ?? 0)),
         ]);
 
         // Handle questions - first delete all old questions, then create new ones
