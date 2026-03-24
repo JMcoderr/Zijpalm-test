@@ -37,11 +37,19 @@
                     <x-zijpalm-modal text="Activiteit aankondiging" livewire include="activity-announcement-mail" modal="announcementMailModal" :variables="['activity' => $activity, 'errors' => $errors->announcementMail->all()]"/>
                     {{-- If the activity has not ended --}}
                     @if(!$activity->end?->isPast())
-                        <form id="activity-destroy" method="POST" action="{{route('activity.destroy', $activity)}}" onsubmit="return confirm('Je staat op het punt de activiteit {{$activity->title}} te annuleren. Alle ingeschreven leden krijgen hun inschrijvingskosten teruggestort.')">
-                            @csrf
-                            @method('delete')
-                            <x-zijpalm-button type="submit" form="activity-destroy" label="Annuleer activiteit" variant="obvious"/>
-                        </form>
+                        <div class="flex flex-wrap gap-4 justify-center">
+                            <form id="activity-destroy" method="POST" action="{{route('activity.destroy', $activity)}}" onsubmit="return confirm('Je staat op het punt de activiteit {{$activity->title}} te annuleren. Alle ingeschreven leden krijgen hun inschrijvingskosten teruggestort.')">
+                                @csrf
+                                @method('delete')
+                                <x-zijpalm-button type="submit" form="activity-destroy" label="Annuleer activiteit" variant="obvious"/>
+                            </form>
+
+                            <form id="activity-permanentDelete-inline" method="POST" action="{{route('activity.permanentDelete', $activity)}}" onsubmit="return confirm('Je staat op het punt de activiteit {{$activity->title}} permanent te verwijderen. Deze actie kan niet ongedaan worden gemaakt.')">
+                                @csrf
+                                @method('delete')
+                                <x-zijpalm-button type="submit" form="activity-permanentDelete-inline" label="Permanent verwijderen" variant="obvious"/>
+                            </form>
+                        </div>
                     @endif
                 @endif
 
