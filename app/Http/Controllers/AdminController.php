@@ -101,6 +101,51 @@ class AdminController extends Controller
         return view('admin.users', compact('userGroups', 'admins', 'deletedUsers'));
     }
 
+    public function exportUsers()
+    {
+        $users = User::notSoftDeleted()
+            ->orderBy('type')
+            ->orderBy('firstName')
+            ->get();
+
+        $fileName = 'ledenlijst_' . now()->format('Ymd_His') . '.csv';
+
+        return response()->streamDownload(function () use ($users) {
+            $output = fopen('php://output', 'w');
+
+            // UTF-8 BOM for Excel compatibility.
+            fwrite($output, "\xEF\xBB\xBF");
+
+            fputcsv($output, [
+                'First name',
+                'Last name',
+                'Email',
+                'Phone',
+                'Type',
+                'Employee number',
+                'Contribution',
+                'Is admin',
+            ], ';');
+
+            foreach ($users as $user) {
+                fputcsv($output, [
+                    $user->firstName,
+                    $user->lastName,
+                    $user->email,
+                    $user->phone,
+                    $user->type->value,
+                    $user->employee_number,
+                    number_format((float) $user->contribution, 2, '.', ''),
+                    $user->is_admin ? 'yes' : 'no',
+                ], ';');
+            }
+
+            fclose($output);
+        }, $fileName, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
+    }
+
     public function reports()
     {
         // Get all non-cancelled & non-weekly activities

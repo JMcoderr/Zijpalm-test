@@ -35,6 +35,7 @@
 
                 <x-zijpalm-modal text="Importeer overig" livewire include="import-members" modal="importMembers" :variables="['id' => 'import-members-form', 'endpoint' => route('admin.importMembers'), 'errors' => $errors->importMembers->all()]" />
                 <x-zijpalm-button class="ml-2" type="action" variant="default" label="Importeer overig" x-on:click="importMembers = true" />
+                <x-zijpalm-button class="ml-2" :href="route('admin.users.export')" type="redirect" variant="default" label="Exporteer ledenlijst" />
                 {{--                                <x-zijpalm-button href="#" label="Importeer medewerkers" />--}}
             </div>
             @foreach (array_merge($userGroups, ['Oud leden (Meest recent verwijderde eerst)' => $deletedUsers]) as $name => $members)

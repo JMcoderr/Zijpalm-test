@@ -192,6 +192,7 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->controller(AdminC
     function(){
         Route::redirect('/', 'admin/activiteiten')->name('index');
         Route::get('gebruikers', 'users')->name('users');
+        Route::get('gebruikers/export', 'exportUsers')->name('users.export');
         Route::post('import-medewerkers', 'importEmployees')->name('importEmployees');
         Route::post('import-leden', 'importMembers')->name('importMembers');
         Route::delete('lidmaatschap-afmelden/{user}', 'removeUser')->name('removeUser');
