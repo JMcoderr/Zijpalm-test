@@ -3,7 +3,7 @@
 
     <!-- Session Status -->
     <x-auth-session-status class="text-center" :status="session('status')" />
-    <form wire:submit="login" class="flex flex-col gap-6" x-data="{ showPassword: false }" x-effect="$el.querySelectorAll('input[autocomplete*=\'password\']').forEach((input) => input.type = showPassword ? 'text' : 'password')">
+    <form wire:submit="login" class="flex flex-col gap-6">
         <!-- Email Address -->
         <flux:input
             wire:model="email"
@@ -21,6 +21,7 @@
                 wire:model="password"
                 :label="__('Wachtwoord')"
                 type="password"
+                viewable
                 required
                 autocomplete="current-password"
                 :placeholder="__('Wachtwoord')"
@@ -40,14 +41,6 @@
                 {{ __('Wachtwoord vergeten?') }}
             </flux:link>
         </div>
-
-        <div class="flex items-center justify-end">
-            <label class="inline-flex items-center gap-2 text-sm text-zinc-600 cursor-pointer">
-                <input type="checkbox" x-model="showPassword" class="rounded border-zinc-300">
-                <span>{{ __('Toon wachtwoord') }}</span>
-            </label>
-        </div>
-
 
         <div class="flex items-center justify-end">
             <flux:button variant="primary" type="submit" class="w-full">{{ __('Log in') }}</flux:button>
