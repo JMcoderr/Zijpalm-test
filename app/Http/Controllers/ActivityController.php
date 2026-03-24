@@ -383,11 +383,8 @@ class ActivityController extends Controller
     }
 
     public function permanentDelete(Activity $activity){
-        if($activity->type === ActivityType::Archived || $activity->type === ActivityType::Weekly || ($activity->start < now() && $activity->end < now())) {
-            $activity->delete();
-            return redirect()->route('activity.index')->with('success',"Activiteit '$activity->title' succesvol verwijderd!");
-        } else {
-            return redirect()->back()->with('error',"Activiteit '$activity->title' is nog niet verlopen en kan dus niet verwijderd worden!");
-        }
+        $activity->delete();
+
+        return redirect()->route('activity.index')->with('success',"Activiteit '$activity->title' succesvol permanent verwijderd!");
     }
 }
