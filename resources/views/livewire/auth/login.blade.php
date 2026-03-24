@@ -21,7 +21,6 @@
                 wire:model="password"
                 :label="__('Wachtwoord')"
                 type="password"
-                viewable
                 required
                 autocomplete="current-password"
                 :placeholder="__('Wachtwoord')"
