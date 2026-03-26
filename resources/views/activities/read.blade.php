@@ -38,6 +38,11 @@
                     {{-- If the activity has not ended --}}
                     @if(!$activity->end?->isPast())
                         <div class="flex flex-wrap gap-4 justify-center">
+                            <form id="activity-copy" method="POST" action="{{route('activity.copy', $activity)}}" onsubmit="return confirm('Je staat op het punt de activiteit {{$activity->title}} te kopieren. Doorgaan?')">
+                                @csrf
+                                <x-zijpalm-button type="submit" form="activity-copy" label="Kopieer activiteit" variant="obvious"/>
+                            </form>
+
                             <form id="activity-destroy" method="POST" action="{{route('activity.destroy', $activity)}}" onsubmit="return confirm('Je staat op het punt de activiteit {{$activity->title}} te annuleren. Alle ingeschreven leden krijgen hun inschrijvingskosten teruggestort.')">
                                 @csrf
                                 @method('delete')

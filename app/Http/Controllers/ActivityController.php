@@ -290,6 +290,37 @@ class ActivityController extends Controller
     }
 
     /**
+     * Duplicate an activity and copy all configurable content.
+     */
+    public function copy(Activity $activity)
+    {
+        $activity->load('questions.selectOptions');
+
+        $copy = $activity->replicate();
+        $copy->title = $activity->title . ' (kopie)';
+        $copy->save();
+
+        foreach ($activity->questions as $question) {
+            $questionCopy = $copy->questions()->create([
+                'type' => $question->type,
+                'query' => $question->query,
+                'price' => $question->price,
+                'max_amount' => $question->max_amount,
+            ]);
+
+            foreach ($question->selectOptions as $option) {
+                $questionCopy->selectOptions()->create([
+                    'option' => $option->option,
+                    'price' => $option->price,
+                ]);
+            }
+        }
+
+        return redirect()->route('activity.edit', $copy)
+            ->with('success', "Activiteit '{$activity->title}' is gekopieerd. Je kunt nu de kopie bewerken.");
+    }
+
+    /**
      * Update the specified resource in storage.
      */
     public function update(UpdateActivityRequest $request, Activity $activity){
