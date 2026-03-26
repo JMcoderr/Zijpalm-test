@@ -65,6 +65,7 @@ Route::prefix('activiteiten')->name('activity.')->controller(ActivityController:
             //Update
             Route::get('{activity}/bewerken', 'edit')->name('edit');
             Route::put('{activity}', 'update')->name('update');
+            Route::post('{activity}/kopieren', 'copy')->name('copy');
 
             // Delete
             Route::delete('{activity}', 'destroy')->name('destroy');
