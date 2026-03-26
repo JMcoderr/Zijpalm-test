@@ -15,6 +15,7 @@ use App\Mail\NotifyAllMembers;
 use App\Mail\NotifyNewEmployees;
 use App\Models\Activity;
 use App\Models\Content;
+use App\Models\Payment;
 use App\Models\Report;
 use App\Models\User;
 use App\UserType;
@@ -26,6 +27,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
 use Maatwebsite\Excel\Facades\Excel;
+use Mollie\Laravel\Facades\Mollie;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx as XlsxWriter;
 
@@ -101,6 +103,77 @@ class AdminController extends Controller
         ];
 
         return view('admin.users', compact('userGroups', 'admins', 'deletedUsers'));
+    }
+
+    public function sendAnnualInvoices(Request $request)
+    {
+        $data = $request->validateWithBag('annualInvoice', [
+            'amount' => ['required', 'numeric', 'min:0.01'],
+            'year' => ['required', 'integer', 'min:2000', 'max:2100'],
+        ]);
+
+        $amount = (float) $data['amount'];
+        $year = (int) $data['year'];
+
+        $users = User::notSoftDeleted()
+            ->whereIn('type', [UserType::Gepensioneerde, UserType::Inhuur])
+            ->orderBy('firstName')
+            ->get();
+
+        if ($users->isEmpty()) {
+            return redirect()->route('admin.users')->with('error', 'Er zijn geen actieve gepensioneerden of inhuurleden om te factureren.');
+        }
+
+        $sent = 0;
+        $failed = 0;
+
+        foreach ($users as $user) {
+            try {
+                $description = "Jaarlijkse contributie {$year} - {$user->name}";
+
+                $payment = Payment::generatePaymentLink(
+                    $amount,
+                    $description,
+                    now()->addMonth(),
+                    null,
+                    [
+                        'type' => 'annual_invoice',
+                        'year' => $year,
+                        'user_id' => $user->id,
+                    ]
+                );
+
+                $paymentLink = Mollie::api()->paymentLinks->get($payment->mollieId)->_links->checkout->href;
+
+                Mail::raw(
+                    "Beste {$user->name},\n\n" .
+                    "Hierbij ontvang je de jaarlijkse factuur voor {$year}.\n" .
+                    "Bedrag: " . formatPrice($amount) . "\n\n" .
+                    "Betaal via deze link:\n{$paymentLink}\n\n" .
+                    "Met vriendelijke groet,\nZijpalm",
+                    function ($message) use ($user, $year) {
+                        $message->to($user->email, $user->name)
+                            ->subject("Jaarlijkse factuur {$year} - Zijpalm");
+                    }
+                );
+
+                $sent++;
+            } catch (\Throwable $e) {
+                Log::error('[AdminController] Failed to send annual invoice', [
+                    'user_id' => $user->id,
+                    'email' => $user->email,
+                    'error' => $e->getMessage(),
+                ]);
+                $failed++;
+            }
+        }
+
+        $message = "Jaarlijkse facturen verstuurd: {$sent}";
+        if ($failed > 0) {
+            $message .= ", mislukt: {$failed}";
+        }
+
+        return redirect()->route('admin.users')->with($failed > 0 ? 'error' : 'success', $message);
     }
 
     public function exportUsers()
