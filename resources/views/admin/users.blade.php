@@ -40,11 +40,11 @@
                 <x-zijpalm-button class="ml-2" :href="route('admin.users.export')" type="redirect" variant="default" label="Exporteer ledenlijst" />
 
                 <x-zijpalm-modal text="Jaarlijkse facturen" modal="annualInvoice">
-                    <form method="POST" action="{{ route('admin.users.sendAnnualInvoices') }}" class="flex flex-col gap-3">
+                    <form id="annual-invoice-form" method="POST" action="{{ route('admin.users.sendAnnualInvoices') }}" class="flex flex-col gap-3">
                         @csrf
                         <x-input-field type="number" id="amount" name="amount" label="Bedrag per factuur (€)" min="0.01" step="0.01" value="24" required />
                         <x-input-field type="number" id="year" name="year" label="Factuurjaar" min="2000" max="2100" value="{{ now()->year }}" required />
-                        <x-zijpalm-button type="submit" label="Verstuur facturen" variant="obvious" center="horizontal"/>
+                        <x-zijpalm-button type="submit" form="annual-invoice-form" label="Verstuur facturen" variant="obvious" center="horizontal"/>
                     </form>
                 </x-zijpalm-modal>
                 <x-zijpalm-button class="ml-2" type="action" variant="default" label="Jaarfacturen" x-on:click="annualInvoice = true" />
