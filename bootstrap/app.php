@@ -13,7 +13,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-        //
+        // Trust reverse proxies so HTTPS/cookies/CSRF behave correctly in production.
+        $middleware->trustProxies(at: '*');
+
         $middleware->alias([
             'admin' => CheckIfAdmin::class,
             'admin_or_self' => CheckIfAdminOrSelf::class

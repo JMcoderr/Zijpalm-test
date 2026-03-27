@@ -10,6 +10,7 @@ use App\Http\Requests\NotifyAllMembersRequest;
 use App\Http\Requests\NotifyNewEmployeesRequest;
 use App\Imports\NotifyImport;
 use App\Imports\UsersImport;
+use App\Jobs\SendAnnualInvoice;
 use App\Mail\ActivityReminder;
 use App\Mail\NotifyAllMembers;
 use App\Mail\NotifyNewEmployees;
@@ -26,6 +27,9 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
 use Maatwebsite\Excel\Facades\Excel;
+use PhpOffice\PhpSpreadsheet\Cell\DataType;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx as XlsxWriter;
 
 class AdminController extends Controller
 {
@@ -99,6 +103,90 @@ class AdminController extends Controller
         ];
 
         return view('admin.users', compact('userGroups', 'admins', 'deletedUsers'));
+    }
+
+    public function sendAnnualInvoices(Request $request)
+    {
+        $data = $request->validateWithBag('annualInvoice', [
+            'amount' => ['required', 'numeric', 'min:0.01'],
+            'year' => ['required', 'integer', 'min:2000', 'max:2100'],
+        ]);
+
+        $amount = (float) $data['amount'];
+        $year = (int) $data['year'];
+
+        $users = User::notSoftDeleted()
+            ->whereIn('type', [UserType::Gepensioneerde, UserType::Inhuur])
+            ->orderBy('firstName')
+            ->get();
+
+        if ($users->isEmpty()) {
+            return redirect()->route('admin.users')->with('error', 'Er zijn geen actieve gepensioneerden of inhuurleden om te factureren.');
+        }
+
+        foreach ($users as $user) {
+            SendAnnualInvoice::dispatch($user->id, $amount, $year);
+        }
+
+        return redirect()->route('admin.users')->with('success', "{$users->count()} jaarfacturen in wachtrij geplaatst. Verwerking gebeurt op de achtergrond.");
+    }
+
+    public function exportUsers()
+    {
+        $users = User::notSoftDeleted()
+            ->orderBy('type')
+            ->orderBy('firstName')
+            ->get();
+
+        $fileName = 'ledenlijst_' . now()->format('Ymd_His') . '.xlsx';
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Leden');
+
+        $headers = [
+            'First name',
+            'Last name',
+            'Email',
+            'Phone',
+            'Type',
+            'Employee number',
+            'Contribution',
+            'Is admin',
+        ];
+
+        $sheet->fromArray($headers, null, 'A1');
+
+        $row = 2;
+        foreach ($users as $user) {
+            $phone = formatPhoneNumber($user->phone);
+
+            $sheet->fromArray([
+                $user->firstName,
+                $user->lastName,
+                $user->email,
+                $phone,
+                $user->type->value,
+                $user->employee_number,
+                number_format((float) $user->contribution, 2, '.', ''),
+                $user->is_admin ? 'yes' : 'no',
+            ], null, 'A' . $row);
+
+            // Force text to preserve the leading 0 in Excel.
+            $sheet->setCellValueExplicit('D' . $row, $phone, DataType::TYPE_STRING);
+
+            $row++;
+        }
+
+        foreach (range('A', 'H') as $column) {
+            $sheet->getColumnDimension($column)->setAutoSize(true);
+        }
+
+        $writer = new XlsxWriter($spreadsheet);
+        $tempFile = tempnam(sys_get_temp_dir(), 'members_');
+        $writer->save($tempFile);
+
+        return response()->download($tempFile, $fileName)->deleteFileAfterSend(true);
     }
 
     public function reports()
