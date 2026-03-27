@@ -19,6 +19,7 @@
             wire:model="password"
             :label="__('Wachtwoord')"
             type="password"
+            viewable
             required
             autocomplete="new-password"
             :placeholder="__('Wachtwoord')"
@@ -29,6 +30,7 @@
             wire:model="password_confirmation"
             :label="__('Herhaal wachtwoord')"
             type="password"
+            viewable
             required
             autocomplete="new-password"
             :placeholder="__('Herhaal wachtwoord')"

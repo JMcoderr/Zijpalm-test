@@ -6,6 +6,7 @@
                         wire:model="current_password"
                         :label="__('Huidig wachtwoord')"
                         type="password"
+                        viewable
                         required
                         autocomplete="current-password"
                     />
@@ -13,6 +14,7 @@
                         wire:model="password"
                         :label="__('Nieuw wachtwoord')"
                         type="password"
+                        viewable
                         required
                         autocomplete="new-password"
                     />
@@ -20,6 +22,7 @@
                         wire:model="password_confirmation"
                         :label="__('Bevestig nieuw wachtwoord')"
                         type="password"
+                        viewable
                         required
                         autocomplete="new-password"
                     />
