@@ -27,6 +27,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
 use Maatwebsite\Excel\Facades\Excel;
+use PhpOffice\PhpSpreadsheet\Cell\DataType;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx as XlsxWriter;
 
@@ -158,16 +159,22 @@ class AdminController extends Controller
 
         $row = 2;
         foreach ($users as $user) {
+            $phone = formatPhoneNumber($user->phone);
+
             $sheet->fromArray([
                 $user->firstName,
                 $user->lastName,
                 $user->email,
-                $user->phone,
+                $phone,
                 $user->type->value,
                 $user->employee_number,
                 number_format((float) $user->contribution, 2, '.', ''),
                 $user->is_admin ? 'yes' : 'no',
             ], null, 'A' . $row);
+
+            // Force text to preserve the leading 0 in Excel.
+            $sheet->setCellValueExplicit('D' . $row, $phone, DataType::TYPE_STRING);
+
             $row++;
         }
 
