@@ -116,19 +116,19 @@ class AdminController extends Controller
         $year = (int) $data['year'];
 
         $users = User::notSoftDeleted()
-            ->whereIn('type', [UserType::Gepensioneerde, UserType::Inhuur])
+            ->where('type', UserType::Gepensioneerde)
             ->orderBy('firstName')
             ->get();
 
         if ($users->isEmpty()) {
-            return redirect()->route('admin.users')->with('error', 'Er zijn geen actieve gepensioneerden of inhuurleden om te factureren.');
+            return redirect()->route('admin.users')->with('error', 'Er zijn geen actieve gepensioneerden om te factureren.');
         }
 
         foreach ($users as $user) {
             SendAnnualInvoice::dispatch($user->id, $amount, $year);
         }
 
-        return redirect()->route('admin.users')->with('success', "{$users->count()} jaarfacturen in wachtrij geplaatst. Verwerking gebeurt op de achtergrond.");
+        return redirect()->route('admin.users')->with('success', "{$users->count()} jaarfacturen voor gepensioneerden in wachtrij geplaatst. Verwerking gebeurt op de achtergrond.");
     }
 
     public function exportUsers()
