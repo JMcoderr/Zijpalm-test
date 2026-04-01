@@ -6,6 +6,17 @@ use BumpCore\EditorPhp\Blocks\Paragraph;
 
 class CustomParagraphBlock extends Paragraph
 {
+    public function allows(): array|string
+    {
+        $allows = parent::allows();
+
+        if (is_array($allows) && isset($allows['text']) && is_array($allows['text'])) {
+            $allows['text'][] = 'br';
+        }
+
+        return $allows;
+    }
+
     /**
      * Preserve line breaks from pasted plain text (e.g. Word) inside paragraph blocks.
      */
