@@ -18,10 +18,10 @@ class ActivityFactory extends Factory
      */
     public function definition(): array
     {
-        $start = fake()->dateTimeBetween('-1 month', '+1 month');
+        $start = fake()->dateTimeBetween('+5 days', '+3 months');
         $end = fake()->dateTimeBetween($start, (clone $start)->modify('+72 hours'));
-        $registrationStart = fake()->dateTimeInInterval($start, '-1 month');
-        $registrationEnd = fake()->dateTimeBetween($registrationStart, $start);
+        $registrationEnd = fake()->dateTimeBetween('now', (clone $start)->modify('-1 day'));
+        $registrationStart = fake()->dateTimeBetween('-14 days', $registrationEnd);
         $cancellationEnd = fake()->dateTimeBetween($registrationEnd, $start);
 
         // If start and end date is the same
@@ -32,11 +32,6 @@ class ActivityFactory extends Factory
         // If start and end date aren't the same
         if($start->format('Y-m-d') !== $end->format('Y-m-d')){
             $type = ActivityType::MultiDay;
-        }
-
-        // If the now is greater than the end
-        if(now() >= $end){
-            $type = ActivityType::Archived;
         }
 
         // Only cancel 10% of activities instead of 50%

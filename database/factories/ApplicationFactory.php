@@ -3,6 +3,8 @@
 namespace Database\Factories;
 
 use App\ApplicationStatus;
+use App\Models\Activity;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -17,9 +19,13 @@ class ApplicationFactory extends Factory
      */
     public function definition(): array
     {
+        $activityId = Activity::query()->inRandomOrder()->value('id');
+        $userId = User::query()->where('id', '!=', 1)->inRandomOrder()->value('id')
+            ?? User::query()->inRandomOrder()->value('id');
+
         return [
-            'activity_id' => $this->faker->unique()->numberBetween(1, 33),
-            'user_id' => $this->faker->unique(true)->numberBetween(2, 101),
+            'activity_id' => $activityId,
+            'user_id' => $userId,
             'participants' => 1,
             'phone' => fake()->numerify('########'),
             'email' => fake()->unique()->safeEmail(),
