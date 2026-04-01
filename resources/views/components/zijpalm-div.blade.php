@@ -137,7 +137,7 @@
         @if($textIsLink)
             <a href="{{$href}}" @class($textClasses)>{!!$text!!}</a>
         @else
-            <p @class($textClasses)>{!!$text!!}</p>
+            <div @class($textClasses)>{!!$text!!}</div>
         @endif
     @endif
 
