@@ -7,11 +7,12 @@
     <form wire:submit="resetPassword" class="flex flex-col gap-6">
         <!-- Email Address -->
         <flux:input
-            wire:model="email"
+            value="{{ $email }}"
             :label="__('Email')"
             type="email"
             required
             autocomplete="email"
+            readonly
         />
 
         <!-- Password -->
@@ -19,7 +20,6 @@
             wire:model="password"
             :label="__('Wachtwoord')"
             type="password"
-            viewable
             required
             autocomplete="new-password"
             :placeholder="__('Wachtwoord')"
@@ -30,7 +30,6 @@
             wire:model="password_confirmation"
             :label="__('Herhaal wachtwoord')"
             type="password"
-            viewable
             required
             autocomplete="new-password"
             :placeholder="__('Herhaal wachtwoord')"
