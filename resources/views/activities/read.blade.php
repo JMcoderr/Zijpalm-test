@@ -14,7 +14,7 @@
                 {{-- If the activity is not cancelled, show the register and cancel buttons --}}
                 @if(!$activity->isCancelled() && $activity->type !== \App\ActivityType::Weekly)
                     @if(!$activity->userApplied() && $activity->period->registration)
-                        <x-zijpalm-button label="Meld je aan!" type="action" variant="obvious" x-on:click="signupModal = true"/>
+                        <x-zijpalm-button :label="$activity->participants->capacity === 0 ? 'Meld je aan voor de reservelijst' : 'Meld je aan!'" type="action" variant="obvious" x-on:click="signupModal = true"/>
                     @elseif($activity->userApplied() && $activity->period->cancellation)
                         <x-zijpalm-button label="Afmelden" variant="obvious" x-on:click.prevent="$el.nextElementSibling.submit()"/>
                         <form method="POST" action="{{route('application.destroy', $activity->userApplied())}}" class="hidden"> @csrf @method('DELETE')</form>
