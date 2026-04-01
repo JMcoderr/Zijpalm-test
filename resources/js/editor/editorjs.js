@@ -6,6 +6,54 @@ import Table from '@editorjs/table'
 import Underline from '@editorjs/underline';
 import Marker from '@editorjs/marker';
 
+function escapeHtml(value) {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
+}
+
+function attachPasteLineBreakHandler(holderElement) {
+  if (holderElement.dataset.editorPasteHandlerAttached === 'true') {
+    return;
+  }
+
+  holderElement.addEventListener('paste', (event) => {
+    const target = event.target;
+    const editableTarget = target instanceof HTMLElement ? target.closest('[contenteditable="true"]') : null;
+
+    if (!editableTarget) {
+      return;
+    }
+
+    const pastedText = event.clipboardData?.getData('text/plain') ?? '';
+
+    // Keep default behavior for single-line text and only normalize multiline paste.
+    if (!pastedText.includes('\n') && !pastedText.includes('\r')) {
+      return;
+    }
+
+    event.preventDefault();
+
+    const normalized = pastedText.replace(/\r\n?/g, '\n');
+    const pastedHtml = normalized
+      .split('\n')
+      .map((line) => (line === '' ? '<br>' : escapeHtml(line)))
+      .join('<br>');
+
+    if (document.queryCommandSupported?.('insertHTML')) {
+      document.execCommand('insertHTML', false, pastedHtml);
+      return;
+    }
+
+    document.execCommand('insertText', false, normalized);
+  });
+
+  holderElement.dataset.editorPasteHandlerAttached = 'true';
+}
+
 window.initializeEditorJsHolders = function () {
   const editorHolders = document.querySelectorAll('[data-editor-holder][data-editor-input]');
 
@@ -34,6 +82,9 @@ window.initializeEditorJsHolders = function () {
       minWidth: 0,
       placeholder: 'Voeg hier uw tekst toe',
       data: initialData,
+      onReady: function () {
+        attachPasteLineBreakHandler(holderElement);
+      },
       inlineToolbar: ['bold', 'italic', 'underline', 'marker', 'link'],
       tools: {
         header: Header,
