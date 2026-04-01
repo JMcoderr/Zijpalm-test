@@ -85,6 +85,15 @@ body {
     h1, h2, h3, h4, h5, h6 {
         @apply font-bold;
     }
+
+    /* Hide browser-native password reveal controls to avoid duplicate eye icons. */
+    input[type='password']::-ms-reveal,
+    input[type='password']::-ms-clear,
+    input[type='password']::-webkit-credentials-auto-fill-button {
+        display: none;
+        visibility: hidden;
+        pointer-events: none;
+    }
 }
 
 [data-flux-field] {
