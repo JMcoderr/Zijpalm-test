@@ -12,7 +12,7 @@ return [
         'linkTool' => BumpCore\EditorPhp\Blocks\LinkTool::class,
         // 'list' => BumpCore\EditorPhp\Blocks\ListBlock::class,
         'list' => \App\Editor\Blocks\CustomListBlock::class,
-        'paragraph' => BumpCore\EditorPhp\Blocks\Paragraph::class,
+        'paragraph' => \App\Editor\Blocks\CustomParagraphBlock::class,
         'personality' => BumpCore\EditorPhp\Blocks\Personality::class,
         'quote' => BumpCore\EditorPhp\Blocks\Quote::class,
         'raw' => BumpCore\EditorPhp\Blocks\Raw::class,
