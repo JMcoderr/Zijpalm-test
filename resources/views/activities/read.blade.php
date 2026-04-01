@@ -49,7 +49,7 @@
                                 <x-zijpalm-button type="submit" form="activity-destroy" label="Annuleer activiteit" variant="obvious"/>
                             </form>
 
-                            <form id="activity-permanentDelete-inline" method="POST" action="{{route('activity.permanentDelete', $activity)}}" onsubmit="return confirm('Je staat op het punt de activiteit {{$activity->title}} permanent te verwijderen. Deze actie kan niet ongedaan worden gemaakt.')">
+                            <form id="activity-permanentDelete-inline" method="POST" action="{{route('activity.permanentDelete', $activity)}}" onsubmit="return confirm('Je staat op het punt de activiteit {{$activity->title}} permanent te verwijderen. Betaalde inschrijfgelden worden niet teruggestort. Deze actie kan niet ongedaan worden gemaakt.')">
                                 @csrf
                                 @method('delete')
                                 <x-zijpalm-button type="submit" form="activity-permanentDelete-inline" label="Permanent verwijderen" variant="obvious"/>
@@ -59,7 +59,7 @@
                 @endif
 
                 @if(auth()->user()?->isAdmin() && ($activity->type === \App\ActivityType::Weekly || $activity->end?->isPast()))
-                    <form id="activity-permanentDelete" method="POST" action="{{route('activity.permanentDelete', $activity)}}" onsubmit="return confirm('Je staat op het punt de activiteit {{$activity->title}} te verwijderen.')">
+                    <form id="activity-permanentDelete" method="POST" action="{{route('activity.permanentDelete', $activity)}}" onsubmit="return confirm('Je staat op het punt de activiteit {{$activity->title}} permanent te verwijderen. Betaalde inschrijfgelden worden niet teruggestort. Deze actie kan niet ongedaan worden gemaakt.')">
                         @csrf
                         @method('delete')
                         <x-zijpalm-button type="submit" form="activity-permanentDelete" label="Permanent verwijderen" variant="obvious"/>
