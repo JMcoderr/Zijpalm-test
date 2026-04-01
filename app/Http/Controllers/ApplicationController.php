@@ -17,6 +17,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Mollie\Laravel\Facades\Mollie;
+use Throwable;
 
 class ApplicationController extends Controller
 {
@@ -169,14 +170,14 @@ class ApplicationController extends Controller
 
         if($status === ApplicationStatus::Reserve) {
             // Reserve: confirmation mail and redirect
-            Mail::to(config('mail.bestuur.address'), config('mail.bestuur.name'))->send(new ActivityApplied($activity, $application->user, true));
+            $this->sendBoardNotification(new ActivityApplied($activity, $application->user, true), 'reserve_signup');
             return redirect()->route('activity.show', $activity)->with('success', "U bent succesvol ingeschreven als reserve voor '{$activity->title}'");
         }
 
         // Organizer free registration: always activate and never redirect to Mollie, except if the organizer brings a guest
         if($canRegisterFree && $guests->count() == 0) {
             $application->update(['status' => ApplicationStatus::Active]);
-            Mail::to(config('mail.bestuur.address'), config('mail.bestuur.name'))->send(new ActivityApplied($activity, $request->user()));
+            $this->sendBoardNotification(new ActivityApplied($activity, $request->user()), 'free_organizer_signup');
             return redirect()->route('activity.show', $activity)->with('success', "Je bent succesvol en gratis als organisator aangemeld voor '{$activity->title}'.");
         }
 
@@ -186,7 +187,7 @@ class ApplicationController extends Controller
         } else {
             // Entirely free (or no paid options selected): activate immediately without payment
             $application->update(['status' => ApplicationStatus::Active]);
-            Mail::to(config('mail.bestuur.address'), config('mail.bestuur.name'))->send(new ActivityApplied($activity, $request->user()));
+            $this->sendBoardNotification(new ActivityApplied($activity, $request->user()), 'free_signup');
             return redirect()->route('activity.show', $activity)->with('success', "U bent succesvol ingeschreven voor '{$activity->title}'");
         }
     }
@@ -239,7 +240,7 @@ class ApplicationController extends Controller
         $application->activity->updateApplications();
 
         // Send the confirmation email
-        Mail::to(config('mail.bestuur.address'), config('mail.bestuur.name'))->send(new ApplicationCancelled($application));
+        $this->sendBoardNotification(new ApplicationCancelled($application), 'application_cancelled');
 
         // Refund the payment(s)
         $application->payments()->each(function(Payment $payment) {
@@ -253,5 +254,32 @@ class ApplicationController extends Controller
 
         // If an application is removed, cancel it and generate a payment link for the first back-up application
         // https://docs.mollie.com/reference/create-payment-link
+    }
+
+    /**
+     * Send board notifications without breaking signup/cancel flows when mail transport is unavailable.
+     */
+    private function sendBoardNotification($mailable, string $context): void
+    {
+        $address = config('mail.bestuur.address');
+        $name = config('mail.bestuur.name');
+
+        if (blank($address)) {
+            Log::warning('[ApplicationController] Board mail skipped: address missing', [
+                'context' => $context,
+            ]);
+
+            return;
+        }
+
+        try {
+            Mail::to($address, $name)->send($mailable);
+        } catch (Throwable $exception) {
+            Log::error('[ApplicationController] Board mail send failed', [
+                'context' => $context,
+                'address' => $address,
+                'error' => $exception->getMessage(),
+            ]);
+        }
     }
 }
