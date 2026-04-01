@@ -112,7 +112,7 @@ class ApplicationController extends Controller
 
         // For each question, calculate option costs and store answers
         foreach($activity->questions as $question){
-            $inputValue = $request->input("questions.$question->id");
+            $inputValue = $this->questionInput($request, (string) $question->id);
 
             if($question->type->value === 'number' && $question->price){
                 $amount = is_numeric($inputValue) ? (int) $inputValue : 0;
@@ -131,7 +131,9 @@ class ApplicationController extends Controller
             }
 
             // Makes sure all questions have answers, provides Yes or No for checkbox input, gives fallback of No for any other input
-            $answer = $question->type->value === 'checkbox' ? ($request->input("questions.$question->id") ? 'Ja' : 'Nee') : $request->input("questions.$question->id", 'Nee');
+            $answer = $question->type->value === 'checkbox'
+                ? ($inputValue ? 'Ja' : 'Nee')
+                : ($inputValue ?? 'Nee');
 
             // Create answers for every question in the application
             $application->answers()->create([
@@ -281,5 +283,19 @@ class ApplicationController extends Controller
                 'error' => $exception->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * Read question input from both supported payload formats.
+     */
+    private function questionInput(Request $request, string $questionId): mixed
+    {
+        $nestedValue = $request->input("questions.$questionId");
+
+        if (!is_null($nestedValue)) {
+            return $nestedValue;
+        }
+
+        return $request->input($questionId);
     }
 }

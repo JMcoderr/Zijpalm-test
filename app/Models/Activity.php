@@ -12,10 +12,12 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use BumpCore\EditorPhp\EditorPhp;
 use App\ApplicationStatus;
+use PhpOffice\PhpSpreadsheet\Cell\DataType;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx as XlsxWriter;
 
 class Activity extends Model
@@ -403,16 +405,21 @@ class Activity extends Model
                 $sheet->setCellValue([4, $row], formatPhoneNumber($application->phone ?: $application->user?->phone));
                 $sheet->setCellValue([5, $row], $application->comment);
                 
-                // Calculate paid amount from payments
-                $paidAmount = $application->payments->where('status', \App\PaymentStatus::paid)->sum('price');
-                $sheet->setCellValue([6, $row], $paidAmount > 0 ? '€ ' . number_format($paidAmount, 2, ',', '.') : '');
+                // Calculate paid amount from payments and keep numeric cell type for Excel formulas
+                $paidAmount = (float) $application->payments->where('status', \App\PaymentStatus::paid)->sum('price');
+                $paidAmountCoordinate = Coordinate::stringFromColumnIndex(6) . $row;
 
-                // Add answers to the questions
-                // Sort the answers by question_id
-                // This is done to make sure the answers are in the same order as the questions
-                $answers = $application->answers->sortBy('question_id');
-                for ($i = 0; $i < count($answers); $i++) {
-                    $sheet->setCellValue([7 + $i, $row], $answers[$i]->answer);
+                if ($paidAmount > 0) {
+                    $sheet->setCellValueExplicit($paidAmountCoordinate, $paidAmount, DataType::TYPE_NUMERIC);
+                    $sheet->getStyle($paidAmountCoordinate)->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_CURRENCY_EUR_SIMPLE);
+                } else {
+                    $sheet->setCellValue($paidAmountCoordinate, '');
+                }
+
+                // Add answers by question ID to prevent misaligned or empty question columns
+                $answersByQuestionId = $application->answers->keyBy('question_id');
+                foreach ($this->questions->sortBy('id')->values() as $index => $question) {
+                    $sheet->setCellValue([7 + $index, $row], $answersByQuestionId->get($question->id)?->answer ?? '');
                 }
 
                 // Sets all to horizontal center
