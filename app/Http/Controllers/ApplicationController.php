@@ -292,10 +292,32 @@ class ApplicationController extends Controller
     {
         $nestedValue = $request->input("questions.$questionId");
 
+        // Support structures like questions[123][value]
+        if (is_array($nestedValue) && array_key_exists('value', $nestedValue)) {
+            return $nestedValue['value'];
+        }
+
         if (!is_null($nestedValue)) {
             return $nestedValue;
         }
 
-        return $request->input($questionId);
+        $nestedValueField = $request->input("questions.$questionId.value");
+        if (!is_null($nestedValueField)) {
+            return $nestedValueField;
+        }
+
+        $flatValue = $request->input($questionId);
+        if (!is_null($flatValue)) {
+            return $flatValue;
+        }
+
+        // Fallback for indexed payloads where each question object carries an id and value.
+        foreach ((array) $request->input('questions', []) as $item) {
+            if (is_array($item) && isset($item['id']) && (string) $item['id'] === $questionId) {
+                return $item['value'] ?? null;
+            }
+        }
+
+        return null;
     }
 }

@@ -416,10 +416,17 @@ class Activity extends Model
                     $sheet->setCellValue($paidAmountCoordinate, '');
                 }
 
-                // Add answers by question ID to prevent misaligned or empty question columns
+                // Prefer answers by question ID, but keep a positional fallback for legacy rows.
                 $answersByQuestionId = $application->answers->keyBy('question_id');
+                $answersByPosition = $application->answers->values();
                 foreach ($this->questions->sortBy('id')->values() as $index => $question) {
-                    $sheet->setCellValue([7 + $index, $row], $answersByQuestionId->get($question->id)?->answer ?? '');
+                    $answer = $answersByQuestionId->get($question->id)?->answer;
+
+                    if (($answer === null || $answer === '') && isset($answersByPosition[$index])) {
+                        $answer = $answersByPosition[$index]?->answer;
+                    }
+
+                    $sheet->setCellValue([7 + $index, $row], $answer ?? '');
                 }
 
                 // Sets all to horizontal center

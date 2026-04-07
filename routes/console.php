@@ -59,11 +59,7 @@ Artisan::command('app:test-activity-confirmation-mail {activity : The activity i
 // Schedule commands
 Schedule::command('app:send-activity-application-mail')->dailyAt('06:00');
 
-// Every two weeks on Friday at 08:00 (even ISO week numbers)
-Schedule::command('app:send-upcoming-activities-digest')
-    ->fridays()
-    ->at('08:00')
-    ->when(fn () => now()->isoWeek() % 2 === 0);
+// Upcoming activities digest is triggered manually from an admin-only button.
 
 // Work the queue every minute, but only if there are jobs in the queue
 // The queue is used for sending emails
