@@ -15,6 +15,14 @@
                     <x-zijpalm-button label="Eenmalige activiteiten" type="action" x-on:click="nextTab = tabs[0]; tab = null; setTimeout(() => {tab = nextTab; nextTab = null;}, 475)"/>
                     <x-zijpalm-button label="Wekelijkse activiteiten" type="action" x-on:click="nextTab = tabs[1]; tab = null; setTimeout(() => {tab = nextTab; nextTab = null;}, 475)"/>
                     <x-zijpalm-button label="Oude activiteiten" type="action" x-on:click="nextTab = tabs[2]; tab = null; setTimeout(() => {tab = nextTab; nextTab = null;}, 475)"/>
+                    @auth
+                        @if(auth()->user()->is_admin)
+                            <form id="mail-upcoming-activities" method="POST" action="{{ route('activity.sendUpcomingActivitiesDigest') }}" onsubmit="return confirm('Weet je zeker dat je de mail met toekomstige activiteiten nu wilt versturen?');">
+                                @csrf
+                                <x-zijpalm-button label="Mail toekomstige activiteiten" type="submit" form="mail-upcoming-activities"/>
+                            </form>
+                        @endif
+                    @endauth
                 </div>
             </x-zijpalm-div>
 

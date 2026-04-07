@@ -59,6 +59,8 @@ Artisan::command('app:test-activity-confirmation-mail {activity : The activity i
 // Schedule commands
 Schedule::command('app:send-activity-application-mail')->dailyAt('06:00');
 
+// Upcoming activities digest is triggered manually from an admin-only button.
+
 // Work the queue every minute, but only if there are jobs in the queue
 // The queue is used for sending emails
 Schedule::command('queue:work --stop-when-empty')->everyMinute()->withoutOverlapping();

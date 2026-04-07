@@ -15,6 +15,7 @@ use App\ApplicationStatus;
 use BumpCore\EditorPhp\EditorPhp;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
@@ -160,6 +161,22 @@ class ActivityController extends Controller
         Mail::to(config('mail.bestuur.address'), config('mail.bestuur.name'))->send(new NewActivity($activity, $nonParticipantEmails));
 
         return redirect()->route('activity.show', $activity)->with('success', 'De aankondiging is verstuurt');
+    }
+
+    /**
+     * Manually send the upcoming activities digest from the activities index.
+     */
+    public function sendUpcomingActivitiesDigest()
+    {
+        $exitCode = Artisan::call('app:send-upcoming-activities-digest');
+
+        if ($exitCode !== 0) {
+            return redirect()->route('activity.index')
+                ->with('error', 'Mail toekomstige activiteiten kon niet worden verstuurd. Controleer de logs.');
+        }
+
+        return redirect()->route('activity.index')
+            ->with('success', trim(Artisan::output()) ?: 'Mail toekomstige activiteiten is verstuurd.');
     }
 
     /**

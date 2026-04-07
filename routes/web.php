@@ -57,6 +57,7 @@ Route::prefix('activiteiten')->name('activity.')->controller(ActivityController:
             // Create
             Route::get('aanmaken', 'create')->name('create');
             Route::post('/', 'store')->name('store');
+            Route::post('mail-toekomstige-activiteiten', 'sendUpcomingActivitiesDigest')->name('sendUpcomingActivitiesDigest');
 
             // Notify
             Route::post('{activity}/informeer-leden', 'notifyMembers')->name('notifyMembers');

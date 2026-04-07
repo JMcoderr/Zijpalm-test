@@ -17,6 +17,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Mollie\Laravel\Facades\Mollie;
+use Throwable;
 
 class ApplicationController extends Controller
 {
@@ -111,7 +112,7 @@ class ApplicationController extends Controller
 
         // For each question, calculate option costs and store answers
         foreach($activity->questions as $question){
-            $inputValue = $request->input("questions.$question->id");
+            $inputValue = $this->questionInput($request, (string) $question->id);
 
             if($question->type->value === 'number' && $question->price){
                 $amount = is_numeric($inputValue) ? (int) $inputValue : 0;
@@ -130,7 +131,9 @@ class ApplicationController extends Controller
             }
 
             // Makes sure all questions have answers, provides Yes or No for checkbox input, gives fallback of No for any other input
-            $answer = $question->type->value === 'checkbox' ? ($request->input("questions.$question->id") ? 'Ja' : 'Nee') : $request->input("questions.$question->id", 'Nee');
+            $answer = $question->type->value === 'checkbox'
+                ? ($inputValue ? 'Ja' : 'Nee')
+                : ($inputValue ?? 'Nee');
 
             // Create answers for every question in the application
             $application->answers()->create([
@@ -169,14 +172,14 @@ class ApplicationController extends Controller
 
         if($status === ApplicationStatus::Reserve) {
             // Reserve: confirmation mail and redirect
-            Mail::to(config('mail.bestuur.address'), config('mail.bestuur.name'))->send(new ActivityApplied($activity, $application->user, true));
+            $this->sendBoardNotification(new ActivityApplied($activity, $application->user, true), 'reserve_signup');
             return redirect()->route('activity.show', $activity)->with('success', "U bent succesvol ingeschreven als reserve voor '{$activity->title}'");
         }
 
         // Organizer free registration: always activate and never redirect to Mollie, except if the organizer brings a guest
         if($canRegisterFree && $guests->count() == 0) {
             $application->update(['status' => ApplicationStatus::Active]);
-            Mail::to(config('mail.bestuur.address'), config('mail.bestuur.name'))->send(new ActivityApplied($activity, $request->user()));
+            $this->sendBoardNotification(new ActivityApplied($activity, $request->user()), 'free_organizer_signup');
             return redirect()->route('activity.show', $activity)->with('success', "Je bent succesvol en gratis als organisator aangemeld voor '{$activity->title}'.");
         }
 
@@ -186,7 +189,7 @@ class ApplicationController extends Controller
         } else {
             // Entirely free (or no paid options selected): activate immediately without payment
             $application->update(['status' => ApplicationStatus::Active]);
-            Mail::to(config('mail.bestuur.address'), config('mail.bestuur.name'))->send(new ActivityApplied($activity, $request->user()));
+            $this->sendBoardNotification(new ActivityApplied($activity, $request->user()), 'free_signup');
             return redirect()->route('activity.show', $activity)->with('success', "U bent succesvol ingeschreven voor '{$activity->title}'");
         }
     }
@@ -239,7 +242,7 @@ class ApplicationController extends Controller
         $application->activity->updateApplications();
 
         // Send the confirmation email
-        Mail::to(config('mail.bestuur.address'), config('mail.bestuur.name'))->send(new ApplicationCancelled($application));
+        $this->sendBoardNotification(new ApplicationCancelled($application), 'application_cancelled');
 
         // Refund the payment(s)
         $application->payments()->each(function(Payment $payment) {
@@ -253,5 +256,68 @@ class ApplicationController extends Controller
 
         // If an application is removed, cancel it and generate a payment link for the first back-up application
         // https://docs.mollie.com/reference/create-payment-link
+    }
+
+    /**
+     * Send board notifications without breaking signup/cancel flows when mail transport is unavailable.
+     */
+    private function sendBoardNotification($mailable, string $context): void
+    {
+        $address = config('mail.bestuur.address');
+        $name = config('mail.bestuur.name');
+
+        if (blank($address)) {
+            Log::warning('[ApplicationController] Board mail skipped: address missing', [
+                'context' => $context,
+            ]);
+
+            return;
+        }
+
+        try {
+            Mail::to($address, $name)->send($mailable);
+        } catch (Throwable $exception) {
+            Log::error('[ApplicationController] Board mail send failed', [
+                'context' => $context,
+                'address' => $address,
+                'error' => $exception->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Read question input from both supported payload formats.
+     */
+    private function questionInput(Request $request, string $questionId): mixed
+    {
+        $nestedValue = $request->input("questions.$questionId");
+
+        // Support structures like questions[123][value]
+        if (is_array($nestedValue) && array_key_exists('value', $nestedValue)) {
+            return $nestedValue['value'];
+        }
+
+        if (!is_null($nestedValue)) {
+            return $nestedValue;
+        }
+
+        $nestedValueField = $request->input("questions.$questionId.value");
+        if (!is_null($nestedValueField)) {
+            return $nestedValueField;
+        }
+
+        $flatValue = $request->input($questionId);
+        if (!is_null($flatValue)) {
+            return $flatValue;
+        }
+
+        // Fallback for indexed payloads where each question object carries an id and value.
+        foreach ((array) $request->input('questions', []) as $item) {
+            if (is_array($item) && isset($item['id']) && (string) $item['id'] === $questionId) {
+                return $item['value'] ?? null;
+            }
+        }
+
+        return null;
     }
 }
