@@ -437,7 +437,7 @@ class ContentSeeder extends Seeder
         Content::create([
             'type' => 'email',
             'name' => 'email-toekomstige-activiteiten-digest',
-            'title' => 'Komende activiteiten van Zijpalm',
+            'title' => 'Email Toekomstige Activiteiten',
             'text' => '{"time":1775600000000,"blocks":[{"type":"paragraph","data":{"text":"Beste leden,"}},{"type":"paragraph","data":{"text":"Hieronder vinden jullie de komende activiteiten van Zijpalm."}}],"version":"2.31.0"}',
             'filePath' => null,
             'fileType' => null,
