@@ -28,7 +28,7 @@ class UpcomingActivitiesDigest extends Mailable
         $this->emails = $emails;
         $this->activities = $activities;
         $this->runningActivities = $runningActivities;
-        $this->content = ContentModel::where('name', 'email-toekomstige-activiteiten-digest')->first();
+        $this->content = ContentModel::where('name', 'email-toekomstige-activiteiten')->first();
     }
 
     /**
