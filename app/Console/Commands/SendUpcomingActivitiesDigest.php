@@ -40,6 +40,15 @@ class SendUpcomingActivitiesDigest extends Command
             ->orderBy('start')
             ->get();
 
+        $runningActivities = Activity::query()
+            ->whereNotNull('start')
+            ->whereNotNull('end')
+            ->where('start', '<=', now())
+            ->where('end', '>=', now())
+            ->whereNotIn('type', [ActivityType::Cancelled, ActivityType::Archived])
+            ->orderBy('start')
+            ->get();
+
         if ($activities->isEmpty()) {
             $this->info('Geen toekomstige activiteiten gevonden binnen 8 weken.');
             return self::SUCCESS;
@@ -58,11 +67,12 @@ class SendUpcomingActivitiesDigest extends Command
 
         try {
             Mail::to(config('mail.bestuur.address'), config('mail.bestuur.name'))
-                ->send(new UpcomingActivitiesDigest($emails, $activities));
+                ->send(new UpcomingActivitiesDigest($emails, $activities, $runningActivities));
         } catch (Throwable $exception) {
             Log::error('[SendUpcomingActivitiesDigest] Mail send failed', [
                 'error' => $exception->getMessage(),
                 'activities' => $activities->count(),
+                'running_activities' => $runningActivities->count(),
                 'emails' => $emails->count(),
             ]);
 
