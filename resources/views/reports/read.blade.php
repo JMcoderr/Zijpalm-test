@@ -7,6 +7,12 @@
 
     <x-zijpalm-div :editable="false" padding="p-0">
         <div class="rounded-2xl overflow-hidden">
+
+            @if($report->image)
+                <div class="flex flex-col justify-center w-full max-h-[50dvh] overflow-clip">
+                    <img src="{{$report->image}}" alt="Verslag omslag" class="object-cover w-full">
+                </div>
+            @endif
             
             {{-- For activity reports, show the associated image --}}
             @if($report->activity)

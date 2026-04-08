@@ -9,6 +9,7 @@ use App\Models\Content;
 use App\Models\Report;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class ReportController extends Controller
 {
@@ -74,10 +75,15 @@ class ReportController extends Controller
     public function store(ReportRequest $request): \Illuminate\Http\RedirectResponse
     {
         $validated = $request->validated();
+        $imagePath = $request->hasFile('report-image')
+            ? uploadImage($request->file('report-image'), 'images/reports/')
+            : null;
+
         // Create the hollow shell of a report
-        DB::transaction(function () use ($validated) {
+        DB::transaction(function () use ($validated, $imagePath) {
             $report = Report::query()->create([
                 'year' => $validated['report-is-year'] != '-' ? $validated['report-is-year'] : null,
+                'imagePath' => $imagePath,
             ]);
 
             $content = $report->content()->create([

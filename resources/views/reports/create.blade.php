@@ -61,6 +61,7 @@
                 <x-input-field id="report-file" type="file" accept=".pdf" label="Bestand" action="displayUploadedFile(this, 'pdf-preview'); displayUploadedFileName(this)"/>
                 <embed id="pdf-preview" type="application/pdf" class="hidden max-w-full rounded-xl mx-2 my-1 aspect-[1/1.41]"/>
             </div>
+            <x-input-field id="report-image" type="file" accept="image/*" label="Omslag afbeelding (optioneel)" action="displayUploadedFileName(this)"/>
             <x-input-field  id="report-is-year" type="select" :options="$yearsAvailable" optionOnly label="Is jaar verslag"/>
         </form>
     </x-zijpalm-div>

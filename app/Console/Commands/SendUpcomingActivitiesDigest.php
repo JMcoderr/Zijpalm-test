@@ -25,7 +25,7 @@ class SendUpcomingActivitiesDigest extends Command
      *
      * @var string
      */
-    protected $description = 'Send a digest with upcoming activities to all active members';
+    protected $description = 'Send a mail with upcoming activities to all active members';
 
     /**
      * Execute the console command.
@@ -76,11 +76,11 @@ class SendUpcomingActivitiesDigest extends Command
                 'emails' => $emails->count(),
             ]);
 
-            $this->error('Digest kon niet worden verzonden door een mailtransportfout.');
+            $this->error('Mail kon niet worden verzonden door een mailtransportfout.');
             return self::FAILURE;
         }
 
-        $this->info("Digest verzonden voor {$activities->count()} activiteiten naar {$emails->count()} leden.");
+        $this->info("Mail verzonden voor {$activities->count()} activiteiten naar {$emails->count()} leden.");
 
         return self::SUCCESS;
     }
