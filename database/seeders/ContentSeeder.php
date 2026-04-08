@@ -72,7 +72,7 @@ class ContentSeeder extends Seeder
             'type' => 'text',
             'name' => 'lid-worden-info',
             'title' => 'Kom mee',
-            'text' => '{"time":1746775105514,"blocks":[{"id":"sPqs5ONqKY","type":"paragraph","data":{"text":"Als werknemer van de gemeente Almere kan je lid worden van de personeelsvereniging."}},{"id":"q9FixML_t0","type":"paragraph","data":{"text":"De contributie van de personeelsvereniging bedraagt € 2,- per maand en wordt 1 maand ná aanmelding automatisch op je salaris ingehouden."}},{"id":"8zb0XWjxH-","type":"paragraph","data":{"text":"Je lidmaatschap gaat dus 1 maand ná aanmelden in "}},{"id":"iQi0bNpDWu","type":"paragraph","data":{"text":"Je aanmelden maar ook afmelden gaat via <a href=\"https://82393.afasinsite.nl/portal-insite-prs/tp-personeelsverenigingen?tab=zijpalm\">MijnHRM</a>\n"}}],"version":"2.31.0-rc.7"}',
+            'text' => '{"time":1746775105514,"blocks":[{"id":"sPqs5ONqKY","type":"paragraph","data":{"text":"Als werknemer van de gemeente Almere kan je lid worden van de personeelsvereniging."}},{"id":"q9FixML_t0","type":"paragraph","data":{"text":"De contributie van de personeelsvereniging bedraagt € 2,- per maand en wordt 1 maand ná aanmelding automatisch op je salaris ingehouden."}},{"id":"8zb0XWjxH-","type":"paragraph","data":{"text":"Je lidmaatschap gaat dus 1 maand ná aanmelden in "}},{"id":"iQi0bNpDWu","type":"paragraph","data":{"text":"Je aanmelden maar ook afmelden gaat via <a href=\"https://82393.afasinsite.nl/portal-insite-prs/tp-personeelsverenigingen\">MijnHRM</a>\n"}}],"version":"2.31.0-rc.7"}',
             'filePath' => null,
             'fileType' => null,
         ]);
