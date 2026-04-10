@@ -14,16 +14,9 @@
                 </div>
             @endif
             
-            {{-- For activity reports, show the associated image --}}
-            @if($report->activity)
-                <div class="flex flex-col justify-center w-full max-h-[50dvh] overflow-clip">
-                    <img src="{{$report->content->file}}" class="object-cover">
-                </div>
-            @endif
-
             {{-- Display either the text content or associated file --}}
             <div @class(['pe-6' => $report->year, 'p-2'])>
-                @if($report->year)
+                @if($report->content?->file)
                     <embed id="pdf-preview" src="{{$report->content->file}}#toolbar=0" type="application/pdf" class="w-full h-auto rounded-xl mx-2 my-1 aspect-[1/1.41]"/>
                 @endif
                 @if($report->activity)

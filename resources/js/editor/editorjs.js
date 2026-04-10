@@ -87,6 +87,11 @@ window.initializeEditorJsHolders = function () {
       },
       inlineToolbar: ['bold', 'italic', 'underline', 'marker', 'link'],
       tools: {
+        paragraph: {
+          config: {
+            preserveBlank: true,
+          },
+        },
         header: Header,
         list: {
           class: EditorjsList,
