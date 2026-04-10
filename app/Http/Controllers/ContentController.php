@@ -135,7 +135,12 @@ class ContentController extends Controller
         if ($content->text && !$request->description) {
             return redirect()->back()->with('error', 'De beschrijving is verplicht.');
         } else if ($request->description) {
-            $text = html_entity_decode($request->description, ENT_QUOTES, 'UTF-8');
+            // Keep editor JSON payload intact so paragraph/newline blocks are preserved.
+            if ($content->type === 'bestuurslid' || $content->type === 'file') {
+                $text = html_entity_decode($request->description, ENT_QUOTES, 'UTF-8');
+            } else {
+                $text = $request->description;
+            }
         } else {
             $text = null;
         }
