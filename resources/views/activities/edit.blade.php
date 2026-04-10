@@ -102,7 +102,7 @@
                 <div class="grid lg:grid-cols-2 grid-cols-1 gap-x-2 relative">
                     <x-input-group id="times" title="Wanneer" height="h-max" grid="grid grid-cols-2">
                         <x-input-field type="date" label="Startdatum" id="start-date" name="start-date" value="{{ old('start-date', $activity->start ? $activity->start->format('Y-m-d') : '') }}" required/>
-                        <x-input-field type="date" label="Einddatum" id="end-date" name="end-date" value="{{ old('end-date', $activity->end ? $activity->end->format('Y-m-d') : '') }}" required/>
+                        <x-input-field type="date" label="Einddatum" id="end-date" name="end-date" value="{{ old('end-date', $activity->end ? $activity->end->format('Y-m-d') : '') }}"/>
                         <input type="hidden" name="start-time" value="00:00"/>
                         <input type="hidden" name="end-time" value="23:59"/>
                         <x-input-field type="date" label="Start Aanmeldperiode" id="registrationStart" name="registrationStart" value="{{ old('registrationStart', $activity->registrationStart ? $activity->registrationStart->format('Y-m-d') : '') }}" required/>
@@ -125,6 +125,7 @@
                     var recurring = document.getElementById('recurring');
                     var noCancel = document.getElementById('noCancellation');
                     var personalConfirmationEnabled = document.getElementById('personalConfirmationEnabled');
+                    var endDate = document.getElementById('end-date');
 
                     if(!timesGroup || !recurring) {
                         return;
@@ -143,9 +144,15 @@
                         if(recurring.checked) {
                             toToggle.forEach(function(el){ el.classList.add('hidden'); });
                             if(recurringField) recurringField.classList.remove('hidden');
+                            if(endDate) {
+                                endDate.required = false;
+                            }
                         } else {
                             toToggle.forEach(function(el){ el.classList.remove('hidden'); });
                             if(recurringField) recurringField.classList.remove('hidden');
+                            if(endDate) {
+                                endDate.required = true;
+                            }
                         }
 
                         if(noCancel && window.toggleCancellationField) {
