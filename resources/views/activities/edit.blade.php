@@ -125,7 +125,10 @@
                     var recurring = document.getElementById('recurring');
                     var noCancel = document.getElementById('noCancellation');
                     var personalConfirmationEnabled = document.getElementById('personalConfirmationEnabled');
+                    var startDate = document.getElementById('start-date');
                     var endDate = document.getElementById('end-date');
+                    var registrationStart = document.getElementById('registrationStart');
+                    var registrationEnd = document.getElementById('registrationEnd');
 
                     if(!timesGroup || !recurring) {
                         return;
@@ -144,14 +147,32 @@
                         if(recurring.checked) {
                             toToggle.forEach(function(el){ el.classList.add('hidden'); });
                             if(recurringField) recurringField.classList.remove('hidden');
+                            if(startDate) {
+                                startDate.required = false;
+                            }
                             if(endDate) {
                                 endDate.required = false;
+                            }
+                            if(registrationStart) {
+                                registrationStart.required = false;
+                            }
+                            if(registrationEnd) {
+                                registrationEnd.required = false;
                             }
                         } else {
                             toToggle.forEach(function(el){ el.classList.remove('hidden'); });
                             if(recurringField) recurringField.classList.remove('hidden');
+                            if(startDate) {
+                                startDate.required = true;
+                            }
                             if(endDate) {
                                 endDate.required = true;
+                            }
+                            if(registrationStart) {
+                                registrationStart.required = true;
+                            }
+                            if(registrationEnd) {
+                                registrationEnd.required = true;
                             }
                         }
 
