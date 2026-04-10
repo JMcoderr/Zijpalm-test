@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Support\Facades\Storage;
 
 class Report extends Model
@@ -16,8 +17,19 @@ class Report extends Model
         'activity_id',
         'content_id',
         'archived',
-        'year'
+        'year',
+        'imagePath'
     ];
+
+    /**
+     * Get the report cover image URL.
+     */
+    protected function image(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => $this->imagePath ? Storage::url($this->imagePath) : null,
+        );
+    }
 
     public function activity()
     {
@@ -38,6 +50,10 @@ class Report extends Model
     protected static function booted()
     {
         static::deleting(function ($report) {
+            if ($report->imagePath && Storage::disk('public')->exists($report->imagePath)) {
+                Storage::disk('public')->delete($report->imagePath);
+            }
+
             if ($report->content) {
                 Storage::disk('public')->delete($report->content->filePath);
                 $report->content->delete();

@@ -121,6 +121,16 @@ class ContentController extends Controller
             }
         }
 
+        if ($content->report && $request->hasFile('report-image')) {
+            if ($content->report->imagePath && Storage::disk('public')->exists($content->report->imagePath)) {
+                Storage::disk('public')->delete($content->report->imagePath);
+            }
+
+            $content->report->update([
+                'imagePath' => uploadImage($request->file('report-image'), 'images/reports/'),
+            ]);
+        }
+
         // Check the description is not empty if content's text is not empty
         if ($content->text && !$request->description) {
             return redirect()->back()->with('error', 'De beschrijving is verplicht.');

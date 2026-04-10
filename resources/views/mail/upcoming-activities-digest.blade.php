@@ -1,6 +1,17 @@
-<p>Beste leden,</p>
+{!! $introHtml !!}
 
-<p>Hieronder vinden jullie de komende activiteiten van Zijpalm:</p>
+@if($runningActivities->isNotEmpty())
+    <p><strong>Lopende activiteiten:</strong></p>
+    <ul>
+        @foreach($runningActivities as $activity)
+            <li>
+                <a href="{{ route('activity.show', $activity) }}">{{ $activity->title }}</a>
+            </li>
+        @endforeach
+    </ul>
+@endif
+
+<p><strong>Komende activiteiten:</strong></p>
 
 <ul>
     @foreach($activities as $activity)

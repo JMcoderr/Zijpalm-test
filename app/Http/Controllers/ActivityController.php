@@ -120,8 +120,16 @@ class ActivityController extends Controller
         $validatedData = $request->validated();
         $validatedData = castValidatedInts($validatedData, ['delay', 'batch_size']);
 
-        // Retrieve all emails of active signups.
-        $emails = $this->retrieveParticipantEmails($activity, [ApplicationStatus::Active]);
+        // Retrieve all emails of registered signups (exclude cancelled).
+        $emails = $this->retrieveParticipantEmails($activity, [
+            ApplicationStatus::Active,
+            ApplicationStatus::Pending,
+            ApplicationStatus::Reserve,
+        ]);
+        $emails = $emails
+            ->filter(fn ($email) => filter_var($email, FILTER_VALIDATE_EMAIL))
+            ->unique()
+            ->values();
 
         // Check if provided Power Automate variables could cause issues.
         $errorArray = $this->validationPowerAutomate($emails, $validatedData['batch_size'], $validatedData['delay']);

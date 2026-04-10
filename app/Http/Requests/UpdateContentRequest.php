@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdateContentRequest extends FormRequest
 {
@@ -21,10 +22,13 @@ class UpdateContentRequest extends FormRequest
      */
     public function rules(): array
     {
+        $content = $this->route('content');
+
         return [
-            'name' => 'nullable|string|max:255|unique:contents,name',
+            'name' => ['nullable', 'string', 'max:255', Rule::unique('contents', 'name')->ignore($content?->id)],
             'image' => 'nullable|image|max:65536',
             'pdf' => 'nullable|mimes:pdf|max:65536',
+            'report-image' => 'nullable|image|max:65536',
             'title' => 'nullable|string|max:255',
             'description' => 'nullable',
         ];
@@ -42,6 +46,8 @@ class UpdateContentRequest extends FormRequest
             'image.max' => 'De afbeelding mag niet groter zijn dan 64MB.',
             'pdf.mimes' => 'Het bestand moet een PDF zijn.',
             'pdf.max' => 'De PDF mag niet groter zijn dan 64MB.',
+            'report-image.image' => 'De omslag moet een afbeelding zijn.',
+            'report-image.max' => 'De omslagafbeelding mag niet groter zijn dan 64MB.',
             'title.string' => 'De titel moet een tekst zijn.',
             'title.max' => 'De titel mag niet langer zijn dan 255 tekens.',
             'name.string' => 'De naam moet een tekst zijn.',

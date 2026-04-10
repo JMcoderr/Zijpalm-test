@@ -49,6 +49,9 @@
                         <x-input-field id="image" type="file" accept="image/*" label="Afbeelding" action="displayUploadedFile(this, 'image-preview'); displayUploadedFileName(this)"/>
                     @elseif ($content->fileType == FileType::Pdf)
                         <x-input-field id="pdf" type="file" accept=".pdf" label="Pdf" action="displayUploadedFile(this, 'pdf-preview'); displayUploadedFileName(this)"/>
+                        @if ($content->report)
+                            <x-input-field id="report-image" type="file" accept="image/*" label="Omslag afbeelding (optioneel)" action="displayUploadedFileName(this)"/>
+                        @endif
                     @endif
                     <p class="">Huidige bestandsnaam: {{ basename($content->file) }} </p>
                 @endif

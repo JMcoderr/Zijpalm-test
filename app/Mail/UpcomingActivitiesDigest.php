@@ -3,6 +3,8 @@
 namespace App\Mail;
 
 use App\Models\Activity;
+use App\Models\Content as ContentModel;
+use BumpCore\EditorPhp\EditorPhp;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
@@ -15,14 +17,18 @@ class UpcomingActivitiesDigest extends Mailable
 
     public Collection $emails;
     public Collection $activities;
+    public Collection $runningActivities;
+    public ?ContentModel $content;
 
     /**
      * Create a new message instance.
      */
-    public function __construct(Collection $emails, Collection $activities)
+    public function __construct(Collection $emails, Collection $activities, Collection $runningActivities)
     {
         $this->emails = $emails;
         $this->activities = $activities;
+        $this->runningActivities = $runningActivities;
+        $this->content = ContentModel::where('name', 'email-toekomstige-activiteiten')->first();
     }
 
     /**
@@ -40,13 +46,20 @@ class UpcomingActivitiesDigest extends Mailable
      */
     public function content(): Content
     {
+        $mailSubject = $this->content?->title ?: 'Komende activiteiten van Zijpalm';
+        $introHtml = $this->content?->text
+            ? EditorPhp::make($this->content->text)->toHtml()
+            : '<p>Beste leden,</p><p>Hieronder vinden jullie de komende activiteiten van Zijpalm.</p>';
+
         $renderedContent = view('mail.upcoming-activities-digest', [
+            'introHtml' => $introHtml,
             'activities' => $this->activities,
+            'runningActivities' => $this->runningActivities,
         ])->render();
 
         $jsonBody = json_encode([
             'emails' => $this->emails,
-            'subject' => 'Komende activiteiten van Zijpalm',
+            'subject' => $mailSubject,
             'body' => $renderedContent,
             'batch_size' => config('mail.power_automate.batch_size.default', 50),
             'delay' => config('mail.power_automate.delay.default', 30),

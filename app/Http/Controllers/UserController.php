@@ -79,7 +79,8 @@ class UserController extends Controller
 
         $user->firstName = $request->input('firstName', $user->firstName);
         $user->lastName = $request->input('lastName', $user->lastName);
-        $user->phone = $request->input('phone', $user->phone);
+        $phone = $request->input('phone', $user->phone);
+        $user->phone = $phone === '' ? null : $phone;
         $user->email = $request->input('email', $user->email);
 
         // Actions only an admin can do

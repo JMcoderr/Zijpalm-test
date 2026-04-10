@@ -25,7 +25,7 @@ class SendUpcomingActivitiesDigest extends Command
      *
      * @var string
      */
-    protected $description = 'Send a digest with upcoming activities to all active members';
+    protected $description = 'Send a mail with upcoming activities to all active members';
 
     /**
      * Execute the console command.
@@ -37,6 +37,15 @@ class SendUpcomingActivitiesDigest extends Command
             ->where('start', '>=', now()->startOfDay())
             ->where('start', '<=', now()->addWeeks(8)->endOfDay())
             ->where('type', '!=', ActivityType::Cancelled)
+            ->orderBy('start')
+            ->get();
+
+        $runningActivities = Activity::query()
+            ->whereNotNull('start')
+            ->whereNotNull('end')
+            ->where('start', '<=', now())
+            ->where('end', '>=', now())
+            ->whereNotIn('type', [ActivityType::Cancelled, ActivityType::Archived])
             ->orderBy('start')
             ->get();
 
@@ -58,19 +67,20 @@ class SendUpcomingActivitiesDigest extends Command
 
         try {
             Mail::to(config('mail.bestuur.address'), config('mail.bestuur.name'))
-                ->send(new UpcomingActivitiesDigest($emails, $activities));
+                ->send(new UpcomingActivitiesDigest($emails, $activities, $runningActivities));
         } catch (Throwable $exception) {
             Log::error('[SendUpcomingActivitiesDigest] Mail send failed', [
                 'error' => $exception->getMessage(),
                 'activities' => $activities->count(),
+                'running_activities' => $runningActivities->count(),
                 'emails' => $emails->count(),
             ]);
 
-            $this->error('Digest kon niet worden verzonden door een mailtransportfout.');
+            $this->error('Mail kon niet worden verzonden door een mailtransportfout.');
             return self::FAILURE;
         }
 
-        $this->info("Digest verzonden voor {$activities->count()} activiteiten naar {$emails->count()} leden.");
+        $this->info("Mail verzonden voor {$activities->count()} activiteiten naar {$emails->count()} leden.");
 
         return self::SUCCESS;
     }
