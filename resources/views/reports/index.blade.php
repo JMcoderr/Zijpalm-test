@@ -33,7 +33,7 @@
                                     <x-zijpalm-div :editable="false" title="" color="light" class="flex flex-col items-center justify-between gap-2 relative w-[16.5rem] h-[16.5rem]" width="">
                                     <x-edit-content :id="$report->content->id" :name="$report->content->name" :editables="['Titel', 'Bestand']" />
                                     <div class="w-24 h-24 rounded-xl overflow-hidden bg-white/70 flex items-center justify-center shrink-0">
-                                        <img src="{{ $report->image ?? asset($reportCardImage) }}" alt="Verslag omslag" class="w-full h-full object-cover" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                                        <img src="{{ $report->image ?? asset($reportCardImage) }}" alt="Verslag omslag" class="w-full h-full object-contain" style="width: 100%; height: 100%; object-fit: contain;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
                                         <flux:icon.document-text variant="solid" class="size-10" style="display:none;" />
                                     </div>
                                     {{-- <h3 class="text-lg font-medium">{{$bylaws->title}}</h3> --}}
@@ -58,7 +58,7 @@
 
                                     <x-edit-content :id="$report->content->id" :name="$report->content->name" :editables="['Titel', 'Bestand']" />
                                     <div class="w-24 h-24 rounded-xl overflow-hidden bg-white/70 flex items-center justify-center shrink-0">
-                                        <img src="{{ $report->image ?? asset($reportCardImage) }}" alt="Verslag omslag" class="w-full h-full object-cover" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                                        <img src="{{ $report->image ?? asset($reportCardImage) }}" alt="Verslag omslag" class="w-full h-full object-contain" style="width: 100%; height: 100%; object-fit: contain;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
                                         <flux:icon.document-text variant="solid" class="size-10" style="display:none;" />
                                     </div>
                                     {{-- <h3 class="text-lg font-medium">{{$bylaws->title}}</h3> --}}

@@ -27,7 +27,7 @@ class Report extends Model
     protected function image(): Attribute
     {
         return Attribute::make(
-            get: fn () => $this->imagePath ? Storage::url($this->imagePath) : null,
+            get: fn () => $this->imagePath ? asset('storage/' . ltrim($this->imagePath, '/')) : null,
         );
     }
 

@@ -7,11 +7,12 @@
     <form wire:submit="resetPassword" class="flex flex-col gap-6">
         <!-- Email Address -->
         <flux:input
-            wire:model="email"
+            value="{{ $email }}"
             :label="__('Email')"
             type="email"
             required
             autocomplete="email"
+            readonly
         />
 
         <!-- Password -->
