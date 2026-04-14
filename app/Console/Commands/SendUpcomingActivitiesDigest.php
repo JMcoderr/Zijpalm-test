@@ -35,7 +35,6 @@ class SendUpcomingActivitiesDigest extends Command
         $activities = Activity::query()
             ->whereNotNull('start')
             ->where('start', '>=', now()->startOfDay())
-            ->where('start', '<=', now()->addWeeks(8)->endOfDay())
             ->where('type', '!=', ActivityType::Cancelled)
             ->orderBy('start')
             ->get();
