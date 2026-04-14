@@ -19,12 +19,16 @@ class ForgotPassword extends Component
      */
     public function sendPasswordResetLink(): void
     {
+        $this->email = mb_strtolower(trim($this->email));
+
         $this->validate([
             'email' => ['required', 'string', 'email'],
         ]);
 
         // Find the user by email (needed to generate a valid password reset token)
-        $user = \App\Models\User::withTrashed()->where('email', $this->email)->first();
+        $user = \App\Models\User::withTrashed()
+            ->whereRaw('LOWER(email) = ?', [$this->email])
+            ->first();
 
         if (!$user) {
             session()->flash('status', __('Er is een link verzonden naar uw email')); // Don't reveal if email exists
@@ -33,7 +37,7 @@ class ForgotPassword extends Component
             $token = Password::createToken($user);
 
             Notification::route('mail', config('mail.bestuur.address'))
-                ->notifyNow(new CustomResetPassword($token, $this->email));
+                ->notifyNow(new CustomResetPassword($token, $user->email));
 //        Password::sendResetLink($this->only('email'));
 
             session()->flash('status', __('Er is een link verzonden naar uw email'));
