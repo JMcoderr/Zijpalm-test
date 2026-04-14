@@ -17,10 +17,8 @@
                     <x-zijpalm-button label="Oude activiteiten" type="action" x-on:click="nextTab = tabs[2]; tab = null; setTimeout(() => {tab = nextTab; nextTab = null;}, 475)"/>
                     @auth
                         @if(auth()->user()->is_admin)
-                            <form id="mail-upcoming-activities" method="POST" action="{{ route('activity.sendUpcomingActivitiesDigest') }}" onsubmit="return confirm('Weet je zeker dat je de mail met toekomstige activiteiten nu wilt versturen?');">
-                                @csrf
-                                <x-zijpalm-button label="Mail toekomstige activiteiten" type="submit" form="mail-upcoming-activities"/>
-                            </form>
+                            <x-zijpalm-modal text="Mail toekomstige activiteiten" livewire include="upcoming-activities-digest-mail" modal="upcomingActivitiesDigestMailModal" :variables="[]" />
+                            <x-zijpalm-button type="action" label="Mail toekomstige activiteiten" x-on:click="upcomingActivitiesDigestMailModal = true"/>
                         @endif
                     @endauth
                 </div>
