@@ -278,11 +278,77 @@
                 </x-zijpalm-div>
             @endif
 
-            {{-- Activity Description --}}
-            <x-zijpalm-div title="Beschrijving" :editable="false" width="w-full" class="">
-                <div class="bg-[rgba(0,0,0,0.15)] rounded-md flex flex-col p-2 text-left">
-                    {!!$activity->descriptionHTML!!}
+            {{-- Activity Description + Cost overview (admin) --}}
+            @if(auth()->user()?->isAdmin())
+                @php
+                    $activeApplications = $applications->whereNotIn('status', [App\ApplicationStatus::Reserve, App\ApplicationStatus::Pending]);
+                    $confirmedParticipants = $activeApplications->sum('participants');
+                    $pendingParticipants = $pending->sum('participants');
+                    $reserveParticipants = $reserves->sum('participants');
+                    $baseRevenue = $confirmedParticipants * (float) $activity->price;
+                    $totalPaid = $activeApplications
+                        ->flatMap(fn ($application) => $application->payments)
+                        ->filter(fn ($payment) => $payment->status === App\PaymentStatus::paid)
+                        ->sum(fn ($payment) => (float) $payment->getPrice());
+                @endphp
+
+                <div class="flex flex-col lg:flex-row gap-5 w-full">
+                    <x-zijpalm-div title="Beschrijving" :editable="false" width="w-full lg:w-2/3" class="">
+                        <div class="bg-[rgba(0,0,0,0.15)] rounded-md flex flex-col p-2 text-left">
+                            {!!$activity->descriptionHTML!!}
+                        </div>
+                    </x-zijpalm-div>
+
+                    <x-zijpalm-div title="Kostenoverzicht" :editable="false" width="w-full lg:w-1/3" class="">
+                        <div class="bg-[rgba(0,0,0,0.15)] rounded-md overflow-x-auto p-0 text-left">
+                            <table class="w-full text-sm">
+                                <thead class="bg-[rgba(0,0,0,0.2)] border-b border-[rgba(0,0,0,0.3)]">
+                                    <tr>
+                                        <th class="text-left font-semibold p-2">Omschrijving</th>
+                                        <th class="text-right font-semibold p-2">Aantal</th>
+                                        <th class="text-right font-semibold p-2">Per stuk</th>
+                                        <th class="text-right font-semibold p-2">Totaal</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-[rgba(0,0,0,0.15)]">
+                                    <tr class="hover:bg-[rgba(0,0,0,0.05)]">
+                                        <td class="p-2 font-semibold">Deelnemers</td>
+                                        <td class="p-2 text-right">{{ $confirmedParticipants }}</td>
+                                        <td class="p-2 text-right">{{ $activity->price > 0 ? formatPrice($activity->price) : 'Gratis' }}</td>
+                                        <td class="p-2 text-right font-semibold">{{ formatPrice($baseRevenue) }}</td>
+                                    </tr>
+                                    @if($pendingParticipants > 0)
+                                        <tr class="hover:bg-[rgba(0,0,0,0.05)] opacity-60">
+                                            <td class="p-2 text-sm">In afwachting betaling</td>
+                                            <td class="p-2 text-right text-sm">{{ $pendingParticipants }}</td>
+                                            <td class="p-2 text-right text-sm">{{ $activity->price > 0 ? formatPrice($activity->price) : '–' }}</td>
+                                            <td class="p-2 text-right font-semibold text-sm">{{ formatPrice($pendingParticipants * (float) $activity->price) }}</td>
+                                        </tr>
+                                    @endif
+                                    @if($reserveParticipants > 0)
+                                        <tr class="hover:bg-[rgba(0,0,0,0.05)] opacity-60">
+                                            <td class="p-2 text-sm">Reserves</td>
+                                            <td class="p-2 text-right text-sm">{{ $reserveParticipants }}</td>
+                                            <td class="p-2 text-right text-sm">{{ $activity->price > 0 ? formatPrice($activity->price) : '–' }}</td>
+                                            <td class="p-2 text-right font-semibold text-sm">{{ formatPrice($reserveParticipants * (float) $activity->price) }}</td>
+                                        </tr>
+                                    @endif
+                                    <tr class="bg-[rgba(0,0,0,0.1)] font-semibold border-t-2 border-[rgba(0,0,0,0.3)]">
+                                        <td colspan="3" class="p-2 text-right">Totaal ontvangen:</td>
+                                        <td class="p-2 text-right">{{ formatPrice($totalPaid) }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </x-zijpalm-div>
                 </div>
-            </x-zijpalm-div>
+            @else
+                {{-- Activity Description --}}
+                <x-zijpalm-div title="Beschrijving" :editable="false" width="w-full" class="">
+                    <div class="bg-[rgba(0,0,0,0.15)] rounded-md flex flex-col p-2 text-left">
+                        {!!$activity->descriptionHTML!!}
+                    </div>
+                </x-zijpalm-div>
+            @endif
         </div>
 </x-page-wrapper>

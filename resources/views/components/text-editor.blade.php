@@ -30,9 +30,16 @@
 
     $editorDataHTMLSafe = $editordata;
 
-    // If there is editordata, make sure that EditorJS can read it (removing @json and json_decode makes it NOT work!)
-    if($editordata){
-        $editordata = json_decode(html_entity_decode($editordata, ENT_QUOTES, 'UTF-8'), true);
+    // Prefer raw JSON first to avoid unnecessary entity transformations (e.g. links/query params).
+    if ($editordata) {
+        $decodedData = json_decode($editordata, true);
+
+        // Fallback for legacy HTML-entity encoded payloads.
+        if (!is_array($decodedData)) {
+            $decodedData = json_decode(html_entity_decode($editordata, ENT_QUOTES, 'UTF-8'), true);
+        }
+
+        $editordata = is_array($decodedData) ? $decodedData : null;
     }
 @endphp
 

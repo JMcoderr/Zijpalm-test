@@ -8,7 +8,7 @@
 
     {{-- Container, only show if activities of any kind have been properly given --}}
     @if($activities || $recurringActitivies || $archivedActivities)
-        <div id="Activities" class="flex flex-col w-full" x-data="{tabs: ['activities', 'recurring', 'archived'], tab: 'activities', nextTab: null}">
+        <div id="Activities" class="flex flex-col w-full" x-data="{tabs: ['activities', 'recurring', 'archived'], tab: 'activities', nextTab: null, upcomingActivitiesDigestMailModal: false}">
             <x-zijpalm-div title="" color="light" :editable="false" width="w-min-max">
                 {{-- Buttons --}}
                 <div class="flex flex-wrap justify-center gap-x-4 gap-y-2">
@@ -17,10 +17,8 @@
                     <x-zijpalm-button label="Oude activiteiten" type="action" x-on:click="nextTab = tabs[2]; tab = null; setTimeout(() => {tab = nextTab; nextTab = null;}, 475)"/>
                     @auth
                         @if(auth()->user()->is_admin)
-                            <form id="mail-upcoming-activities" method="POST" action="{{ route('activity.sendUpcomingActivitiesDigest') }}" onsubmit="return confirm('Weet je zeker dat je de mail met toekomstige activiteiten nu wilt versturen?');">
-                                @csrf
-                                <x-zijpalm-button label="Mail toekomstige activiteiten" type="submit" form="mail-upcoming-activities"/>
-                            </form>
+                            <x-zijpalm-modal text="Mail toekomstige activiteiten" include="livewire.upcoming-activities-digest-mail" modal="upcomingActivitiesDigestMailModal" :variables="[]" />
+                            <x-zijpalm-button type="action" label="Mail toekomstige activiteiten" x-on:click="upcomingActivitiesDigestMailModal = true"/>
                         @endif
                     @endauth
                 </div>

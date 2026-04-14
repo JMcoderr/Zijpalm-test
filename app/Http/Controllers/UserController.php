@@ -75,6 +75,9 @@ class UserController extends Controller
                     $user->setNotification($case);
                 }
             }
+
+            // New activity announcements are mandatory for all users.
+            $user->setNotification(UserNotifications::NEW_ACTIVITY);
         }
 
         $user->firstName = $request->input('firstName', $user->firstName);

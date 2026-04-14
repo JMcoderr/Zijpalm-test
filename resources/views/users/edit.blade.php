@@ -23,7 +23,6 @@
                 <x-input-group title="E-mail updates" class="flex flex-col gap-2" height="h-min">
                     <p>Hier kun je aangeven voor welke gebeurtenissen je mails wilt ontvangen</p>
                     <x-input-field type="checkbox" id="notifications[{{UserNotifications::NEWSLETTER->name}}]" :checked="$user->wantsNotification(UserNotifications::NEWSLETTER)" label="Nieuwsbrief" :disabled="auth()->user() !== $user" />
-                    <x-input-field type="checkbox" id="notifications[{{UserNotifications::NEW_ACTIVITY->name}}]" :checked="$user->wantsNotification(UserNotifications::NEW_ACTIVITY)" label="Nieuwe activiteit" :disabled="auth()->user() !== $user" />
                     <x-input-field type="checkbox" id="notifications[{{UserNotifications::ACTIVITY_REMINDER->name}}]" :checked="$user->wantsNotification(UserNotifications::ACTIVITY_REMINDER)" label="Herinnering activiteit" :disabled="auth()->user() !== $user" />
                     <x-input-field type="checkbox" id="notifications[{{UserNotifications::RECURRING_ACTIVITY_REMINDER->name}}]" :checked="$user->wantsNotification(UserNotifications::RECURRING_ACTIVITY_REMINDER)" label="Herinnering terugkerende activiteit" :disabled="auth()->user() !== $user" />
                     <x-input-field type="checkbox" id="notifications[{{UserNotifications::ACTIVITY_SIGNUP->name}}]" :checked="$user->wantsNotification(UserNotifications::ACTIVITY_SIGNUP)" label="Inschrijving activiteit" :disabled="auth()->user() !== $user" />
