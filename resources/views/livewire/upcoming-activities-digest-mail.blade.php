@@ -40,8 +40,8 @@
             Dit kan enige tijd duren afhankelijk van het aantal leden en de wachttijd tussen mails.
         </p>
 
-        <form wire:submit="sendDigest" class="flex flex-col gap-4">
-            <x-zijpalm-button type="submit" label="Mail toekomstige activiteiten versturen" center="horizontal"/>
+        <form id="upcoming-activities-digest-form" wire:submit="sendDigest" class="flex flex-col gap-4">
+            <x-zijpalm-button type="submit" form="upcoming-activities-digest-form" label="Mail toekomstige activiteiten versturen" center="horizontal"/>
         </form>
     </div>
 </div>
