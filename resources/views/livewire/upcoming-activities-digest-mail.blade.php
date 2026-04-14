@@ -1,46 +1,12 @@
 <div>
     <div class="flex flex-col">
-        {{-- Show errors, if any --}}
-        @if(!empty($errors))
-            <x-zijpalm-div color="light" title="Foutmelding(en)" :editable="false" error id="error-messages"
-                           onclick="this.remove()">
-                <ul class="text-center">
-                    @foreach($errors as $error)
-                        <li class="">{{$error}}</li>
-                    @endforeach
-                </ul>
-            </x-zijpalm-div>
-            <script>
-                setTimeout(function () {
-                    const errorDiv = document.getElementById('error-messages');
-                    if (errorDiv) {
-                        errorDiv.remove();
-                    }
-                }, 5000);
-            </script>
-        @endif
-
-        {{-- Show success message, if any --}}
-        @if(!empty($successMessage))
-            <x-zijpalm-div color="light" :editable="false" :text="$successMessage" success id="success-messages"
-                           onclick="this.remove()">
-            </x-zijpalm-div>
-            <script>
-                setTimeout(function () {
-                    const successDiv = document.getElementById('success-messages');
-                    if (successDiv) {
-                        successDiv.remove();
-                    }
-                }, 5000);
-            </script>
-        @endif
-
         <p class="mb-4 text-gray-900">
             Met deze actie verstuurt u een mail met alle toekomstige activiteiten naar alle actieve leden.<br>
             Dit kan enige tijd duren afhankelijk van het aantal leden en de wachttijd tussen mails.
         </p>
 
-        <form id="upcoming-activities-digest-form" wire:submit="sendDigest" class="flex flex-col gap-4">
+        <form id="upcoming-activities-digest-form" method="POST" action="{{ route('activity.sendUpcomingActivitiesDigest') }}" class="flex flex-col gap-4" onsubmit="this.querySelector('button[type=submit]').disabled = true; this.querySelector('button[type=submit] p').innerText = 'Bezig met versturen...';">
+            @csrf
             <x-zijpalm-button type="submit" form="upcoming-activities-digest-form" label="Mail toekomstige activiteiten versturen" center="horizontal"/>
         </form>
     </div>

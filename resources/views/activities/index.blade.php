@@ -17,7 +17,7 @@
                     <x-zijpalm-button label="Oude activiteiten" type="action" x-on:click="nextTab = tabs[2]; tab = null; setTimeout(() => {tab = nextTab; nextTab = null;}, 475)"/>
                     @auth
                         @if(auth()->user()->is_admin)
-                            <x-zijpalm-modal text="Mail toekomstige activiteiten" livewire include="upcoming-activities-digest-mail" modal="upcomingActivitiesDigestMailModal" :variables="[]" />
+                            <x-zijpalm-modal text="Mail toekomstige activiteiten" include="upcoming-activities-digest-mail" modal="upcomingActivitiesDigestMailModal" :variables="[]" />
                             <x-zijpalm-button type="action" label="Mail toekomstige activiteiten" x-on:click="upcomingActivitiesDigestMailModal = true"/>
                         @endif
                     @endauth
