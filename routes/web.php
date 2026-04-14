@@ -37,11 +37,11 @@ Route::middleware('auth')->group(
         // Routes for user management
         Route::middleware('admin_or_self')->prefix('lid')->name('user.')->group(
             function(){
-                Route::get('{user}', [UserController::class, 'edit'])->name('edit');
-                Route::put('{user}', [UserController::class, 'update'])->name('update');
-                Route::get('{user}/password', Password::class)->name('password');
-                Route::get('{user}/afmelden', [UserController::class, 'cancelSubscription'])->name('cancel');
-                Route::delete('{user}/afmelden', [UserController::class, 'processCancelSubscription'])->name('processCancel');
+                Route::get('{user}', [UserController::class, 'edit'])->name('edit')->withTrashed();
+                Route::put('{user}', [UserController::class, 'update'])->name('update')->withTrashed();
+                Route::get('{user}/password', Password::class)->name('password')->withTrashed();
+                Route::get('{user}/afmelden', [UserController::class, 'cancelSubscription'])->name('cancel')->withTrashed();
+                Route::delete('{user}/afmelden', [UserController::class, 'processCancelSubscription'])->name('processCancel')->withTrashed();
             }
         );
     }
