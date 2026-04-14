@@ -32,7 +32,7 @@ class ResetPassword extends Component
     {
         $this->token = $token;
 
-        $this->email = request()->string('email');
+        $this->email = mb_strtolower(trim((string) request()->query('email', '')));
     }
 
     /**
@@ -40,6 +40,8 @@ class ResetPassword extends Component
      */
     public function resetPassword(): void
     {
+        $this->email = mb_strtolower(trim($this->email));
+
         $this->validate([
             'token' => ['required'],
             'email' => ['required', 'string', 'email'],
@@ -47,7 +49,9 @@ class ResetPassword extends Component
         ]);
 
         //BAND-AID FIX FOR SOFTDELETED USERS
-        $user = User::withTrashed()->where('email', $this->email)->first();
+        $user = User::withTrashed()
+            ->whereRaw('LOWER(email) = ?', [$this->email])
+            ->first();
         $deleted_at = null;
         if ($user && $user->trashed()) {
             $deleted_at = $user->deleted_at;
