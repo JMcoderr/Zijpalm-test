@@ -51,6 +51,8 @@ class UpcomingActivitiesDigest extends Mailable
             ? EditorPhp::make($this->content->text)->toHtml()
             : '<p>Beste leden,</p><p>Hieronder vinden jullie de komende activiteiten van Zijpalm.</p>';
 
+        $introHtml = $this->normalizeIntroLinks($introHtml);
+
         $renderedContent = view('mail.upcoming-activities-digest', [
             'introHtml' => $introHtml,
             'activities' => $this->activities,
@@ -63,7 +65,7 @@ class UpcomingActivitiesDigest extends Mailable
             'body' => $renderedContent,
             'batch_size' => config('mail.power_automate.batch_size.default', 50),
             'delay' => config('mail.power_automate.delay.default', 30),
-        ], JSON_PRETTY_PRINT);
+        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
         return new Content(
             text: 'mail.raw-json',
@@ -81,5 +83,27 @@ class UpcomingActivitiesDigest extends Mailable
     public function attachments(): array
     {
         return [];
+    }
+
+    private function normalizeIntroLinks(string $html): string
+    {
+        return preg_replace_callback(
+            '/href\s*=\s*(["\'])(.*?)\1/i',
+            function (array $matches) {
+                $quote = $matches[1];
+                $href = trim($matches[2]);
+
+                if ($href === '') {
+                    return 'href=' . $quote . $href . $quote;
+                }
+
+                if (str_starts_with($href, 'www.')) {
+                    $href = 'https://' . $href;
+                }
+
+                return 'href=' . $quote . e($href) . $quote;
+            },
+            $html
+        ) ?? $html;
     }
 }
