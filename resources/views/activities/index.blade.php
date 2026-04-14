@@ -8,7 +8,7 @@
 
     {{-- Container, only show if activities of any kind have been properly given --}}
     @if($activities || $recurringActitivies || $archivedActivities)
-        <div id="Activities" class="flex flex-col w-full" x-data="{tabs: ['activities', 'recurring', 'archived'], tab: 'activities', nextTab: null}">
+        <div id="Activities" class="flex flex-col w-full" x-data="{tabs: ['activities', 'recurring', 'archived'], tab: 'activities', nextTab: null, upcomingActivitiesDigestMailModal: false}">
             <x-zijpalm-div title="" color="light" :editable="false" width="w-min-max">
                 {{-- Buttons --}}
                 <div class="flex flex-wrap justify-center gap-x-4 gap-y-2">
