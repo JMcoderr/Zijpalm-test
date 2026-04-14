@@ -22,7 +22,7 @@ class ReportRequest extends FormRequest{
             // General information
 //            'report-type' => ['required','in:Activiteit,Jaar'],
             'report-title' => ['required','max:255', 'unique:contents,name'],
-            'report-file' => ['required','file','mimes:pdf','max:2048'],
+            'report-file' => ['required','file','mimes:pdf','max:65536'],
             'report-image' => ['nullable','image','max:65536'],
             'report-is-year' => ['nullable', 'regex:/^\d{4}$|^-$/'],
 
@@ -50,6 +50,7 @@ class ReportRequest extends FormRequest{
 
             'report-file.required' => 'Een bestand is verplicht voor een verslag.',
             'report-file.mimes' => 'Het verslagbestand moet een PDF-bestand zijn.',
+            'report-file.max' => 'Het verslagbestand mag niet groter zijn dan 64MB.',
             'report-image.image' => 'De omslag moet een afbeelding zijn.',
             'report-image.max' => 'De omslagafbeelding mag niet groter zijn dan 64MB.',
 
