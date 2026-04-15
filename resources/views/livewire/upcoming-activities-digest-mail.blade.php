@@ -1,17 +1,16 @@
 <div>
     <div class="flex flex-col">
-        @if(!empty($errors))
-            <x-zijpalm-div color="light" title="Foutmelding(en)" :editable="false" error id="error-messages"
-                           onclick="this.remove()">
+        @if($errors->any())
+            <x-zijpalm-div color="light" title="Foutmelding(en)" :editable="false" error id="upcoming-digest-error-messages">
                 <ul class="text-center">
-                    @foreach($errors as $error)
-                        <li class="">{{ $error }}</li>
+                    @foreach($errors->all() as $error)
+                        <li>{{ $error }}</li>
                     @endforeach
                 </ul>
             </x-zijpalm-div>
             <script>
                 setTimeout(function () {
-                    const errorDiv = document.getElementById('error-messages');
+                    const errorDiv = document.getElementById('upcoming-digest-error-messages');
                     if (errorDiv) {
                         errorDiv.remove();
                     }
