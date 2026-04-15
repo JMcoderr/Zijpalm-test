@@ -28,15 +28,22 @@ class ActivityApplied extends Mailable
     public ContentModel $reserveContent;
     public $qrcode;
     public bool $reserve;
+    public bool $forceDefaultTemplate;
+
+    /**
+     * Keep payload size bounded for downstream automation parsers.
+     */
+    private const MAX_PERSONAL_CONFIRMATION_LENGTH = 35000;
 
     /**
      * Create a new message instance.
      */
-    public function __construct(Activity $activity, User $user, bool $reserve = false)
+    public function __construct(Activity $activity, User $user, bool $reserve = false, bool $forceDefaultTemplate = false)
     {
         $this->activity = $activity;
         $this->user = $user;
         $this->reserve = $reserve;
+        $this->forceDefaultTemplate = $forceDefaultTemplate;
 
         // Get the dynamic content for the email and cache it for 1 hour
         $this->content = getFromCache('email-activiteit-aangemeld');
@@ -64,9 +71,9 @@ class ActivityApplied extends Mailable
         }
 
         $personalConfirmationHtml = null;
-        if ($this->activity->personal_confirmation_enabled) {
+        if ($this->activity->personal_confirmation_enabled && !$this->forceDefaultTemplate) {
             try {
-                $personalConfirmationHtml = $this->activity->personalConfirmationHTML;
+                $personalConfirmationHtml = $this->sanitizeMailHtml((string) $this->activity->personalConfirmationHTML);
             } catch (Throwable $exception) {
                 Log::error('[ActivityApplied] Personal confirmation render failed, falling back to default content', [
                     'activity_id' => $this->activity->id,
@@ -74,6 +81,11 @@ class ActivityApplied extends Mailable
                     'error' => $exception->getMessage(),
                 ]);
             }
+        } elseif ($this->activity->personal_confirmation_enabled && $this->forceDefaultTemplate) {
+            Log::info('[ActivityApplied] Personal confirmation skipped for forced-default context', [
+                'activity_id' => $this->activity->id,
+                'user_id' => $this->user->id,
+            ]);
         }
 
         // Get the application for the user and activity
@@ -102,7 +114,7 @@ class ActivityApplied extends Mailable
 
             $introHtml = $this->reserve
                 ? ($this->reserveContent->textHTML ?? '')
-                : ($personalConfirmationHtml ?: ($this->content->textHTML ?? ''));
+                : ($this->content->textHTML ?? '');
 
             $applicationSummary = $this->application
                 ? '<p><strong>Deelnemers:</strong> ' . (int) $this->application->participants . '</p>'
@@ -143,6 +155,38 @@ class ActivityApplied extends Mailable
                 'jsonBody' => $jsonBody
             ],
         );
+    }
+
+    /**
+     * Remove risky tags/control bytes and keep HTML within a safe size for transport.
+     */
+    private function sanitizeMailHtml(string $html): string
+    {
+        if ($html === '') {
+            return '';
+        }
+
+        $sanitized = $html;
+
+        // Strip tags that can break downstream rendering or automation parsers.
+        $sanitized = preg_replace('/<\s*(script|style|iframe|object|embed)\b[^>]*>.*?<\s*\/\s*\1\s*>/is', '', $sanitized) ?? $sanitized;
+
+        // Remove non-printable control characters except line breaks and tabs.
+        $sanitized = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', '', $sanitized) ?? $sanitized;
+
+        // Avoid oversized payloads in Power Automate by truncating at a safe length.
+        if (mb_strlen($sanitized, 'UTF-8') > self::MAX_PERSONAL_CONFIRMATION_LENGTH) {
+            Log::warning('[ActivityApplied] Personal confirmation truncated for payload safety', [
+                'activity_id' => $this->activity->id,
+                'user_id' => $this->user->id,
+                'original_length' => mb_strlen($sanitized, 'UTF-8'),
+                'max_length' => self::MAX_PERSONAL_CONFIRMATION_LENGTH,
+            ]);
+
+            $sanitized = mb_substr($sanitized, 0, self::MAX_PERSONAL_CONFIRMATION_LENGTH, 'UTF-8');
+        }
+
+        return $sanitized;
     }
 
     /**
