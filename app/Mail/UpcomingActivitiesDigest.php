@@ -18,16 +18,18 @@ class UpcomingActivitiesDigest extends Mailable
     public Collection $emails;
     public Collection $activities;
     public Collection $runningActivities;
+    public array $validatedData;
     public ?ContentModel $content;
 
     /**
      * Create a new message instance.
      */
-    public function __construct(Collection $emails, Collection $activities, Collection $runningActivities)
+    public function __construct(Collection $emails, Collection $activities, Collection $runningActivities, array $validatedData = [])
     {
         $this->emails = $emails;
         $this->activities = $activities;
         $this->runningActivities = $runningActivities;
+        $this->validatedData = $validatedData;
         $this->content = ContentModel::where('name', 'email-toekomstige-activiteiten')->first();
     }
 
@@ -63,8 +65,8 @@ class UpcomingActivitiesDigest extends Mailable
             'emails' => $this->emails,
             'subject' => $mailSubject,
             'body' => $renderedContent,
-            'batch_size' => config('mail.power_automate.batch_size.default', 50),
-            'delay' => config('mail.power_automate.delay.default', 30),
+            'batch_size' => $this->validatedData['batch_size'] ?? config('mail.power_automate.batch_size.default', 50),
+            'delay' => $this->validatedData['delay'] ?? config('mail.power_automate.delay.default', 30),
         ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
         return new Content(

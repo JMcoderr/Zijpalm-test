@@ -13,7 +13,9 @@ use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 use App\Models\Content as ContentModel;
+use Illuminate\Support\Facades\Log;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
+use Throwable;
 
 class ActivityApplied extends Mailable
 {
@@ -61,6 +63,19 @@ class ActivityApplied extends Mailable
             $this->qrcode = (string) QrCode::size(192)->format('png')->generate($this->activity->whatsappUrl);
         }
 
+        $personalConfirmationHtml = null;
+        if ($this->activity->personal_confirmation_enabled) {
+            try {
+                $personalConfirmationHtml = $this->activity->personalConfirmationHTML;
+            } catch (Throwable $exception) {
+                Log::error('[ActivityApplied] Personal confirmation render failed, falling back to default content', [
+                    'activity_id' => $this->activity->id,
+                    'user_id' => $this->user->id,
+                    'error' => $exception->getMessage(),
+                ]);
+            }
+        }
+
         // Get the application for the user and activity
         $this->application = $this->activity->applications()
             ->where('user_id', $this->user->id)
@@ -75,13 +90,14 @@ class ActivityApplied extends Mailable
             'reserveContent' => $this->reserveContent,
             'qrcode' => $this->qrcode,
             'reserve' => $this->reserve,
+            'personalConfirmationHtml' => $personalConfirmationHtml,
         ])->render();
 
         $jsonBody = json_encode([
             'email' => $this->user->email,
             'subject' => $this->content->title . ' ' . $this->activity->title,
             'body' => $renderedContent,
-        ], JSON_PRETTY_PRINT);
+        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
         return new Content(
             text: 'mail.raw-json',
