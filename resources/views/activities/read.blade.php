@@ -281,15 +281,17 @@
             {{-- Activity Description + Cost overview (admin) --}}
             @if(auth()->user()?->isAdmin())
                 @php
-                    $activeApplications = $applications->whereNotIn('status', [App\ApplicationStatus::Reserve, App\ApplicationStatus::Pending]);
+                    $activeApplications = $applications->where('status', App\ApplicationStatus::Active)->values();
+                    $freeOrganizerApplications = $activeApplications->filter(fn ($application) => $application->isFreeOrganizerApplication());
                     $confirmedParticipants = $activeApplications->sum('participants');
+                    $freeOrganizerCount = $freeOrganizerApplications->count();
+                    $paidParticipants = $activeApplications->sum(fn ($application) => $application->isFreeOrganizerApplication() ? max(0, $application->participants - 1) : $application->participants);
                     $pendingParticipants = $pending->sum('participants');
                     $reserveParticipants = $reserves->sum('participants');
-                    $baseRevenue = $confirmedParticipants * (float) $activity->price;
-                    $totalPaid = $activeApplications
-                        ->flatMap(fn ($application) => $application->payments)
-                        ->filter(fn ($payment) => $payment->status === App\PaymentStatus::paid)
-                        ->sum(fn ($payment) => (float) $payment->getPrice());
+                    $baseRevenue = $activeApplications->sum(fn ($application) => $application->calculateBaseCost());
+                    $extrasRevenue = $activeApplications->sum(fn ($application) => $application->calculateExtrasCost());
+                    $totalDue = $activeApplications->sum(fn ($application) => $application->calculateTotalCost());
+                    $totalPaid = $applications->sum(fn ($application) => $application->calculateTotalPaid());
                 @endphp
 
                 <div class="flex flex-col lg:flex-row gap-5 w-full">
@@ -312,10 +314,24 @@
                                 </thead>
                                 <tbody class="divide-y divide-[rgba(0,0,0,0.15)]">
                                     <tr class="hover:bg-[rgba(0,0,0,0.05)]">
-                                        <td class="p-2 font-semibold">Deelnemers</td>
-                                        <td class="p-2 text-right">{{ $confirmedParticipants }}</td>
+                                        <td class="p-2 font-semibold">Betaalde deelnemers</td>
+                                        <td class="p-2 text-right">{{ $paidParticipants }}</td>
                                         <td class="p-2 text-right">{{ $activity->price > 0 ? formatPrice($activity->price) : 'Gratis' }}</td>
                                         <td class="p-2 text-right font-semibold">{{ formatPrice($baseRevenue) }}</td>
+                                    </tr>
+                                    @if($freeOrganizerCount > 0)
+                                        <tr class="hover:bg-[rgba(0,0,0,0.05)] opacity-60">
+                                            <td class="p-2 text-sm">Gratis organisatoren</td>
+                                            <td class="p-2 text-right text-sm">{{ $freeOrganizerCount }}</td>
+                                            <td class="p-2 text-right text-sm">Gratis</td>
+                                            <td class="p-2 text-right font-semibold text-sm">{{ formatPrice(0) }}</td>
+                                        </tr>
+                                    @endif
+                                    <tr class="hover:bg-[rgba(0,0,0,0.05)]">
+                                        <td class="p-2 font-semibold">Extra's (vragen)</td>
+                                        <td class="p-2 text-right">—</td>
+                                        <td class="p-2 text-right">—</td>
+                                        <td class="p-2 text-right font-semibold">{{ formatPrice($extrasRevenue) }}</td>
                                     </tr>
                                     @if($pendingParticipants > 0)
                                         <tr class="hover:bg-[rgba(0,0,0,0.05)] opacity-60">
@@ -342,6 +358,73 @@
                         </div>
                     </x-zijpalm-div>
                 </div>
+
+                <x-zijpalm-div title="Wie heeft wat betaald?" :editable="false" width="w-full" class="mt-5">
+                    <div class="bg-[rgba(0,0,0,0.15)] rounded-md overflow-x-auto p-0 text-left">
+                        <table class="w-full text-sm">
+                            <thead class="bg-[rgba(0,0,0,0.2)] border-b border-[rgba(0,0,0,0.3)]">
+                                <tr>
+                                    <th class="text-left font-semibold p-2">Naam</th>
+                                    <th class="text-left font-semibold p-2">Status</th>
+                                    <th class="text-right font-semibold p-2">Basis</th>
+                                    <th class="text-right font-semibold p-2">Extra's</th>
+                                    <th class="text-right font-semibold p-2">Totaal</th>
+                                    <th class="text-right font-semibold p-2">Betaald</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-[rgba(0,0,0,0.15)]">
+                                @foreach($applications as $application)
+                                    @php
+                                        $baseCost = $application->calculateBaseCost();
+                                        $extraCost = $application->calculateExtrasCost();
+                                        $totalCost = $application->calculateTotalCost();
+                                        $paidAmount = $application->calculateTotalPaid();
+                                        $statusLabel = match($application->status->value) {
+                                            'active' => 'Actief',
+                                            'pending' => 'In afwachting betaling',
+                                            'reserve' => 'Reserve',
+                                            default => 'Geannuleerd',
+                                        };
+                                    @endphp
+                                    <tr class="align-top hover:bg-[rgba(0,0,0,0.05)] {{ $application->status === App\ApplicationStatus::Reserve ? 'opacity-60' : '' }} {{ $application->status === App\ApplicationStatus::Pending ? 'opacity-80' : '' }}">
+                                        <td class="p-2">
+                                            <div class="font-semibold">{{ $application->user->name }}</div>
+                                            @if($application->guests->isNotEmpty())
+                                                <div class="text-xs opacity-70">Gasten: {{ $application->guests->pluck('name')->join(', ') }}</div>
+                                            @endif
+                                            @if($application->isFreeOrganizerApplication())
+                                                <div class="text-xs font-semibold text-emerald-600">Gratis organisator</div>
+                                            @endif
+                                        </td>
+                                        <td class="p-2">{{ $statusLabel }}</td>
+                                        <td class="p-2 text-right">{{ formatPrice($baseCost) }}</td>
+                                        <td class="p-2 text-right">
+                                            <div>{{ formatPrice($extraCost) }}</div>
+                                            @if($application->answers->filter(fn ($answer) => getAnswerPrice($answer) > 0)->isNotEmpty())
+                                                <details class="mt-1 text-xs text-left">
+                                                    <summary class="cursor-pointer select-none opacity-70">Bekijk extra's</summary>
+                                                    <ul class="mt-1 space-y-1">
+                                                        @foreach($application->answers as $answer)
+                                                            @php($answerPrice = getAnswerPrice($answer))
+                                                            @if($answerPrice > 0)
+                                                                <li class="flex justify-between gap-3">
+                                                                    <span>{{ $answer->question->query }}</span>
+                                                                    <span>{{ formatPrice($answerPrice) }}</span>
+                                                                </li>
+                                                            @endif
+                                                        @endforeach
+                                                    </ul>
+                                                </details>
+                                            @endif
+                                        </td>
+                                        <td class="p-2 text-right font-semibold">{{ formatPrice($totalCost) }}</td>
+                                        <td class="p-2 text-right font-semibold">{{ formatPrice($paidAmount) }}</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </x-zijpalm-div>
             @else
                 {{-- Activity Description --}}
                 <x-zijpalm-div title="Beschrijving" :editable="false" width="w-full" class="">

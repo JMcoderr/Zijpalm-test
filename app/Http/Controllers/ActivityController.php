@@ -299,9 +299,20 @@ class ActivityController extends Controller
     public function show(Activity $activity)
     {
         // Store the activity's applications inside of a variable, uses a sortBy callback to prioritise applications in order of the ApplicationStatus Enum
-        $applications = $activity->applications()->with(['user' => fn($q) => $q->withTrashed()], 'guests')->whereNotIn('status', [ApplicationStatus::Cancelled])->get()->sortBy(fn($app) => array_search(ApplicationStatus::from($app->status->value), ApplicationStatus::cases()));
-        $reserves = $activity->applications()->with(['user' => fn($q) => $q->withTrashed()], 'guests')->where('status', ApplicationStatus::Reserve)->get();
-        $pending = $activity->applications()->with(['user' => fn($q) => $q->withTrashed()], 'guests')->where('status', ApplicationStatus::Pending)->get();
+        $applicationRelations = [
+            'user' => fn($q) => $q->withTrashed(),
+            'guests',
+            'answers.question.selectOptions',
+            'payments',
+        ];
+        $applications = $activity->applications()->with($applicationRelations)->whereNotIn('status', [ApplicationStatus::Cancelled])->get()->sortBy(fn($app) => array_search(ApplicationStatus::from($app->status->value), ApplicationStatus::cases()));
+        $reserves = $activity->applications()->with($applicationRelations)->where('status', ApplicationStatus::Reserve)->get();
+        $pending = $activity->applications()->with($applicationRelations)->where('status', ApplicationStatus::Pending)->get();
+
+        $activity->setRelation('applications', $applications);
+        $applications->each(fn ($application) => $application->setRelation('activity', $activity));
+        $reserves->each(fn ($application) => $application->setRelation('activity', $activity));
+        $pending->each(fn ($application) => $application->setRelation('activity', $activity));
 
         return view('activities.read', compact('activity', 'applications', 'reserves', 'pending'));
     }

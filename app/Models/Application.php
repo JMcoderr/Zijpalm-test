@@ -81,6 +81,55 @@ class Application extends Model
         $this->save();
     }
 
+    public function isOrganizerApplication(): bool
+    {
+        return (bool) ($this->activity?->organizer && $this->user?->name && str_contains($this->activity->organizer, $this->user->name));
+    }
+
+    public function isFreeOrganizerApplication(): bool
+    {
+        $activity = $this->activity;
+
+        if (!$activity || !$this->isOrganizerApplication() || (int) ($activity->free_organizer_count ?? 0) <= 0) {
+            return false;
+        }
+
+        $freeOrganizerApplications = $activity->applications
+            ->whereNotIn('status', [ApplicationStatus::Cancelled, ApplicationStatus::Reserve, ApplicationStatus::Pending])
+            ->sortBy('created_at')
+            ->filter(fn ($application) => $application->isOrganizerApplication())
+            ->take((int) $activity->free_organizer_count);
+
+        return $freeOrganizerApplications->contains('id', $this->id);
+    }
+
+    public function calculateBaseCost(): float
+    {
+        $activity = $this->activity;
+
+        if (!$activity) {
+            return 0.0;
+        }
+
+        if ($this->isFreeOrganizerApplication()) {
+            return max(0, $this->participants - 1) * (float) $activity->price;
+        }
+
+        return $this->participants * (float) $activity->price;
+    }
+
+    public function calculateExtrasCost(): float
+    {
+        return (float) $this->answers->sum(fn ($answer) => getAnswerPrice($answer));
+    }
+
+    public function calculateTotalPaid(): float
+    {
+        return (float) $this->payments
+            ->where('status', PaymentStatus::paid)
+            ->sum(fn ($payment) => (float) $payment->getPrice());
+    }
+
     /**
      * Calculate the total cost of the application based on activity price and answers to questions.
      *
@@ -88,44 +137,6 @@ class Application extends Model
      */
     public function calculateTotalCost(): float
     {
-        // Calculate the total cost based on the activity and number of participants
-        $activity = $this->activity;
-
-        // Calculate the total cost based on the activity price and number of participants
-        $totalCost = $activity->price * $this->participants;
-
-        // Calculate additional costs based on answers to questions
-        // For each question, add the costs to the total
-        foreach($this->answers as $answer){
-            $question = $answer->question;
-
-            // Continue if question actually has a price
-            if($question->price || $question->type === 'select'){
-
-                // Numbers are simply multiply by values
-                if($question->type === QuestionType::Number){
-                    $totalCost += $question->price * ((int)$answer->answer ?: 0);
-                }
-
-                // Checkbox: answer is "Ja" or "Nee"
-                if($question->type === QuestionType::Checkbox){
-                    // If the answer is "Ja", add the price, otherwise add 0
-                    $answer->answer == 'Ja' ? $totalCost += $question->price : 0;
-                }
-
-                // If the question is of type select, check for selected option's price
-                if($question->type === QuestionType::Select){
-                    $selected = $answer->answer;
-                    foreach($question->selectOptions as $option){
-                        if($option['option'] == $selected && !empty($option['price'])){
-                            $totalCost += $option['price'];
-                        }
-                    }
-                }
-            }
-        }
-
-        // Return the total cost
-        return $totalCost;
+        return $this->calculateBaseCost() + $this->calculateExtrasCost();
     }
 }
