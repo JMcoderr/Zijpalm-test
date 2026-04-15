@@ -82,22 +82,60 @@ class ActivityApplied extends Mailable
             ->whereNot('status', ApplicationStatus::Cancelled)
             ->first();
 
-        $renderedContent = view('mail.activity-applied', [
-            'activity' => $this->activity,
-            'application' => $this->application,
-            'user' => $this->user,
-            'content' => $this->content,
-            'reserveContent' => $this->reserveContent,
-            'qrcode' => $this->qrcode,
-            'reserve' => $this->reserve,
-            'personalConfirmationHtml' => $personalConfirmationHtml,
-        ])->render();
+        try {
+            $renderedContent = view('mail.activity-applied', [
+                'activity' => $this->activity,
+                'application' => $this->application,
+                'user' => $this->user,
+                'content' => $this->content,
+                'reserveContent' => $this->reserveContent,
+                'qrcode' => $this->qrcode,
+                'reserve' => $this->reserve,
+                'personalConfirmationHtml' => $personalConfirmationHtml,
+            ])->render();
+        } catch (Throwable $exception) {
+            Log::error('[ActivityApplied] Mail view render failed, using fallback body', [
+                'activity_id' => $this->activity->id,
+                'user_id' => $this->user->id,
+                'error' => $exception->getMessage(),
+            ]);
+
+            $introHtml = $this->reserve
+                ? ($this->reserveContent->textHTML ?? '')
+                : ($personalConfirmationHtml ?: ($this->content->textHTML ?? ''));
+
+            $applicationSummary = $this->application
+                ? '<p><strong>Deelnemers:</strong> ' . (int) $this->application->participants . '</p>'
+                : '';
+
+            $renderedContent =
+                '<p>Beste ' . e($this->user->name) . ',</p>' .
+                $introHtml .
+                '<p><strong>Activiteit:</strong> ' . e($this->activity->title) . '</p>' .
+                '<p><strong>Locatie:</strong> ' . e((string) $this->activity->location) . '</p>' .
+                '<p><strong>Start:</strong> ' . e(formatDate($this->activity->start)) . ' om ' . e(formatTime($this->activity->start)) . ' uur</p>' .
+                $applicationSummary;
+        }
 
         $jsonBody = json_encode([
             'email' => $this->user->email,
             'subject' => $this->content->title . ' ' . $this->activity->title,
             'body' => $renderedContent,
-        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE);
+
+        if ($jsonBody === false) {
+            Log::error('[ActivityApplied] JSON encode failed', [
+                'activity_id' => $this->activity->id,
+                'user_id' => $this->user->id,
+                'error' => json_last_error_msg(),
+            ]);
+
+            $jsonBody = json_encode([
+                'email' => $this->user->email,
+                'subject' => $this->content->title . ' ' . $this->activity->title,
+                'body' => '<p>Inschrijving ontvangen voor ' . e($this->activity->title) . '.</p>',
+            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE) ?: '{}';
+        }
 
         return new Content(
             text: 'mail.raw-json',
