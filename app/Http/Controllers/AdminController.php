@@ -208,7 +208,7 @@ class AdminController extends Controller
 //        return view('admin.reports', compact('activityGroups', 'yearlyReports'));
         $reports = Report::query()->orderByDesc('created_at')->withWhereHas('content', fn($q) => $q->where('fileType', FileType::Pdf))->get();
         $activities = $reports->whereNull('year');
-        $years = $reports->whereNotNull('year');
+        $years = $reports->whereNotNull('year')->sortBy('year')->values();
 
         return view('admin.reports', compact('activities', 'years'));
     }

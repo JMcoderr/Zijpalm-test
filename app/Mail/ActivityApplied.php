@@ -57,7 +57,7 @@ class ActivityApplied extends Mailable
     public function content(): Content
     {
         // Generate the QR code for the WhatsApp URL
-        if (isset($activity->whatsappUrl)) {
+        if (isset($this->activity->whatsappUrl)) {
             $this->qrcode = (string) QrCode::size(192)->format('png')->generate($this->activity->whatsappUrl);
         }
 
