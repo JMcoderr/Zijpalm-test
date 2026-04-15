@@ -27,7 +27,7 @@ class ReportController extends Controller
 
         $reports = Report::query()->orderbyDesc('created_at')->withWhereHas('content', fn($q) => $q->where('fileType', FileType::Pdf))->get();
         $activities = $reports->whereNull('year');
-        $years = $reports->whereNotNull('year');
+        $years = $reports->whereNotNull('year')->sortBy('year')->values();
         // Return the view, compact the variables to send with
         return view('reports.index', compact(['activities', 'years']));
     }
