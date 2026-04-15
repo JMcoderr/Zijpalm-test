@@ -33,8 +33,8 @@
     @if($reserve)
         {!! $reserveContent->textHTML !!}
         {!! $content->textHTML !!}
-    @elseif($activity->personal_confirmation_enabled && $activity->personalConfirmationHTML)
-        {!! $activity->personalConfirmationHTML !!}
+    @elseif($activity->personal_confirmation_enabled && !empty($personalConfirmationHtml))
+        {!! $personalConfirmationHtml !!}
     @else
         {!! $content->textHTML !!}
     @endif

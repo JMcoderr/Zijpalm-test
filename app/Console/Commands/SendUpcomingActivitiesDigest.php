@@ -18,7 +18,7 @@ class SendUpcomingActivitiesDigest extends Command
      *
      * @var string
      */
-    protected $signature = 'app:send-upcoming-activities-digest';
+    protected $signature = 'app:send-upcoming-activities-digest {--batch_size=} {--delay=}';
 
     /**
      * The console command description.
@@ -32,6 +32,9 @@ class SendUpcomingActivitiesDigest extends Command
      */
     public function handle(): int
     {
+        $batchSize = (int) ($this->option('batch_size') ?: config('mail.power_automate.batch_size.default', 50));
+        $delay = (int) ($this->option('delay') ?: config('mail.power_automate.delay.default', 30));
+
         $activities = Activity::query()
             ->whereNotNull('start')
             ->where('start', '>=', now()->startOfDay())
@@ -66,13 +69,18 @@ class SendUpcomingActivitiesDigest extends Command
 
         try {
             Mail::to(config('mail.bestuur.address'), config('mail.bestuur.name'))
-                ->send(new UpcomingActivitiesDigest($emails, $activities, $runningActivities));
+                ->send(new UpcomingActivitiesDigest($emails, $activities, $runningActivities, [
+                    'batch_size' => $batchSize,
+                    'delay' => $delay,
+                ]));
         } catch (Throwable $exception) {
             Log::error('[SendUpcomingActivitiesDigest] Mail send failed', [
                 'error' => $exception->getMessage(),
                 'activities' => $activities->count(),
                 'running_activities' => $runningActivities->count(),
                 'emails' => $emails->count(),
+                'batch_size' => $batchSize,
+                'delay' => $delay,
             ]);
 
             $this->error('Mail kon niet worden verzonden door een mailtransportfout.');
