@@ -329,47 +329,6 @@
                                             <td colspan="3" class="p-2 text-right">Totaal:</td>
                                             <td class="p-2 text-right">{{ formatPrice($manualFinanceTotal) }}</td>
                                         </tr>
-                                    @else
-                                        <tr class="hover:bg-[rgba(0,0,0,0.05)]">
-                                            <td class="p-2 font-semibold">Betaalde deelnemers</td>
-                                            <td class="p-2 text-right">{{ $paidParticipants }}</td>
-                                            <td class="p-2 text-right">{{ $activity->price > 0 ? formatPrice($activity->price) : 'Gratis' }}</td>
-                                            <td class="p-2 text-right font-semibold">{{ formatPrice($baseRevenue) }}</td>
-                                        </tr>
-                                        @if($freeOrganizerCount > 0)
-                                            <tr class="hover:bg-[rgba(0,0,0,0.05)] opacity-60">
-                                                <td class="p-2 text-sm">Gratis organisatoren</td>
-                                                <td class="p-2 text-right text-sm">{{ $freeOrganizerCount }}</td>
-                                                <td class="p-2 text-right text-sm">Gratis</td>
-                                                <td class="p-2 text-right font-semibold text-sm">{{ formatPrice(0) }}</td>
-                                            </tr>
-                                        @endif
-                                        <tr class="hover:bg-[rgba(0,0,0,0.05)]">
-                                            <td class="p-2 font-semibold">Extra's (vragen)</td>
-                                            <td class="p-2 text-right">—</td>
-                                            <td class="p-2 text-right">—</td>
-                                            <td class="p-2 text-right font-semibold">{{ formatPrice($extrasRevenue) }}</td>
-                                        </tr>
-                                        @if($pendingParticipants > 0)
-                                            <tr class="hover:bg-[rgba(0,0,0,0.05)] opacity-60">
-                                                <td class="p-2 text-sm">In afwachting betaling</td>
-                                                <td class="p-2 text-right text-sm">{{ $pendingParticipants }}</td>
-                                                <td class="p-2 text-right text-sm">{{ $activity->price > 0 ? formatPrice($activity->price) : '–' }}</td>
-                                                <td class="p-2 text-right font-semibold text-sm">{{ formatPrice($pendingParticipants * (float) $activity->price) }}</td>
-                                            </tr>
-                                        @endif
-                                        @if($reserveParticipants > 0)
-                                            <tr class="hover:bg-[rgba(0,0,0,0.05)] opacity-60">
-                                                <td class="p-2 text-sm">Reserves</td>
-                                                <td class="p-2 text-right text-sm">{{ $reserveParticipants }}</td>
-                                                <td class="p-2 text-right text-sm">{{ $activity->price > 0 ? formatPrice($activity->price) : '–' }}</td>
-                                                <td class="p-2 text-right font-semibold text-sm">{{ formatPrice($reserveParticipants * (float) $activity->price) }}</td>
-                                            </tr>
-                                        @endif
-                                        <tr class="bg-[rgba(0,0,0,0.1)] font-semibold border-t-2 border-[rgba(0,0,0,0.3)]">
-                                            <td colspan="3" class="p-2 text-right">Totaal ontvangen:</td>
-                                            <td class="p-2 text-right">{{ formatPrice($totalPaid) }}</td>
-                                        </tr>
                                     @endif
                                 </tbody>
                             </table>

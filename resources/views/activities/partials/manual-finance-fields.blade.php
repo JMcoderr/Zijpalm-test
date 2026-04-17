@@ -6,11 +6,6 @@
     if (!is_array($financeRows)) {
         $financeRows = [];
     }
-
-    // Show one starter row only on first load, not after user intentionally removed all rows.
-    if (empty($financeRows) && $oldFinanceRows === null) {
-        $financeRows = [['description' => '', 'quantity' => 1, 'unit_price' => '']];
-    }
 @endphp
 
 <x-input-group id="{{ $prefix }}" title="Kostenoverzicht" grid="grid grid-cols-1" class="mt-3 md:max-w-xl">
