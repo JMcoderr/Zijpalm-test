@@ -17,6 +17,8 @@ class UpcomingActivitiesDigest extends Mailable
 {
     use SerializesModels;
 
+    private const MAX_INTRO_HTML_LENGTH = 35000;
+
     public Collection $emails;
     public Collection $activities;
     public Collection $runningActivities;
@@ -57,6 +59,7 @@ class UpcomingActivitiesDigest extends Mailable
             : '<p>Beste leden,</p><p>Hieronder vinden jullie de komende activiteiten van Zijpalm.</p>';
 
         $introHtml = $this->normalizeIntroLinks($introHtml);
+        $introHtml = $this->sanitizeHtmlForAutomate($introHtml);
 
         try {
             $renderedContent = view('mail.upcoming-activities-digest', [
@@ -148,5 +151,30 @@ class UpcomingActivitiesDigest extends Mailable
             },
             $html
         ) ?? $html;
+    }
+
+    /**
+     * Keep digest intro HTML safe and bounded for downstream automation parsers.
+     */
+    private function sanitizeHtmlForAutomate(string $html): string
+    {
+        if ($html === '') {
+            return '';
+        }
+
+        $sanitized = $html;
+        $sanitized = preg_replace('/<\s*(script|style|iframe|object|embed)\b[^>]*>.*?<\s*\/\s*\1\s*>/is', '', $sanitized) ?? $sanitized;
+        $sanitized = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', '', $sanitized) ?? $sanitized;
+
+        if (mb_strlen($sanitized, 'UTF-8') > self::MAX_INTRO_HTML_LENGTH) {
+            Log::warning('[UpcomingActivitiesDigest] Intro truncated for payload safety', [
+                'original_length' => mb_strlen($sanitized, 'UTF-8'),
+                'max_length' => self::MAX_INTRO_HTML_LENGTH,
+            ]);
+
+            $sanitized = mb_substr($sanitized, 0, self::MAX_INTRO_HTML_LENGTH, 'UTF-8');
+        }
+
+        return $sanitized;
     }
 }

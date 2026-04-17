@@ -21,6 +21,8 @@ class ActivityApplied extends Mailable
 {
     use SerializesModels;
 
+    private const MAX_PERSONAL_CONFIRMATION_LENGTH = 35000;
+
     public User $user;
     public Activity $activity;
     public ?Application $application;
@@ -78,7 +80,7 @@ class ActivityApplied extends Mailable
         $personalConfirmationHtml = null;
         if ($this->activity->personal_confirmation_enabled) {
             try {
-                $personalConfirmationHtml = $this->activity->personalConfirmationHTML;
+                $personalConfirmationHtml = $this->sanitizeMailHtml((string) $this->activity->personalConfirmationHTML);
             } catch (Throwable $exception) {
                 Log::error('[ActivityApplied] Personal confirmation render failed, falling back to default content', [
                     'activity_id' => $this->activity->id,
@@ -176,6 +178,37 @@ class ActivityApplied extends Mailable
                 'jsonBody' => $jsonBody
             ],
         );
+    }
+
+    /**
+     * Keep personal confirmation HTML safe and bounded for downstream automation parsers.
+     */
+    private function sanitizeMailHtml(string $html): string
+    {
+        if ($html === '') {
+            return '';
+        }
+
+        $sanitized = $html;
+
+        // Strip tags that commonly break automation parsing.
+        $sanitized = preg_replace('/<\s*(script|style|iframe|object|embed)\b[^>]*>.*?<\s*\/\s*\1\s*>/is', '', $sanitized) ?? $sanitized;
+
+        // Remove non-printable control characters except line breaks and tabs.
+        $sanitized = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', '', $sanitized) ?? $sanitized;
+
+        if (mb_strlen($sanitized, 'UTF-8') > self::MAX_PERSONAL_CONFIRMATION_LENGTH) {
+            Log::warning('[ActivityApplied] Personal confirmation truncated for payload safety', [
+                'activity_id' => $this->activity->id,
+                'user_id' => $this->user->id,
+                'original_length' => mb_strlen($sanitized, 'UTF-8'),
+                'max_length' => self::MAX_PERSONAL_CONFIRMATION_LENGTH,
+            ]);
+
+            $sanitized = mb_substr($sanitized, 0, self::MAX_PERSONAL_CONFIRMATION_LENGTH, 'UTF-8');
+        }
+
+        return $sanitized;
     }
 
     /**
