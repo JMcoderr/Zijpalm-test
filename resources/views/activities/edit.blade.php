@@ -100,8 +100,7 @@
                 @include('activities.partials.manual-finance-fields', [
                     'prefix' => 'edit-manual-finance',
                     'manualBudget' => $activity->manual_budget,
-                    'manualIncomeEntries' => $activity->manual_income_entries ?? [],
-                    'manualExpenseEntries' => $activity->manual_expense_entries ?? [],
+                    'manualFinanceEntries' => $activity->manual_income_entries ?? [],
                 ])
 
                 <flux:separator variant="subtle"/>

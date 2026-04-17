@@ -257,8 +257,7 @@ class ActivityController extends Controller
     public function store(StoreActivityRequest $request){
         // Store all the request data in a temp variable
         $data = $request->all();
-        $manualIncomeEntries = $this->sanitizeManualFinanceEntries($data['manual_income_entries'] ?? null);
-        $manualExpenseEntries = $this->sanitizeManualFinanceEntries($data['manual_expense_entries'] ?? null);
+        $manualFinanceEntries = $this->sanitizeManualFinanceEntries($data['manual_finance_entries'] ?? null);
         $manualBudget = $this->parseManualBudget($data['manual_budget'] ?? null);
 
         // Check if an activity is recurring, if not a start-date is required.
@@ -317,8 +316,8 @@ class ActivityController extends Controller
             'registrationEnd' => $data['registrationEnd'],
             'cancellationEnd' => isset($data['noCancellation']) ? null : ($data['cancellationEnd'] ?? null),
             'free_organizer_count' => $data['free_organizer_count'],
-            'manual_income_entries' => !empty($manualIncomeEntries) ? $manualIncomeEntries : null,
-            'manual_expense_entries' => !empty($manualExpenseEntries) ? $manualExpenseEntries : null,
+            'manual_income_entries' => !empty($manualFinanceEntries) ? $manualFinanceEntries : null,
+            'manual_expense_entries' => null,
             'manual_budget' => $manualBudget,
         ]);
 
@@ -424,8 +423,7 @@ class ActivityController extends Controller
     public function update(UpdateActivityRequest $request, Activity $activity){
         // Collect data from request
         $data = $request->all();
-        $manualIncomeEntries = $this->sanitizeManualFinanceEntries($data['manual_income_entries'] ?? null);
-        $manualExpenseEntries = $this->sanitizeManualFinanceEntries($data['manual_expense_entries'] ?? null);
+        $manualFinanceEntries = $this->sanitizeManualFinanceEntries($data['manual_finance_entries'] ?? null);
         $manualBudget = $this->parseManualBudget($data['manual_budget'] ?? null);
 
         // Determine activity type
@@ -461,8 +459,8 @@ class ActivityController extends Controller
             'registrationEnd' => $data['registrationEnd'] ?? $activity->registrationEnd,
             'cancellationEnd' => isset($data['noCancellation']) ? null : ($data['cancellationEnd'] ?? $activity->cancellationEnd),
             'free_organizer_count' => $data['free_organizer_count'] ?? $activity->free_organizer_count,
-            'manual_income_entries' => !empty($manualIncomeEntries) ? $manualIncomeEntries : null,
-            'manual_expense_entries' => !empty($manualExpenseEntries) ? $manualExpenseEntries : null,
+            'manual_income_entries' => !empty($manualFinanceEntries) ? $manualFinanceEntries : null,
+            'manual_expense_entries' => null,
             'manual_budget' => $manualBudget,
         ]);
 

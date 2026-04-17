@@ -37,14 +37,10 @@ class StoreActivityRequest extends FormRequest
             'personalConfirmationEnabled' => ['nullable'],
             'personalConfirmation' => ['nullable', 'required_if:personalConfirmationEnabled,on'],
             'manual_budget' => ['nullable', 'regex:/^\d+([.,]\d{1,2})?$/'],
-            'manual_income_entries' => ['nullable', 'array'],
-            'manual_income_entries.*.description' => ['nullable', 'string', 'max:255'],
-            'manual_income_entries.*.quantity' => ['nullable', 'numeric', 'min:0'],
-            'manual_income_entries.*.unit_price' => ['nullable', 'regex:/^\d+([.,]\d{1,2})?$/'],
-            'manual_expense_entries' => ['nullable', 'array'],
-            'manual_expense_entries.*.description' => ['nullable', 'string', 'max:255'],
-            'manual_expense_entries.*.quantity' => ['nullable', 'numeric', 'min:0'],
-            'manual_expense_entries.*.unit_price' => ['nullable', 'regex:/^\d+([.,]\d{1,2})?$/'],
+            'manual_finance_entries' => ['nullable', 'array'],
+            'manual_finance_entries.*.description' => ['nullable', 'string', 'max:255'],
+            'manual_finance_entries.*.quantity' => ['nullable', 'numeric', 'min:0'],
+            'manual_finance_entries.*.unit_price' => ['nullable', 'regex:/^\d+([.,]\d{1,2})?$/'],
 
             // Times
             'start-date' => ['nullable', 'date'],
@@ -88,8 +84,7 @@ class StoreActivityRequest extends FormRequest
             'whatsappUrl.url' => 'De WhatsApp-URL moet een geldige URL zijn.',
             'personalConfirmation.required_if' => 'Persoonlijke bevestiging is verplicht wanneer deze optie aan staat.',
             'manual_budget.regex' => 'Begroot bedrag moet een geldig bedrag zijn.',
-            'manual_income_entries.*.unit_price.regex' => 'Inkomstenprijs moet in formaat 0.00 staan.',
-            'manual_expense_entries.*.unit_price.regex' => 'Uitgavenprijs moet in formaat 0.00 staan.',
+            'manual_finance_entries.*.unit_price.regex' => 'Bijdrage per deelnemer moet in formaat 0.00 staan.',
 
             // Times
             'start-date.date' => 'De startdatum moet een geldige datum zijn.',
