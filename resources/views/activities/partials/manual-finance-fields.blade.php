@@ -32,9 +32,9 @@
                 <tbody id="{{ $prefix }}-body" data-next-index="{{ count($financeRows) }}" class="divide-y divide-[rgba(0,0,0,0.1)]">
                     @foreach($financeRows as $index => $row)
                         <tr class="bg-[rgba(255,255,255,0.75)]">
-                            <td class="p-1.5 align-top"><input type="text" name="manual_finance_entries[{{ $index }}][description]" value="{{ $row['description'] ?? '' }}" class="w-full rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-sm font-medium text-zinc-800 placeholder:text-zinc-400"/></td>
-                            <td class="p-1.5 align-top"><input type="number" name="manual_finance_entries[{{ $index }}][quantity]" step="0.01" min="0" value="{{ $row['quantity'] ?? '' }}" class="w-full rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-sm font-medium text-zinc-800 placeholder:text-zinc-400"/></td>
-                            <td class="p-1.5 align-top"><input type="text" name="manual_finance_entries[{{ $index }}][unit_price]" inputmode="decimal" value="{{ $row['unit_price'] ?? '' }}" class="w-full rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-sm font-medium text-zinc-800 placeholder:text-zinc-400"/></td>
+                            <td class="p-1.5 align-top"><input type="text" name="manual_finance_entries[{{ $index }}][description]" value="{{ $row['description'] ?? '' }}" required class="w-full rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-sm font-medium text-zinc-800 placeholder:text-zinc-400"/></td>
+                            <td class="p-1.5 align-top"><input type="number" name="manual_finance_entries[{{ $index }}][quantity]" step="0.01" min="0" value="{{ $row['quantity'] ?? '' }}" required class="w-full rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-sm font-medium text-zinc-800 placeholder:text-zinc-400"/></td>
+                            <td class="p-1.5 align-top"><input type="text" name="manual_finance_entries[{{ $index }}][unit_price]" inputmode="decimal" value="{{ $row['unit_price'] ?? '' }}" required class="w-full rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-sm font-medium text-zinc-800 placeholder:text-zinc-400"/></td>
                             <td class="p-2 align-top font-semibold text-zijpalm-700" data-total-cell>{{ isset($row['total']) ? number_format((float) $row['total'], 2, ',', '.') : '0,00' }}</td>
                             <td class="p-1.5 text-right align-top">
                                 <x-zijpalm-button type="action" variant="remove" size="size-4" onclick="manualFinanceRemoveRow(this, '{{ $prefix }}')"/>
@@ -86,9 +86,9 @@
     function manualFinanceRowTemplate(prefix, index) {
         return `
             <tr class="bg-[rgba(255,255,255,0.75)]">
-                <td class="p-1.5 align-top"><input type="text" name="manual_finance_entries[${index}][description]" class="w-full rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-sm font-medium text-zinc-800 placeholder:text-zinc-400"/></td>
-                <td class="p-1.5 align-top"><input type="number" name="manual_finance_entries[${index}][quantity]" step="0.01" min="0" value="" class="w-full rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-sm font-medium text-zinc-800 placeholder:text-zinc-400"/></td>
-                <td class="p-1.5 align-top"><input type="text" name="manual_finance_entries[${index}][unit_price]" inputmode="decimal" class="w-full rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-sm font-medium text-zinc-800 placeholder:text-zinc-400"/></td>
+                <td class="p-1.5 align-top"><input type="text" name="manual_finance_entries[${index}][description]" required class="w-full rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-sm font-medium text-zinc-800 placeholder:text-zinc-400"/></td>
+                <td class="p-1.5 align-top"><input type="number" name="manual_finance_entries[${index}][quantity]" step="0.01" min="0" value="" required class="w-full rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-sm font-medium text-zinc-800 placeholder:text-zinc-400"/></td>
+                <td class="p-1.5 align-top"><input type="text" name="manual_finance_entries[${index}][unit_price]" inputmode="decimal" required class="w-full rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-sm font-medium text-zinc-800 placeholder:text-zinc-400"/></td>
                 <td class="p-2 align-top font-semibold text-zijpalm-700" data-total-cell>0,00</td>
                 <td class="p-1.5 text-right align-top">
                     <button type="button" class="bg-linear-to-t from-zinc-300 to-zinc-200 inset-shadow-zinc-100 text-red-500 rounded-full p-1 hover:scale-105 duration-300" onclick="manualFinanceRemoveRow(this, '${prefix}')">
