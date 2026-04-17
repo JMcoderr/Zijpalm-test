@@ -32,6 +32,7 @@ class SendUpcomingActivitiesDigest extends Command
      */
     public function handle(): int
     {
+        $mailDebug = true;
         $batchSize = (int) ($this->option('batch_size') ?: config('mail.power_automate.batch_size.default', 50));
         $delay = (int) ($this->option('delay') ?: config('mail.power_automate.delay.default', 30));
 
@@ -67,6 +68,21 @@ class SendUpcomingActivitiesDigest extends Command
             return self::SUCCESS;
         }
 
+        if ($mailDebug) {
+            Log::debug('[SendUpcomingActivitiesDigest] Send started', [
+                'to' => config('mail.bestuur.address'),
+                'mailer' => config('mail.default'),
+                'smtp_host' => config('mail.mailers.smtp.host'),
+                'smtp_port' => config('mail.mailers.smtp.port'),
+                'smtp_scheme' => config('mail.mailers.smtp.scheme'),
+                'activities' => $activities->count(),
+                'running_activities' => $runningActivities->count(),
+                'emails' => $emails->count(),
+                'batch_size' => $batchSize,
+                'delay' => $delay,
+            ]);
+        }
+
         try {
             Mail::to(config('mail.bestuur.address'), config('mail.bestuur.name'))
                 ->send(new UpcomingActivitiesDigest($emails, $activities, $runningActivities, [
@@ -85,6 +101,17 @@ class SendUpcomingActivitiesDigest extends Command
 
             $this->error('Mail kon niet worden verzonden door een mailtransportfout.');
             return self::FAILURE;
+        }
+
+        if ($mailDebug) {
+            Log::debug('[SendUpcomingActivitiesDigest] Send completed', [
+                'to' => config('mail.bestuur.address'),
+                'activities' => $activities->count(),
+                'running_activities' => $runningActivities->count(),
+                'emails' => $emails->count(),
+                'batch_size' => $batchSize,
+                'delay' => $delay,
+            ]);
         }
 
         $this->info("Mail verzonden voor {$activities->count()} activiteiten naar {$emails->count()} leden.");

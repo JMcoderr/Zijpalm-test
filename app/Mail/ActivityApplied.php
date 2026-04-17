@@ -28,22 +28,15 @@ class ActivityApplied extends Mailable
     public ContentModel $reserveContent;
     public $qrcode;
     public bool $reserve;
-    public bool $forceDefaultTemplate;
-
-    /**
-     * Keep payload size bounded for downstream automation parsers.
-     */
-    private const MAX_PERSONAL_CONFIRMATION_LENGTH = 35000;
 
     /**
      * Create a new message instance.
      */
-    public function __construct(Activity $activity, User $user, bool $reserve = false, bool $forceDefaultTemplate = false)
+    public function __construct(Activity $activity, User $user, bool $reserve = false)
     {
         $this->activity = $activity;
         $this->user = $user;
         $this->reserve = $reserve;
-        $this->forceDefaultTemplate = $forceDefaultTemplate;
 
         // Get the dynamic content for the email and cache it for 1 hour
         $this->content = getFromCache('email-activiteit-aangemeld');
@@ -65,15 +58,27 @@ class ActivityApplied extends Mailable
      */
     public function content(): Content
     {
+        $mailDebug = true;
+
         // Generate the QR code for the WhatsApp URL
         if (isset($this->activity->whatsappUrl)) {
             $this->qrcode = (string) QrCode::size(192)->format('png')->generate($this->activity->whatsappUrl);
         }
 
+        if ($mailDebug) {
+            Log::debug('[ActivityApplied] Building payload', [
+                'activity_id' => $this->activity->id,
+                'user_id' => $this->user->id,
+                'reserve' => $this->reserve,
+                'personal_confirmation_enabled' => (bool) $this->activity->personal_confirmation_enabled,
+                'activity_title' => $this->activity->title,
+            ]);
+        }
+
         $personalConfirmationHtml = null;
-        if ($this->activity->personal_confirmation_enabled && !$this->forceDefaultTemplate) {
+        if ($this->activity->personal_confirmation_enabled) {
             try {
-                $personalConfirmationHtml = $this->sanitizeMailHtml((string) $this->activity->personalConfirmationHTML);
+                $personalConfirmationHtml = $this->activity->personalConfirmationHTML;
             } catch (Throwable $exception) {
                 Log::error('[ActivityApplied] Personal confirmation render failed, falling back to default content', [
                     'activity_id' => $this->activity->id,
@@ -81,11 +86,6 @@ class ActivityApplied extends Mailable
                     'error' => $exception->getMessage(),
                 ]);
             }
-        } elseif ($this->activity->personal_confirmation_enabled && $this->forceDefaultTemplate) {
-            Log::info('[ActivityApplied] Personal confirmation skipped for forced-default context', [
-                'activity_id' => $this->activity->id,
-                'user_id' => $this->user->id,
-            ]);
         }
 
         // Get the application for the user and activity
@@ -105,6 +105,16 @@ class ActivityApplied extends Mailable
                 'reserve' => $this->reserve,
                 'personalConfirmationHtml' => $personalConfirmationHtml,
             ])->render();
+
+            if ($mailDebug) {
+                Log::debug('[ActivityApplied] View rendered', [
+                    'activity_id' => $this->activity->id,
+                    'user_id' => $this->user->id,
+                    'rendered_length' => strlen($renderedContent),
+                    'personal_confirmation_used' => !empty($personalConfirmationHtml),
+                    'reserve' => $this->reserve,
+                ]);
+            }
         } catch (Throwable $exception) {
             Log::error('[ActivityApplied] Mail view render failed, using fallback body', [
                 'activity_id' => $this->activity->id,
@@ -114,7 +124,7 @@ class ActivityApplied extends Mailable
 
             $introHtml = $this->reserve
                 ? ($this->reserveContent->textHTML ?? '')
-                : ($this->content->textHTML ?? '');
+                : ($personalConfirmationHtml ?: ($this->content->textHTML ?? ''));
 
             $applicationSummary = $this->application
                 ? '<p><strong>Deelnemers:</strong> ' . (int) $this->application->participants . '</p>'
@@ -134,6 +144,17 @@ class ActivityApplied extends Mailable
             'subject' => $this->content->title . ' ' . $this->activity->title,
             'body' => $renderedContent,
         ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE);
+
+        if ($mailDebug) {
+            Log::debug('[ActivityApplied] JSON payload prepared', [
+                'activity_id' => $this->activity->id,
+                'user_id' => $this->user->id,
+                'json_length' => strlen((string) $jsonBody),
+                'subject' => $this->content->title . ' ' . $this->activity->title,
+                'personal_confirmation_enabled' => (bool) $this->activity->personal_confirmation_enabled,
+                'personal_confirmation_in_body' => $personalConfirmationHtml ? str_contains($renderedContent, (string) $personalConfirmationHtml) : false,
+            ]);
+        }
 
         if ($jsonBody === false) {
             Log::error('[ActivityApplied] JSON encode failed', [
@@ -155,38 +176,6 @@ class ActivityApplied extends Mailable
                 'jsonBody' => $jsonBody
             ],
         );
-    }
-
-    /**
-     * Remove risky tags/control bytes and keep HTML within a safe size for transport.
-     */
-    private function sanitizeMailHtml(string $html): string
-    {
-        if ($html === '') {
-            return '';
-        }
-
-        $sanitized = $html;
-
-        // Strip tags that can break downstream rendering or automation parsers.
-        $sanitized = preg_replace('/<\s*(script|style|iframe|object|embed)\b[^>]*>.*?<\s*\/\s*\1\s*>/is', '', $sanitized) ?? $sanitized;
-
-        // Remove non-printable control characters except line breaks and tabs.
-        $sanitized = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', '', $sanitized) ?? $sanitized;
-
-        // Avoid oversized payloads in Power Automate by truncating at a safe length.
-        if (mb_strlen($sanitized, 'UTF-8') > self::MAX_PERSONAL_CONFIRMATION_LENGTH) {
-            Log::warning('[ActivityApplied] Personal confirmation truncated for payload safety', [
-                'activity_id' => $this->activity->id,
-                'user_id' => $this->user->id,
-                'original_length' => mb_strlen($sanitized, 'UTF-8'),
-                'max_length' => self::MAX_PERSONAL_CONFIRMATION_LENGTH,
-            ]);
-
-            $sanitized = mb_substr($sanitized, 0, self::MAX_PERSONAL_CONFIRMATION_LENGTH, 'UTF-8');
-        }
-
-        return $sanitized;
     }
 
     /**

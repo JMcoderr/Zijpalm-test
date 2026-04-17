@@ -10,6 +10,8 @@ use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class UpcomingActivitiesDigest extends Mailable
 {
@@ -48,6 +50,7 @@ class UpcomingActivitiesDigest extends Mailable
      */
     public function content(): Content
     {
+        $mailDebug = true;
         $mailSubject = $this->content?->title ?: 'Komende activiteiten van Zijpalm';
         $introHtml = $this->content?->text
             ? EditorPhp::make($this->content->text)->toHtml()
@@ -55,11 +58,21 @@ class UpcomingActivitiesDigest extends Mailable
 
         $introHtml = $this->normalizeIntroLinks($introHtml);
 
-        $renderedContent = view('mail.upcoming-activities-digest', [
-            'introHtml' => $introHtml,
-            'activities' => $this->activities,
-            'runningActivities' => $this->runningActivities,
-        ])->render();
+        try {
+            $renderedContent = view('mail.upcoming-activities-digest', [
+                'introHtml' => $introHtml,
+                'activities' => $this->activities,
+                'runningActivities' => $this->runningActivities,
+            ])->render();
+        } catch (Throwable $exception) {
+            Log::error('[UpcomingActivitiesDigest] View render failed, using fallback body', [
+                'error' => $exception->getMessage(),
+                'activities' => $this->activities->count(),
+                'running_activities' => $this->runningActivities->count(),
+            ]);
+
+            $renderedContent = '<p>Beste leden,</p><p>De mail met toekomstige activiteiten kon niet volledig worden opgebouwd.</p>';
+        }
 
         $jsonBody = json_encode([
             'emails' => $this->emails,
@@ -67,7 +80,35 @@ class UpcomingActivitiesDigest extends Mailable
             'body' => $renderedContent,
             'batch_size' => $this->validatedData['batch_size'] ?? config('mail.power_automate.batch_size.default', 50),
             'delay' => $this->validatedData['delay'] ?? config('mail.power_automate.delay.default', 30),
-        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE);
+
+        if ($mailDebug) {
+            Log::debug('[UpcomingActivitiesDigest] JSON payload prepared', [
+                'emails' => $this->emails->count(),
+                'activities' => $this->activities->count(),
+                'running_activities' => $this->runningActivities->count(),
+                'batch_size' => $this->validatedData['batch_size'] ?? config('mail.power_automate.batch_size.default', 50),
+                'delay' => $this->validatedData['delay'] ?? config('mail.power_automate.delay.default', 30),
+                'json_length' => strlen((string) $jsonBody),
+                'subject' => $mailSubject,
+            ]);
+        }
+
+        if ($jsonBody === false) {
+            Log::error('[UpcomingActivitiesDigest] JSON encode failed', [
+                'error' => json_last_error_msg(),
+                'emails' => $this->emails->count(),
+                'activities' => $this->activities->count(),
+            ]);
+
+            $jsonBody = json_encode([
+                'emails' => $this->emails,
+                'subject' => $mailSubject,
+                'body' => '<p>Beste leden,</p><p>De mail met toekomstige activiteiten kon niet volledig worden opgebouwd.</p>',
+                'batch_size' => $this->validatedData['batch_size'] ?? config('mail.power_automate.batch_size.default', 50),
+                'delay' => $this->validatedData['delay'] ?? config('mail.power_automate.delay.default', 30),
+            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE) ?: '{}';
+        }
 
         return new Content(
             text: 'mail.raw-json',

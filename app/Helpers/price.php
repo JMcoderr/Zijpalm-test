@@ -32,28 +32,17 @@ function formatPriceForDb(string $price){
  * @return float The calculated price based on the answer and question type.
  */
 function getAnswerPrice($answer): float {
-    if (!$answer || !isset($answer->question)) {
-        return 0.0;
-    }
-
-    $question = $answer->question;
-    $type = $question->type ?? null;
-
-    if (is_string($type)) {
-        $type = QuestionType::tryFrom($type);
-    }
-
-    switch ($type) {
+    switch ($answer->question->type) {
         case QuestionType::Text:
             return 0.0;
         case QuestionType::Checkbox:
             return in_array($answer->answer, [true, 1, '1', 'Ja', 'ja', 'true'], true)
-                ? (float) ($question->price ?? 0)
+                ? (float) ($answer->question->price ?? 0)
                 : 0.0;
         case QuestionType::Number:
-            return (float) $answer->answer * (float) ($question->price ?? 0);
+            return (float) $answer->answer * (float) ($answer->question->price ?? 0);
         case QuestionType::Select:
-            $option = $question->selectOptions->firstWhere('option', $answer->answer);
+            $option = $answer->question->selectOptions->firstWhere('option', $answer->answer);
             return isset($option->price) ? (float) $option->price : 0.0;
         default:
             return 0.0;

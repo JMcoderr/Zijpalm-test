@@ -179,7 +179,10 @@ class ApplicationController extends Controller
         // Organizer free registration: always activate and never redirect to Mollie, except if the organizer brings a guest
         if($canRegisterFree && $guests->count() == 0) {
             $application->update(['status' => ApplicationStatus::Active]);
-            $this->sendBoardNotification(new ActivityApplied($activity, $request->user(), false, true), 'free_organizer_signup');
+            // Force standard confirmation template for free organizers.
+            $mailActivity = clone $activity;
+            $mailActivity->personal_confirmation_enabled = false;
+            $this->sendBoardNotification(new ActivityApplied($mailActivity, $application->user), 'free_organizer_signup');
             return redirect()->route('activity.show', $activity)->with('success', "Je bent succesvol en gratis als organisator aangemeld voor '{$activity->title}'.");
         }
 
@@ -265,6 +268,7 @@ class ApplicationController extends Controller
     {
         $address = config('mail.bestuur.address');
         $name = config('mail.bestuur.name');
+        $mailDebug = true;
 
         if (blank($address)) {
             Log::warning('[ApplicationController] Board mail skipped: address missing', [
@@ -275,11 +279,39 @@ class ApplicationController extends Controller
         }
 
         try {
+            if ($mailDebug) {
+                Log::debug('[ApplicationController] Board mail send started', [
+                    'context' => $context,
+                    'address' => $address,
+                    'name' => $name,
+                    'mailable' => get_class($mailable),
+                    'mailer' => config('mail.default'),
+                    'smtp_host' => config('mail.mailers.smtp.host'),
+                    'smtp_port' => config('mail.mailers.smtp.port'),
+                    'smtp_scheme' => config('mail.mailers.smtp.scheme'),
+                    'from_address' => config('mail.from.address'),
+                    'from_name' => config('mail.from.name'),
+                ]);
+            }
+
             Mail::to($address, $name)->send($mailable);
+
+            if ($mailDebug) {
+                Log::debug('[ApplicationController] Board mail send completed', [
+                    'context' => $context,
+                    'address' => $address,
+                    'mailable' => get_class($mailable),
+                ]);
+            }
         } catch (Throwable $exception) {
             Log::error('[ApplicationController] Board mail send failed', [
                 'context' => $context,
                 'address' => $address,
+                'mailable' => get_class($mailable),
+                'mailer' => config('mail.default'),
+                'smtp_host' => config('mail.mailers.smtp.host'),
+                'smtp_port' => config('mail.mailers.smtp.port'),
+                'smtp_scheme' => config('mail.mailers.smtp.scheme'),
                 'error' => $exception->getMessage(),
             ]);
         }
