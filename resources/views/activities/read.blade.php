@@ -292,7 +292,14 @@
                     $extrasRevenue = $activeApplications->sum(fn ($application) => $application->calculateExtrasCost());
                     $totalDue = $activeApplications->sum(fn ($application) => $application->calculateTotalCost());
                     $totalPaid = $applications->sum(fn ($application) => $application->calculateTotalPaid());
-                    $manualFinanceEntries = collect($activity->manual_income_entries ?? []);
+                    $manualFinanceEntries = collect($activity->manual_income_entries ?? [])->filter(function ($entry) {
+                        $description = trim((string) ($entry['description'] ?? ''));
+                        $hasDescription = $description !== '';
+                        $hasQuantity = array_key_exists('quantity', $entry) && $entry['quantity'] !== null && $entry['quantity'] !== '';
+                        $hasUnitPrice = array_key_exists('unit_price', $entry) && $entry['unit_price'] !== null && $entry['unit_price'] !== '';
+
+                        return $hasDescription && $hasQuantity && $hasUnitPrice;
+                    })->values();
                     $hasManualFinance = $manualFinanceEntries->isNotEmpty();
                     $manualFinanceTotal = $manualFinanceEntries->sum(fn ($entry) => (float) ($entry['total'] ?? 0));
                 @endphp
