@@ -179,10 +179,7 @@ class ApplicationController extends Controller
         // Organizer free registration: always activate and never redirect to Mollie, except if the organizer brings a guest
         if($canRegisterFree && $guests->count() == 0) {
             $application->update(['status' => ApplicationStatus::Active]);
-            // Force standard confirmation template for free organizers.
-            $mailActivity = clone $activity;
-            $mailActivity->personal_confirmation_enabled = false;
-            $this->sendBoardNotification(new ActivityApplied($mailActivity, $application->user), 'free_organizer_signup');
+            $this->sendBoardNotification(new ActivityApplied($activity, $application->user), 'free_organizer_signup');
             return redirect()->route('activity.show', $activity)->with('success', "Je bent succesvol en gratis als organisator aangemeld voor '{$activity->title}'.");
         }
 
