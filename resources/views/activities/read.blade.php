@@ -319,7 +319,7 @@
                                     <tr>
                                         <th class="text-left font-semibold p-2">Omschrijving</th>
                                         <th class="text-right font-semibold p-2">Aantal</th>
-                                        <th class="text-right font-semibold p-2">Bijdrage per deelnemer</th>
+                                        <th class="text-right font-semibold p-2">Per stuk</th>
                                         <th class="text-right font-semibold p-2">Totaal</th>
                                     </tr>
                                 </thead>
