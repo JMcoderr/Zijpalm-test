@@ -295,6 +295,14 @@
                     $manualFinanceEntries = collect($activity->manual_income_entries ?? []);
                     $hasManualFinance = $manualFinanceEntries->isNotEmpty();
                     $manualFinanceTotal = $manualFinanceEntries->sum(fn ($entry) => (float) ($entry['total'] ?? 0));
+                    $formatManualValue = function (float $value): string {
+                        $formatted = number_format($value, 2, ',', '.');
+                        if (str_ends_with($formatted, ',00')) {
+                            return substr($formatted, 0, -3);
+                        }
+
+                        return rtrim(rtrim($formatted, '0'), ',');
+                    };
                 @endphp
 
                 <div class="flex flex-col lg:flex-row gap-5 w-full">
@@ -321,13 +329,13 @@
                                             <tr class="hover:bg-[rgba(0,0,0,0.05)]">
                                                 <td class="p-2 font-semibold">{{ $entry['description'] ?? 'Regel' }}</td>
                                                 <td class="p-2 text-right">{{ $entry['quantity'] ?? 0 }}</td>
-                                                <td class="p-2 text-right">EUR {{ number_format((float) ($entry['unit_price'] ?? 0), 2, ',', '.') }}</td>
-                                                <td class="p-2 text-right font-semibold">EUR {{ number_format((float) ($entry['total'] ?? 0), 2, ',', '.') }}</td>
+                                                <td class="p-2 text-right">{{ $formatManualValue((float) ($entry['unit_price'] ?? 0)) }}</td>
+                                                <td class="p-2 text-right font-semibold">{{ $formatManualValue((float) ($entry['total'] ?? 0)) }}</td>
                                             </tr>
                                         @endforeach
                                         <tr class="bg-[rgba(0,0,0,0.06)] font-semibold">
                                             <td colspan="3" class="p-2 text-right">Totaal:</td>
-                                            <td class="p-2 text-right">EUR {{ number_format((float) $manualFinanceTotal, 2, ',', '.') }}</td>
+                                            <td class="p-2 text-right">{{ $formatManualValue((float) $manualFinanceTotal) }}</td>
                                         </tr>
                                     @endif
                                 </tbody>

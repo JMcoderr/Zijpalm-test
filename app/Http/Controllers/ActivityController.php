@@ -135,8 +135,16 @@ class ActivityController extends Controller
             $hasDescription = $description !== '';
             $hasAnyInput = $hasDescription || $hasQuantityInput || $hasUnitPriceInput;
 
-            // Keep every row the user actually started filling.
+            // Skip empty rows and rows without description to avoid accidental extra lines.
             if (!$hasAnyInput) {
+                continue;
+            }
+
+            if (!$hasDescription) {
+                continue;
+            }
+
+            if (!$hasQuantityInput && !$hasUnitPriceInput) {
                 continue;
             }
 
