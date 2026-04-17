@@ -87,7 +87,7 @@
         return `
             <tr class="bg-[rgba(255,255,255,0.75)]">
                 <td class="p-1.5 align-top"><input type="text" name="manual_finance_entries[][description]" class="w-full rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-zinc-900"/></td>
-                <td class="p-1.5 align-top"><input type="number" name="manual_finance_entries[][quantity]" step="0.01" min="0" value="1" class="w-full rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-zinc-900"/></td>
+                <td class="p-1.5 align-top"><input type="number" name="manual_finance_entries[][quantity]" step="0.01" min="0" value="" class="w-full rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-zinc-900"/></td>
                 <td class="p-1.5 align-top"><input type="text" name="manual_finance_entries[][unit_price]" inputmode="decimal" class="w-full rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-zinc-900"/></td>
                 <td class="p-2 align-top font-semibold text-zijpalm-700" data-total-cell>0,00</td>
                 <td class="p-1.5 text-right align-top">

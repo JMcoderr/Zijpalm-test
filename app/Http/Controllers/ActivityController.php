@@ -126,18 +126,22 @@ class ActivityController extends Controller
             $quantityRaw = $entry['quantity'] ?? null;
             $unitPriceRaw = $entry['unit_price'] ?? null;
 
-            $hasQuantity = $quantityRaw !== null && $quantityRaw !== '';
-            $hasUnitPrice = $unitPriceRaw !== null && $unitPriceRaw !== '';
+            $hasQuantityInput = $quantityRaw !== null && $quantityRaw !== '';
+            $hasUnitPriceInput = $unitPriceRaw !== null && $unitPriceRaw !== '';
 
-            if ($description === '' && !$hasQuantity && !$hasUnitPrice) {
+            $quantity = $hasQuantityInput ? max(0, (float) str_replace(',', '.', (string) $quantityRaw)) : 0.0;
+            $unitPrice = $hasUnitPriceInput ? formatPriceForDb((string) $unitPriceRaw) : 0.0;
+
+            $hasDescription = $description !== '';
+            $hasCompletePriceLine = $quantity > 0 && $unitPrice > 0;
+
+            // Keep only rows that are explicitly described or fully priced.
+            if (!$hasDescription && !$hasCompletePriceLine) {
                 continue;
             }
 
-            $quantity = max(0, (float) str_replace(',', '.', (string) ($quantityRaw ?? 0)));
-            $unitPrice = $hasUnitPrice ? formatPriceForDb((string) $unitPriceRaw) : 0.0;
-
             $sanitized[] = [
-                'description' => $description !== '' ? $description : 'Zonder omschrijving',
+                'description' => $description,
                 'quantity' => $quantity,
                 'unit_price' => $unitPrice,
                 'total' => round($quantity * $unitPrice, 2),
