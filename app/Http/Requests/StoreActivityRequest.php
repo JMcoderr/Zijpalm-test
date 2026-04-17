@@ -66,33 +66,6 @@ class StoreActivityRequest extends FormRequest
         ];
     }
 
-    public function withValidator($validator): void
-    {
-        $validator->after(function ($validator) {
-            $entries = $this->input('manual_finance_entries', []);
-
-            if (!is_array($entries)) {
-                return;
-            }
-
-            foreach ($entries as $index => $entry) {
-                $description = trim((string) ($entry['description'] ?? ''));
-                $quantity = $entry['quantity'] ?? null;
-                $unitPrice = $entry['unit_price'] ?? null;
-
-                $hasDescription = $description !== '';
-                $hasQuantity = $quantity !== null && $quantity !== '';
-                $hasUnitPrice = $unitPrice !== null && $unitPrice !== '';
-
-                if (!($hasDescription && $hasQuantity && $hasUnitPrice)) {
-                    $validator->errors()->add(
-                        "manual_finance_entries.$index.description",
-                        'Elke toegevoegde kostenregel moet volledig ingevuld zijn (omschrijving, aantal en bijdrage per deelnemer).'
-                    );
-                }
-            }
-        });
-    }
 
     /**
      * Get custom messages for validator errors.

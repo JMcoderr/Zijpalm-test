@@ -321,13 +321,13 @@
                                             <tr class="hover:bg-[rgba(0,0,0,0.05)]">
                                                 <td class="p-2 font-semibold">{{ $entry['description'] ?? 'Regel' }}</td>
                                                 <td class="p-2 text-right">{{ $entry['quantity'] ?? 0 }}</td>
-                                                <td class="p-2 text-right">{{ formatPrice((float) ($entry['unit_price'] ?? 0)) }}</td>
-                                                <td class="p-2 text-right font-semibold">{{ formatPrice((float) ($entry['total'] ?? 0)) }}</td>
+                                                <td class="p-2 text-right">EUR {{ number_format((float) ($entry['unit_price'] ?? 0), 2, ',', '.') }}</td>
+                                                <td class="p-2 text-right font-semibold">EUR {{ number_format((float) ($entry['total'] ?? 0), 2, ',', '.') }}</td>
                                             </tr>
                                         @endforeach
                                         <tr class="bg-[rgba(0,0,0,0.06)] font-semibold">
                                             <td colspan="3" class="p-2 text-right">Totaal:</td>
-                                            <td class="p-2 text-right">{{ formatPrice($manualFinanceTotal) }}</td>
+                                            <td class="p-2 text-right">EUR {{ number_format((float) $manualFinanceTotal, 2, ',', '.') }}</td>
                                         </tr>
                                     @endif
                                 </tbody>
