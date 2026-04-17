@@ -295,7 +295,6 @@
                     $manualFinanceEntries = collect($activity->manual_income_entries ?? []);
                     $hasManualFinance = $manualFinanceEntries->isNotEmpty();
                     $manualFinanceTotal = $manualFinanceEntries->sum(fn ($entry) => (float) ($entry['total'] ?? 0));
-                    $manualBudget = $activity->manual_budget !== null ? (float) $activity->manual_budget : null;
                 @endphp
 
                 <div class="flex flex-col lg:flex-row gap-5 w-full">
@@ -330,16 +329,6 @@
                                             <td colspan="3" class="p-2 text-right">Totaal:</td>
                                             <td class="p-2 text-right">{{ formatPrice($manualFinanceTotal) }}</td>
                                         </tr>
-                                        @if(!is_null($manualBudget))
-                                            <tr class="bg-[rgba(0,0,0,0.08)] font-semibold">
-                                                <td colspan="3" class="p-2 text-right">Begroot:</td>
-                                                <td class="p-2 text-right">{{ formatPrice($manualBudget) }}</td>
-                                            </tr>
-                                            <tr class="bg-[rgba(0,0,0,0.12)] font-semibold">
-                                                <td colspan="3" class="p-2 text-right">Afwijking t.o.v. begroot:</td>
-                                                <td class="p-2 text-right">{{ formatPrice($manualFinanceTotal - $manualBudget) }}</td>
-                                            </tr>
-                                        @endif
                                     @else
                                         <tr class="hover:bg-[rgba(0,0,0,0.05)]">
                                             <td class="p-2 font-semibold">Betaalde deelnemers</td>

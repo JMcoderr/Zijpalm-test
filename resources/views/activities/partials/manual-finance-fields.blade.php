@@ -1,6 +1,5 @@
 @php
     $prefix = $prefix ?? 'manual-finance';
-    $manualBudgetValue = old('manual_budget', $manualBudget ?? '');
     $financeRows = old('manual_finance_entries', $manualFinanceEntries ?? []);
 
     if (blank($financeRows) || !is_array($financeRows)) {
@@ -8,32 +7,14 @@
     }
 @endphp
 
-<x-input-group id="{{ $prefix }}" title="Handmatig kostenoverzicht" grid="grid grid-cols-1" class="mt-1">
+<x-input-group id="{{ $prefix }}" title="Kostenoverzicht" grid="grid grid-cols-1" class="mt-3 md:max-w-2xl">
     <p class="text-sm text-zinc-600">
         Voeg regels toe met omschrijving, aantal en bijdrage per deelnemer. Totalen worden automatisch berekend.
     </p>
 
-    <div class="grid md:grid-cols-2 grid-cols-1 gap-3">
-        <div>
-            <label for="manual_budget" class="block text-sm font-semibold mb-1">Begroot bedrag (optioneel)</label>
-            <input
-                id="manual_budget"
-                name="manual_budget"
-                type="text"
-                inputmode="decimal"
-                placeholder="0.00"
-                value="{{ $manualBudgetValue }}"
-                class="w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zijpalm-300"
-            />
-        </div>
-        <div class="rounded-md bg-[rgba(0,0,0,0.06)] px-3 py-2 text-sm space-y-1">
-            <div class="flex justify-between"><span>Totaal:</span><strong id="{{ $prefix }}-total">€ 0,00</strong></div>
-        </div>
-    </div>
-
     <div class="rounded-md border border-zinc-300 overflow-hidden mt-2">
         <div class="bg-zijpalm-100 px-3 py-2 flex items-center justify-between">
-            <h4 class="font-semibold text-sm">Tabelregels</h4>
+            <h4 class="font-semibold text-sm">Kostenoverzicht</h4>
             <button type="button" class="text-sm font-semibold text-zijpalm-700" onclick="manualFinanceAddRow('{{ $prefix }}')">+ Regel</button>
         </div>
 
@@ -60,6 +41,11 @@
                 @endforeach
                 </tbody>
             </table>
+        </div>
+
+        <div class="border-t border-zinc-300 bg-zinc-50 px-3 py-2 text-sm flex justify-end gap-2">
+            <span class="font-semibold">Totale kosten:</span>
+            <strong id="{{ $prefix }}-total">€ 0,00</strong>
         </div>
     </div>
 </x-input-group>

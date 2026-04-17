@@ -79,11 +79,12 @@
                     />
                 </x-input-group>
 
+                <div class="mt-5">
                 @include('activities.partials.manual-finance-fields', [
                     'prefix' => 'create-manual-finance',
-                    'manualBudget' => null,
                     'manualFinanceEntries' => [],
                 ])
+                </div>
 
                 <flux:separator variant="subtle"/>
 
