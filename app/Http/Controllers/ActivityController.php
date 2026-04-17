@@ -133,8 +133,10 @@ class ActivityController extends Controller
             $unitPrice = $hasUnitPriceInput ? formatPriceForDb((string) $unitPriceRaw) : 0.0;
 
             $hasDescription = $description !== '';
-            // Only persist rows that are explicitly named by the user.
-            if (!$hasDescription) {
+            $hasAnyInput = $hasDescription || $hasQuantityInput || $hasUnitPriceInput;
+
+            // Persist any row the user actually filled in.
+            if (!$hasAnyInput) {
                 continue;
             }
 
