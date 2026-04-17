@@ -110,6 +110,52 @@ class ActivityController extends Controller
         return $errorArray;
     }
 
+    /**
+     * Normalize and sanitize manually entered finance rows.
+     */
+    private function sanitizeManualFinanceEntries(?array $entries): array
+    {
+        if (!is_array($entries)) {
+            return [];
+        }
+
+        $sanitized = [];
+
+        foreach ($entries as $entry) {
+            $description = trim((string) ($entry['description'] ?? ''));
+            $quantityRaw = $entry['quantity'] ?? null;
+            $unitPriceRaw = $entry['unit_price'] ?? null;
+
+            $hasQuantity = $quantityRaw !== null && $quantityRaw !== '';
+            $hasUnitPrice = $unitPriceRaw !== null && $unitPriceRaw !== '';
+
+            if ($description === '' && !$hasQuantity && !$hasUnitPrice) {
+                continue;
+            }
+
+            $quantity = max(0, (float) str_replace(',', '.', (string) ($quantityRaw ?? 0)));
+            $unitPrice = $hasUnitPrice ? formatPriceForDb((string) $unitPriceRaw) : 0.0;
+
+            $sanitized[] = [
+                'description' => $description !== '' ? $description : 'Zonder omschrijving',
+                'quantity' => $quantity,
+                'unit_price' => $unitPrice,
+                'total' => round($quantity * $unitPrice, 2),
+            ];
+        }
+
+        return $sanitized;
+    }
+
+    private function parseManualBudget(mixed $budget): ?float
+    {
+        if ($budget === null || $budget === '') {
+            return null;
+        }
+
+        return formatPriceForDb((string) $budget);
+    }
+
     /***
      * Sends a reminder email to participants registered for a given activity.
      * @param Activity $activity
@@ -211,6 +257,9 @@ class ActivityController extends Controller
     public function store(StoreActivityRequest $request){
         // Store all the request data in a temp variable
         $data = $request->all();
+        $manualIncomeEntries = $this->sanitizeManualFinanceEntries($data['manual_income_entries'] ?? null);
+        $manualExpenseEntries = $this->sanitizeManualFinanceEntries($data['manual_expense_entries'] ?? null);
+        $manualBudget = $this->parseManualBudget($data['manual_budget'] ?? null);
 
         // Check if an activity is recurring, if not a start-date is required.
         if(!isset($data['start-date']) && !isset($data['recurring'])) {
@@ -268,6 +317,9 @@ class ActivityController extends Controller
             'registrationEnd' => $data['registrationEnd'],
             'cancellationEnd' => isset($data['noCancellation']) ? null : ($data['cancellationEnd'] ?? null),
             'free_organizer_count' => $data['free_organizer_count'],
+            'manual_income_entries' => !empty($manualIncomeEntries) ? $manualIncomeEntries : null,
+            'manual_expense_entries' => !empty($manualExpenseEntries) ? $manualExpenseEntries : null,
+            'manual_budget' => $manualBudget,
         ]);
 
         // If there are questions, and they're a valid array, loop through each
@@ -372,6 +424,9 @@ class ActivityController extends Controller
     public function update(UpdateActivityRequest $request, Activity $activity){
         // Collect data from request
         $data = $request->all();
+        $manualIncomeEntries = $this->sanitizeManualFinanceEntries($data['manual_income_entries'] ?? null);
+        $manualExpenseEntries = $this->sanitizeManualFinanceEntries($data['manual_expense_entries'] ?? null);
+        $manualBudget = $this->parseManualBudget($data['manual_budget'] ?? null);
 
         // Determine activity type
         $type = ActivityType::OneDay;
@@ -406,6 +461,9 @@ class ActivityController extends Controller
             'registrationEnd' => $data['registrationEnd'] ?? $activity->registrationEnd,
             'cancellationEnd' => isset($data['noCancellation']) ? null : ($data['cancellationEnd'] ?? $activity->cancellationEnd),
             'free_organizer_count' => $data['free_organizer_count'] ?? $activity->free_organizer_count,
+            'manual_income_entries' => !empty($manualIncomeEntries) ? $manualIncomeEntries : null,
+            'manual_expense_entries' => !empty($manualExpenseEntries) ? $manualExpenseEntries : null,
+            'manual_budget' => $manualBudget,
         ]);
 
         // Handle questions - first delete all old questions, then create new ones

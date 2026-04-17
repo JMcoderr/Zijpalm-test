@@ -43,7 +43,10 @@ class Activity extends Model
         'cancellationEnd',
         'imagePath',
         'type',
-        'free_organizer_count'
+        'free_organizer_count',
+        'manual_income_entries',
+        'manual_expense_entries',
+        'manual_budget',
     ];
 
     protected $casts = [
@@ -54,6 +57,9 @@ class Activity extends Model
         'registrationEnd' => 'datetime',
         'cancellationEnd' => 'datetime',
         'personal_confirmation_enabled' => 'boolean',
+        'manual_income_entries' => 'array',
+        'manual_expense_entries' => 'array',
+        'manual_budget' => 'decimal:2',
     ];
 
     public function applications()

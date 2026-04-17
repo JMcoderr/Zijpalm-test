@@ -97,6 +97,13 @@
                     />
                 </x-input-group>
 
+                @include('activities.partials.manual-finance-fields', [
+                    'prefix' => 'edit-manual-finance',
+                    'manualBudget' => $activity->manual_budget,
+                    'manualIncomeEntries' => $activity->manual_income_entries ?? [],
+                    'manualExpenseEntries' => $activity->manual_expense_entries ?? [],
+                ])
+
                 <flux:separator variant="subtle"/>
 
                 <div class="grid lg:grid-cols-2 grid-cols-1 gap-x-2 relative">

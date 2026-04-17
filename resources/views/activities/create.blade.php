@@ -79,6 +79,13 @@
                     />
                 </x-input-group>
 
+                @include('activities.partials.manual-finance-fields', [
+                    'prefix' => 'create-manual-finance',
+                    'manualBudget' => null,
+                    'manualIncomeEntries' => [],
+                    'manualExpenseEntries' => [],
+                ])
+
                 <flux:separator variant="subtle"/>
 
                 <div class="grid lg:grid-cols-2 grid-cols-1 gap-x-2 relative">

@@ -292,6 +292,13 @@
                     $extrasRevenue = $activeApplications->sum(fn ($application) => $application->calculateExtrasCost());
                     $totalDue = $activeApplications->sum(fn ($application) => $application->calculateTotalCost());
                     $totalPaid = $applications->sum(fn ($application) => $application->calculateTotalPaid());
+                    $manualIncomeEntries = collect($activity->manual_income_entries ?? []);
+                    $manualExpenseEntries = collect($activity->manual_expense_entries ?? []);
+                    $hasManualFinance = $manualIncomeEntries->isNotEmpty() || $manualExpenseEntries->isNotEmpty();
+                    $manualIncomeTotal = $manualIncomeEntries->sum(fn ($entry) => (float) ($entry['total'] ?? 0));
+                    $manualExpenseTotal = $manualExpenseEntries->sum(fn ($entry) => (float) ($entry['total'] ?? 0));
+                    $manualBalanceTotal = $manualIncomeTotal - $manualExpenseTotal;
+                    $manualBudget = $activity->manual_budget !== null ? (float) $activity->manual_budget : null;
                 @endphp
 
                 <div class="flex flex-col lg:flex-row gap-5 w-full">
@@ -313,46 +320,88 @@
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-[rgba(0,0,0,0.15)]">
-                                    <tr class="hover:bg-[rgba(0,0,0,0.05)]">
-                                        <td class="p-2 font-semibold">Betaalde deelnemers</td>
-                                        <td class="p-2 text-right">{{ $paidParticipants }}</td>
-                                        <td class="p-2 text-right">{{ $activity->price > 0 ? formatPrice($activity->price) : 'Gratis' }}</td>
-                                        <td class="p-2 text-right font-semibold">{{ formatPrice($baseRevenue) }}</td>
-                                    </tr>
-                                    @if($freeOrganizerCount > 0)
-                                        <tr class="hover:bg-[rgba(0,0,0,0.05)] opacity-60">
-                                            <td class="p-2 text-sm">Gratis organisatoren</td>
-                                            <td class="p-2 text-right text-sm">{{ $freeOrganizerCount }}</td>
-                                            <td class="p-2 text-right text-sm">Gratis</td>
-                                            <td class="p-2 text-right font-semibold text-sm">{{ formatPrice(0) }}</td>
+                                    @if($hasManualFinance)
+                                        @foreach($manualIncomeEntries as $entry)
+                                            <tr class="hover:bg-[rgba(0,0,0,0.05)]">
+                                                <td class="p-2 font-semibold">{{ $entry['description'] ?? 'Inkomst' }}</td>
+                                                <td class="p-2 text-right">{{ $entry['quantity'] ?? 0 }}</td>
+                                                <td class="p-2 text-right">{{ formatPrice((float) ($entry['unit_price'] ?? 0)) }}</td>
+                                                <td class="p-2 text-right font-semibold">{{ formatPrice((float) ($entry['total'] ?? 0)) }}</td>
+                                            </tr>
+                                        @endforeach
+                                        <tr class="bg-[rgba(0,0,0,0.06)] font-semibold">
+                                            <td colspan="3" class="p-2 text-right">Totaal inkomsten:</td>
+                                            <td class="p-2 text-right">{{ formatPrice($manualIncomeTotal) }}</td>
+                                        </tr>
+
+                                        @foreach($manualExpenseEntries as $entry)
+                                            <tr class="hover:bg-[rgba(0,0,0,0.05)] opacity-90">
+                                                <td class="p-2">{{ $entry['description'] ?? 'Uitgave' }}</td>
+                                                <td class="p-2 text-right">{{ $entry['quantity'] ?? 0 }}</td>
+                                                <td class="p-2 text-right">{{ formatPrice((float) ($entry['unit_price'] ?? 0)) }}</td>
+                                                <td class="p-2 text-right font-semibold">{{ formatPrice((float) ($entry['total'] ?? 0)) }}</td>
+                                            </tr>
+                                        @endforeach
+                                        <tr class="bg-[rgba(0,0,0,0.06)] font-semibold">
+                                            <td colspan="3" class="p-2 text-right">Totaal uitgaven:</td>
+                                            <td class="p-2 text-right">{{ formatPrice($manualExpenseTotal) }}</td>
+                                        </tr>
+                                        <tr class="bg-[rgba(0,0,0,0.1)] font-semibold border-t-2 border-[rgba(0,0,0,0.3)]">
+                                            <td colspan="3" class="p-2 text-right">Saldo:</td>
+                                            <td class="p-2 text-right">{{ formatPrice($manualBalanceTotal) }}</td>
+                                        </tr>
+                                        @if(!is_null($manualBudget))
+                                            <tr class="bg-[rgba(0,0,0,0.08)] font-semibold">
+                                                <td colspan="3" class="p-2 text-right">Begroot:</td>
+                                                <td class="p-2 text-right">{{ formatPrice($manualBudget) }}</td>
+                                            </tr>
+                                            <tr class="bg-[rgba(0,0,0,0.12)] font-semibold">
+                                                <td colspan="3" class="p-2 text-right">Afwijking t.o.v. begroot:</td>
+                                                <td class="p-2 text-right">{{ formatPrice($manualBalanceTotal - $manualBudget) }}</td>
+                                            </tr>
+                                        @endif
+                                    @else
+                                        <tr class="hover:bg-[rgba(0,0,0,0.05)]">
+                                            <td class="p-2 font-semibold">Betaalde deelnemers</td>
+                                            <td class="p-2 text-right">{{ $paidParticipants }}</td>
+                                            <td class="p-2 text-right">{{ $activity->price > 0 ? formatPrice($activity->price) : 'Gratis' }}</td>
+                                            <td class="p-2 text-right font-semibold">{{ formatPrice($baseRevenue) }}</td>
+                                        </tr>
+                                        @if($freeOrganizerCount > 0)
+                                            <tr class="hover:bg-[rgba(0,0,0,0.05)] opacity-60">
+                                                <td class="p-2 text-sm">Gratis organisatoren</td>
+                                                <td class="p-2 text-right text-sm">{{ $freeOrganizerCount }}</td>
+                                                <td class="p-2 text-right text-sm">Gratis</td>
+                                                <td class="p-2 text-right font-semibold text-sm">{{ formatPrice(0) }}</td>
+                                            </tr>
+                                        @endif
+                                        <tr class="hover:bg-[rgba(0,0,0,0.05)]">
+                                            <td class="p-2 font-semibold">Extra's (vragen)</td>
+                                            <td class="p-2 text-right">—</td>
+                                            <td class="p-2 text-right">—</td>
+                                            <td class="p-2 text-right font-semibold">{{ formatPrice($extrasRevenue) }}</td>
+                                        </tr>
+                                        @if($pendingParticipants > 0)
+                                            <tr class="hover:bg-[rgba(0,0,0,0.05)] opacity-60">
+                                                <td class="p-2 text-sm">In afwachting betaling</td>
+                                                <td class="p-2 text-right text-sm">{{ $pendingParticipants }}</td>
+                                                <td class="p-2 text-right text-sm">{{ $activity->price > 0 ? formatPrice($activity->price) : '–' }}</td>
+                                                <td class="p-2 text-right font-semibold text-sm">{{ formatPrice($pendingParticipants * (float) $activity->price) }}</td>
+                                            </tr>
+                                        @endif
+                                        @if($reserveParticipants > 0)
+                                            <tr class="hover:bg-[rgba(0,0,0,0.05)] opacity-60">
+                                                <td class="p-2 text-sm">Reserves</td>
+                                                <td class="p-2 text-right text-sm">{{ $reserveParticipants }}</td>
+                                                <td class="p-2 text-right text-sm">{{ $activity->price > 0 ? formatPrice($activity->price) : '–' }}</td>
+                                                <td class="p-2 text-right font-semibold text-sm">{{ formatPrice($reserveParticipants * (float) $activity->price) }}</td>
+                                            </tr>
+                                        @endif
+                                        <tr class="bg-[rgba(0,0,0,0.1)] font-semibold border-t-2 border-[rgba(0,0,0,0.3)]">
+                                            <td colspan="3" class="p-2 text-right">Totaal ontvangen:</td>
+                                            <td class="p-2 text-right">{{ formatPrice($totalPaid) }}</td>
                                         </tr>
                                     @endif
-                                    <tr class="hover:bg-[rgba(0,0,0,0.05)]">
-                                        <td class="p-2 font-semibold">Extra's (vragen)</td>
-                                        <td class="p-2 text-right">—</td>
-                                        <td class="p-2 text-right">—</td>
-                                        <td class="p-2 text-right font-semibold">{{ formatPrice($extrasRevenue) }}</td>
-                                    </tr>
-                                    @if($pendingParticipants > 0)
-                                        <tr class="hover:bg-[rgba(0,0,0,0.05)] opacity-60">
-                                            <td class="p-2 text-sm">In afwachting betaling</td>
-                                            <td class="p-2 text-right text-sm">{{ $pendingParticipants }}</td>
-                                            <td class="p-2 text-right text-sm">{{ $activity->price > 0 ? formatPrice($activity->price) : '–' }}</td>
-                                            <td class="p-2 text-right font-semibold text-sm">{{ formatPrice($pendingParticipants * (float) $activity->price) }}</td>
-                                        </tr>
-                                    @endif
-                                    @if($reserveParticipants > 0)
-                                        <tr class="hover:bg-[rgba(0,0,0,0.05)] opacity-60">
-                                            <td class="p-2 text-sm">Reserves</td>
-                                            <td class="p-2 text-right text-sm">{{ $reserveParticipants }}</td>
-                                            <td class="p-2 text-right text-sm">{{ $activity->price > 0 ? formatPrice($activity->price) : '–' }}</td>
-                                            <td class="p-2 text-right font-semibold text-sm">{{ formatPrice($reserveParticipants * (float) $activity->price) }}</td>
-                                        </tr>
-                                    @endif
-                                    <tr class="bg-[rgba(0,0,0,0.1)] font-semibold border-t-2 border-[rgba(0,0,0,0.3)]">
-                                        <td colspan="3" class="p-2 text-right">Totaal ontvangen:</td>
-                                        <td class="p-2 text-right">{{ formatPrice($totalPaid) }}</td>
-                                    </tr>
                                 </tbody>
                             </table>
                         </div>
