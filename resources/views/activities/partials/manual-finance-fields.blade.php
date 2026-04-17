@@ -1,14 +1,20 @@
 @php
     $prefix = $prefix ?? 'manual-finance';
-    $financeRows = old('manual_finance_entries', $manualFinanceEntries ?? []);
+    $oldFinanceRows = old('manual_finance_entries');
+    $financeRows = $oldFinanceRows !== null ? $oldFinanceRows : ($manualFinanceEntries ?? []);
 
-    if (blank($financeRows) || !is_array($financeRows)) {
+    if (!is_array($financeRows)) {
+        $financeRows = [];
+    }
+
+    // Show one starter row only on first load, not after user intentionally removed all rows.
+    if (empty($financeRows) && $oldFinanceRows === null) {
         $financeRows = [['description' => '', 'quantity' => 1, 'unit_price' => '']];
     }
 @endphp
 
 <x-input-group id="{{ $prefix }}" title="Kostenoverzicht" grid="grid grid-cols-1" class="mt-3 md:max-w-xl">
-    <p class="text-sm text-zijpalm-700/80 mb-1">
+    <p class="text-sm text-zinc-600 mb-1">
         Vul per regel omschrijving, aantal en bijdrage in. Op de activiteitenpagina worden alle regels automatisch opgeteld.
     </p>
 
@@ -21,10 +27,10 @@
             <table class="w-full text-sm">
                 <thead class="bg-[rgba(0,0,0,0.06)] border-b border-[rgba(0,0,0,0.15)]">
                     <tr>
-                        <th class="text-left p-2 font-semibold text-zijpalm-700">Omschrijving</th>
-                        <th class="text-left p-2 font-semibold text-zijpalm-700">Aantal</th>
-                        <th class="text-left p-2 font-semibold text-zijpalm-700">Bijdrage per deelnemer</th>
-                        <th class="text-left p-2 font-semibold text-zijpalm-700">Totaal</th>
+                        <th class="text-left p-2 font-bold text-zijpalm-700">Omschrijving</th>
+                        <th class="text-left p-2 font-bold text-zijpalm-700">Aantal</th>
+                        <th class="text-left p-2 font-bold text-zijpalm-700">Bijdrage per deelnemer</th>
+                        <th class="text-left p-2 font-bold text-zijpalm-700">Totaal</th>
                         <th class="p-2"></th>
                     </tr>
                 </thead>
@@ -121,11 +127,6 @@
         const row = button.closest('tr');
         if (row) {
             row.remove();
-        }
-
-        if (!targetBody.querySelector('tr')) {
-            manualFinanceAddRow(prefix);
-            return;
         }
 
         manualFinanceRecalculate(prefix);
