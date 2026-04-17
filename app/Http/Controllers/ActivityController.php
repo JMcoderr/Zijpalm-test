@@ -133,10 +133,10 @@ class ActivityController extends Controller
             $unitPrice = $hasUnitPriceInput ? formatPriceForDb((string) $unitPriceRaw) : 0.0;
 
             $hasDescription = $description !== '';
-            $hasCompletePriceLine = $quantity > 0 && $unitPrice > 0;
+            $hasCompletePriceLine = $hasQuantityInput && $hasUnitPriceInput;
 
-            // Keep only rows that are explicitly described or fully priced.
-            if (!$hasDescription && !$hasCompletePriceLine) {
+            // Only keep fully completed rows.
+            if (!($hasDescription && $hasCompletePriceLine)) {
                 continue;
             }
 
