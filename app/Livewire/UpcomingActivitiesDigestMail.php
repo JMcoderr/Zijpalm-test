@@ -21,11 +21,11 @@ class UpcomingActivitiesDigestMail extends Component
             $exitCode = Artisan::call('app:send-upcoming-activities-digest');
 
             if ($exitCode !== 0) {
-                $this->errors = ['Mail toekomstige activiteiten kon niet worden verstuurd. Controleer de logs.'];
+                $this->errors = ['Mail toekomstige activiteiten kon niet worden verstuurd. Controleer de logs en SMTP-configuratie.'];
                 return;
             }
 
-            $this->successMessage = trim(Artisan::output()) ?: 'Mail toekomstige activiteiten is succesvol verstuurd.';
+            $this->successMessage = trim(Artisan::output()) ?: 'Mail toekomstige activiteiten is succesvol verstuurd naar de ingestelde ontvangers.';
             // Clear the modal after success
             $this->dispatch('close-modal', modal: 'upcomingActivitiesDigestMailModal');
         } catch (Throwable $exception) {
