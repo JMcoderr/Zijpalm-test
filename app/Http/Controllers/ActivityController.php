@@ -226,17 +226,7 @@ class ActivityController extends Controller
      */
     public function sendUpcomingActivitiesDigest(Request $request)
     {
-        $validatedData = $request->validate([
-            'batch_size' => 'required|integer|min:' . config('mail.power_automate.batch_size.min', 10) . '|max:' . config('mail.power_automate.batch_size.max', 500),
-            'delay' => 'required|integer|min:' . config('mail.power_automate.delay.min', 10) . '|max:' . config('mail.power_automate.delay.max', 300),
-        ]);
-
-        $validatedData = castValidatedInts($validatedData, ['delay', 'batch_size']);
-
-        $exitCode = Artisan::call('app:send-upcoming-activities-digest', [
-            '--batch_size' => $validatedData['batch_size'],
-            '--delay' => $validatedData['delay'],
-        ]);
+        $exitCode = Artisan::call('app:send-upcoming-activities-digest');
 
         if ($exitCode !== 0) {
             return redirect()->route('activity.index')
