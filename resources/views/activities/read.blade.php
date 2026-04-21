@@ -181,7 +181,12 @@
                                 {{-- Start and end dates/times --}}
                                 <div class="flex flex-col">
                                     <span class="text-lg font-bold">Datum</span>
-                                    <span> {{$activity->formattedDatesAndTimes->activity->full}}</span>
+                                    <span>
+                                        {{$activity->formattedDatesAndTimes->activity->start->date}}
+                                        @if($activity->formattedDatesAndTimes->activity->end->date !== $activity->formattedDatesAndTimes->activity->start->date)
+                                            t/m {{$activity->formattedDatesAndTimes->activity->end->date}}
+                                        @endif
+                                    </span>
                                 </div>
 
                                 @if($activity->type != App\ActivityType::Weekly)

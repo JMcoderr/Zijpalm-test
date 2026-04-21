@@ -166,10 +166,15 @@
 
             <div @class($detailClasses)>
                 @if($type === 'activity')
+                    @php
+                        $activityStartDate = $content->formattedDatesAndTimes->activity->start->date;
+                        $activityEndDate = $content->formattedDatesAndTimes->activity->end->date;
+                        $showEndDate = !empty($activityEndDate) && $activityEndDate !== $activityStartDate;
+                    @endphp
                     <div class="flex flex-col w-1/2">
                         <span @class($textClasses)>Wanneer</span>
                         <span class="text-wrap">
-                            {{$content->formattedDatesAndTimes->activity->start->date ?: $content->formattedDatesAndTimes->activity->full}}
+                            {{ $activityStartDate }}@if($showEndDate) t/m {{ $activityEndDate }}@endif
                         </span>
                     </div>
                     <div class="flex flex-col w-1/2">

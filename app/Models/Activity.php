@@ -130,22 +130,42 @@ class Activity extends Model
     {
         return Attribute::make(
             get: function () {
-                if (blank($this->personal_confirmation)) {
+                $rawConfirmation = (string) $this->getRawOriginal('personal_confirmation');
+
+                if (blank($rawConfirmation)) {
                     return null;
                 }
 
                 // Prefer editor-json rendering, but gracefully handle plain text content as fallback.
                 try {
-                    $decoded = json_decode((string) $this->personal_confirmation, true);
+                    $decoded = json_decode($rawConfirmation, true);
 
                     if (is_array($decoded) && array_key_exists('blocks', $decoded)) {
-                        return EditorPhp::make($this->personal_confirmation)->toHtml();
+                        $renderedHtml = EditorPhp::make($rawConfirmation)->toHtml();
+
+                        if (!blank(trim(strip_tags((string) $renderedHtml)))) {
+                            return $renderedHtml;
+                        }
+
+                        $plainTextFallback = collect(data_get($decoded, 'blocks', []))
+                            ->pluck('data.text')
+                            ->filter()
+                            ->implode("\n");
+
+                        if (!blank($plainTextFallback)) {
+                            $escaped = e($plainTextFallback);
+                            $withLinks = preg_replace('/(https?:\/\/[^\s<]+)/i', '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>', $escaped) ?? $escaped;
+
+                            return nl2br($withLinks);
+                        }
+
+                        return $renderedHtml;
                     }
                 } catch (\Throwable) {
                     // Fall through to plain text fallback.
                 }
 
-                $escaped = e((string) $this->personal_confirmation);
+                $escaped = e($rawConfirmation);
                 $withLinks = preg_replace('/(https?:\/\/[^\s<]+)/i', '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>', $escaped) ?? $escaped;
 
                 return nl2br($withLinks);
