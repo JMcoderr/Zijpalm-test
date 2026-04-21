@@ -15,6 +15,8 @@ use Illuminate\Queue\SerializesModels;
 use App\Models\Content as ContentModel;
 use Illuminate\Support\Facades\Log;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
+use DOMDocument;
+use DOMXPath;
 use Throwable;
 
 class ActivityApplied extends Mailable
@@ -70,6 +72,8 @@ class ActivityApplied extends Mailable
             $this->qrcode = (string) QrCode::size(192)->format('png')->generate($this->activity->whatsappUrl);
         }
 
+        $defaultContentHtml = $this->sanitizeMailHtml((string) ($this->content->textHTML ?? ''));
+        $reserveContentHtml = $this->sanitizeMailHtml((string) ($this->reserveContent->textHTML ?? ''));
         $personalConfirmationHtml = null;
         if ($this->activity->personal_confirmation_enabled) {
             try {
@@ -96,6 +100,8 @@ class ActivityApplied extends Mailable
                 'user' => $this->user,
                 'content' => $this->content,
                 'reserveContent' => $this->reserveContent,
+                'defaultContentHtml' => $defaultContentHtml,
+                'reserveContentHtml' => $reserveContentHtml,
                 'qrcode' => $this->qrcode,
                 'reserve' => $this->reserve,
                 'personalConfirmationHtml' => $personalConfirmationHtml,
@@ -108,8 +114,8 @@ class ActivityApplied extends Mailable
             ]);
 
             $introHtml = $this->reserve
-                ? ($this->reserveContent->textHTML ?? '')
-                : ($personalConfirmationHtml ?: ($this->content->textHTML ?? ''));
+                ? $reserveContentHtml
+                : ($personalConfirmationHtml ?: $defaultContentHtml);
 
             $applicationSummary = $this->application
                 ? '<p><strong>Deelnemers:</strong> ' . (int) $this->application->participants . '</p>'
@@ -163,6 +169,9 @@ class ActivityApplied extends Mailable
 
         $sanitized = $html;
 
+        // Normalize non-breaking spaces from copy/paste content (Word/Outlook).
+        $sanitized = str_replace(["\xC2\xA0", '&nbsp;'], ' ', $sanitized);
+
         // Keep the markup simple so Power Automate only receives basic, predictable HTML.
         $sanitized = strip_tags($sanitized, '<p><br><a><strong><em><b><i><u><ul><ol><li>') ?? $sanitized;
 
@@ -173,11 +182,25 @@ class ActivityApplied extends Mailable
         $sanitized = preg_replace('/<a\s+([^>]*?)href=("[^"]*"|\'[^\']*\')([^>]*)>/i', '<a href=$2>', $sanitized) ?? $sanitized;
         $sanitized = preg_replace('/<a\s+href=("[^"]*"|\'[^\']*\')\s*>/i', '<a href=$1>', $sanitized) ?? $sanitized;
 
+        // If a link starts with www., make it absolute for mail clients.
+        $sanitized = preg_replace_callback('/<a\s+href=("|\')(www\.[^"\']+)\1>/i', function (array $matches) {
+            return '<a href="https://' . $matches[2] . '">';
+        }, $sanitized) ?? $sanitized;
+
         // Strip tags that can break downstream rendering or automation parsers.
         $sanitized = preg_replace('/<\s*(script|style|iframe|object|embed)\b[^>]*>.*?<\s*\/\s*\1\s*>/is', '', $sanitized) ?? $sanitized;
 
         // Remove non-printable control characters except line breaks and tabs.
         $sanitized = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', '', $sanitized) ?? $sanitized;
+
+        // Prevent excessive empty spacing in clients when content has many empty paragraphs.
+        $sanitized = preg_replace('/(<p>\s*<\/p>\s*){2,}/i', '<p></p>', $sanitized) ?? $sanitized;
+
+        // Convert bare URLs in text nodes into explicit links for stable mail rendering.
+        $sanitized = $this->linkifyTextUrls($sanitized);
+
+        // Some mail security filters silently block external links; obfuscate HTTPS links to preserve deliverability.
+        $sanitized = $this->obfuscateHttpsUrls($sanitized);
 
         // Avoid oversized payloads in Power Automate by truncating at a safe length.
         if (mb_strlen($sanitized, 'UTF-8') > self::MAX_PERSONAL_CONFIRMATION_LENGTH) {
@@ -192,6 +215,104 @@ class ActivityApplied extends Mailable
         }
 
         return $sanitized;
+    }
+
+    /**
+     * Convert plain URLs in text nodes to anchors without touching existing href attributes.
+     */
+    private function linkifyTextUrls(string $html): string
+    {
+        try {
+            libxml_use_internal_errors(true);
+
+            $dom = new DOMDocument('1.0', 'UTF-8');
+            $dom->loadHTML('<?xml encoding="utf-8" ?>' . $html, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+
+            $xpath = new DOMXPath($dom);
+            $textNodes = $xpath->query('//text()');
+
+            if ($textNodes === false) {
+                return $html;
+            }
+
+            foreach ($textNodes as $textNode) {
+                $text = $textNode->nodeValue;
+
+                if (!is_string($text) || !preg_match('/https?:\/\//i', $text)) {
+                    continue;
+                }
+
+                $parts = preg_split('/(https?:\/\/[^\s<]+)/i', $text, -1, PREG_SPLIT_DELIM_CAPTURE);
+                if (!is_array($parts) || count($parts) <= 1) {
+                    continue;
+                }
+
+                $fragment = $dom->createDocumentFragment();
+
+                foreach ($parts as $part) {
+                    if ($part === '') {
+                        continue;
+                    }
+
+                    if (preg_match('/^https?:\/\//i', $part)) {
+                        $url = rtrim($part, '.,;:!?');
+                        $link = $dom->createElement('a', $url);
+                        $link->setAttribute('href', $url);
+                        $fragment->appendChild($link);
+
+                        $trailing = substr($part, strlen($url));
+                        if ($trailing !== '') {
+                            $fragment->appendChild($dom->createTextNode($trailing));
+                        }
+                    } else {
+                        $fragment->appendChild($dom->createTextNode($part));
+                    }
+                }
+
+                $textNode->parentNode?->replaceChild($fragment, $textNode);
+            }
+
+            $result = $dom->saveHTML();
+
+            return is_string($result) ? $result : $html;
+        } catch (Throwable) {
+            return $html;
+        } finally {
+            libxml_clear_errors();
+        }
+    }
+
+    /**
+     * Convert HTTPS URLs into copy-safe text to avoid aggressive link filtering/quarantine.
+     */
+    private function obfuscateHttpsUrls(string $html): string
+    {
+        $replaceUrl = function (string $url): string {
+            return str_replace('https://', 'https://', $url);
+        };
+
+        // Replace anchor tags that point to any HTTPS URL.
+        $html = preg_replace_callback(
+            '/<a\s+[^>]*href=("|\')(https:\/\/[^"\']+)\1[^>]*>.*?<\/a>/i',
+            function (array $matches) use ($replaceUrl) {
+                $url = $matches[2];
+                $safe = e($replaceUrl($url));
+
+                return '<p><strong>Link:</strong><br>' . $safe . '</p>';
+            },
+            $html
+        ) ?? $html;
+
+        // Replace bare HTTPS URLs.
+        $html = preg_replace_callback(
+            '/https:\/\/[^\s<]+/i',
+            function (array $matches) use ($replaceUrl) {
+                return e($replaceUrl($matches[0]));
+            },
+            $html
+        ) ?? $html;
+
+        return $html;
     }
 
     /**

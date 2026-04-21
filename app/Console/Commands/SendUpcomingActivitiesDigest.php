@@ -13,6 +13,11 @@ use Throwable;
 
 class SendUpcomingActivitiesDigest extends Command
 {
+    private const DIGEST_RECIPIENTS = [
+        'jordy.meijer@windesheim.nl',
+        'jpieters@almere.nl',
+    ];
+
     /**
      * The name and signature of the console command.
      *
@@ -56,14 +61,12 @@ class SendUpcomingActivitiesDigest extends Command
             return self::SUCCESS;
         }
 
-        $emails = User::notSoftDeleted()
-            ->whereNotNull('email')
-            ->pluck('email')
+        $emails = collect(self::DIGEST_RECIPIENTS)
             ->filter(fn (string $email) => filter_var($email, FILTER_VALIDATE_EMAIL))
             ->values();
 
         if ($emails->isEmpty()) {
-            $this->warn('Geen actieve leden met geldig e-mailadres gevonden.');
+            $this->warn('Geen geldige digest-ontvangers gevonden.');
             return self::SUCCESS;
         }
 
@@ -87,7 +90,7 @@ class SendUpcomingActivitiesDigest extends Command
             return self::FAILURE;
         }
 
-        $this->info("Mail verzonden voor {$activities->count()} activiteiten naar {$emails->count()} leden.");
+        $this->info("Mail verzonden voor {$activities->count()} activiteiten naar {$emails->count()} ontvangers.");
 
         return self::SUCCESS;
     }

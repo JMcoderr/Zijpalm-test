@@ -53,7 +53,7 @@ class UpcomingActivitiesDigest extends Mailable
             ? EditorPhp::make($this->content->text)->toHtml()
             : '<p>Beste leden,</p><p>Hieronder vinden jullie de komende activiteiten van Zijpalm.</p>';
 
-        $introHtml = $this->normalizeIntroLinks($introHtml);
+        $introHtml = $this->sanitizeIntroHtml($this->normalizeIntroLinks($introHtml));
 
         $renderedContent = view('mail.upcoming-activities-digest', [
             'introHtml' => $introHtml,
@@ -107,5 +107,20 @@ class UpcomingActivitiesDigest extends Mailable
             },
             $html
         ) ?? $html;
+    }
+
+    private function sanitizeIntroHtml(string $html): string
+    {
+        $sanitized = $html;
+
+        // Remove problematic editor classes/attributes for mail clients.
+        $sanitized = strip_tags($sanitized, '<p><br><a><strong><em><b><i><u><ul><ol><li>') ?? $sanitized;
+        $sanitized = preg_replace('/\s(?:class|style|id|data-[a-z0-9_-]+|role)=("[^"]*"|\'[^\']*\')/i', '', $sanitized) ?? $sanitized;
+
+        // Normalize pasted non-breaking spaces and reduce excessive blank paragraphs.
+        $sanitized = str_replace(["\xC2\xA0", '&nbsp;'], ' ', $sanitized);
+        $sanitized = preg_replace('/(<p>\s*<\/p>\s*){2,}/i', '<p></p>', $sanitized) ?? $sanitized;
+
+        return $sanitized;
     }
 }
