@@ -129,9 +129,27 @@ class Activity extends Model
     protected function personalConfirmationHTML(): Attribute
     {
         return Attribute::make(
-            get: fn () => $this->personal_confirmation
-                ? EditorPhp::make($this->personal_confirmation)->toHtml()
-                : null
+            get: function () {
+                if (blank($this->personal_confirmation)) {
+                    return null;
+                }
+
+                // Prefer editor-json rendering, but gracefully handle plain text content as fallback.
+                try {
+                    $decoded = json_decode((string) $this->personal_confirmation, true);
+
+                    if (is_array($decoded) && array_key_exists('blocks', $decoded)) {
+                        return EditorPhp::make($this->personal_confirmation)->toHtml();
+                    }
+                } catch (\Throwable) {
+                    // Fall through to plain text fallback.
+                }
+
+                $escaped = e((string) $this->personal_confirmation);
+                $withLinks = preg_replace('/(https?:\/\/[^\s<]+)/i', '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>', $escaped) ?? $escaped;
+
+                return nl2br($withLinks);
+            }
         );
     }
 
