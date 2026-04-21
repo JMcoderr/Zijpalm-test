@@ -61,8 +61,8 @@ class UserController extends Controller
      */
     public function update(UpdateUserRequest $request, User $user)
     {
-        // A user can only set their own notifications
-        if (auth()->user()->is($user)) {
+        // Users can set their own notifications, admins can manage notifications for others.
+        if (auth()->user()->is($user) || auth()->user()->isAdmin()) {
             // Reset the notifications
             $user->notifications = 0;
 

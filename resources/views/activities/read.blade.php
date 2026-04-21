@@ -181,7 +181,12 @@
                                 {{-- Start and end dates/times --}}
                                 <div class="flex flex-col">
                                     <span class="text-lg font-bold">Datum</span>
-                                    <span> {{$activity->formattedDatesAndTimes->activity->full}}</span>
+                                    <span>
+                                        {{$activity->formattedDatesAndTimes->activity->start->date}}
+                                        @if($activity->formattedDatesAndTimes->activity->end->date !== $activity->formattedDatesAndTimes->activity->start->date)
+                                            t/m {{$activity->formattedDatesAndTimes->activity->end->date}}
+                                        @endif
+                                    </span>
                                 </div>
 
                                 @if($activity->type != App\ActivityType::Weekly)
@@ -292,6 +297,16 @@
                     $extrasRevenue = $activeApplications->sum(fn ($application) => $application->calculateExtrasCost());
                     $totalDue = $activeApplications->sum(fn ($application) => $application->calculateTotalCost());
                     $totalPaid = $applications->sum(fn ($application) => $application->calculateTotalPaid());
+                    $manualFinanceEntries = collect($activity->manual_income_entries ?? [])->filter(function ($entry) {
+                        $description = trim((string) ($entry['description'] ?? ''));
+                        $hasDescription = $description !== '';
+                        $hasQuantity = array_key_exists('quantity', $entry) && $entry['quantity'] !== null && $entry['quantity'] !== '';
+                        $hasUnitPrice = array_key_exists('unit_price', $entry) && $entry['unit_price'] !== null && $entry['unit_price'] !== '';
+
+                        return $hasDescription && $hasQuantity && $hasUnitPrice;
+                    })->values();
+                    $hasManualFinance = $manualFinanceEntries->isNotEmpty();
+                    $manualFinanceTotal = $manualFinanceEntries->sum(fn ($entry) => (float) ($entry['total'] ?? 0));
                 @endphp
 
                 <div class="flex flex-col lg:flex-row gap-5 w-full">
@@ -313,46 +328,20 @@
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-[rgba(0,0,0,0.15)]">
-                                    <tr class="hover:bg-[rgba(0,0,0,0.05)]">
-                                        <td class="p-2 font-semibold">Betaalde deelnemers</td>
-                                        <td class="p-2 text-right">{{ $paidParticipants }}</td>
-                                        <td class="p-2 text-right">{{ $activity->price > 0 ? formatPrice($activity->price) : 'Gratis' }}</td>
-                                        <td class="p-2 text-right font-semibold">{{ formatPrice($baseRevenue) }}</td>
-                                    </tr>
-                                    @if($freeOrganizerCount > 0)
-                                        <tr class="hover:bg-[rgba(0,0,0,0.05)] opacity-60">
-                                            <td class="p-2 text-sm">Gratis organisatoren</td>
-                                            <td class="p-2 text-right text-sm">{{ $freeOrganizerCount }}</td>
-                                            <td class="p-2 text-right text-sm">Gratis</td>
-                                            <td class="p-2 text-right font-semibold text-sm">{{ formatPrice(0) }}</td>
+                                    @if($hasManualFinance)
+                                        @foreach($manualFinanceEntries as $entry)
+                                            <tr class="hover:bg-[rgba(0,0,0,0.05)]">
+                                                <td class="p-2 font-semibold">{{ ($entry['description'] ?? '') !== '' ? $entry['description'] : 'Zonder omschrijving' }}</td>
+                                                <td class="p-2 text-right">{{ $entry['quantity'] ?? 0 }}</td>
+                                                <td class="p-2 text-right">{{ formatPrice((float) ($entry['unit_price'] ?? 0)) }}</td>
+                                                <td class="p-2 text-right font-bold">{{ formatPrice((float) ($entry['total'] ?? 0)) }}</td>
+                                            </tr>
+                                        @endforeach
+                                        <tr class="bg-[rgba(0,0,0,0.06)] font-semibold border-t-2 border-[rgba(255,255,255,0.7)]">
+                                            <td colspan="3" class="p-2 text-right">Totaal:</td>
+                                            <td class="p-2 text-right font-bold">{{ formatPrice((float) $manualFinanceTotal) }}</td>
                                         </tr>
                                     @endif
-                                    <tr class="hover:bg-[rgba(0,0,0,0.05)]">
-                                        <td class="p-2 font-semibold">Extra's (vragen)</td>
-                                        <td class="p-2 text-right">—</td>
-                                        <td class="p-2 text-right">—</td>
-                                        <td class="p-2 text-right font-semibold">{{ formatPrice($extrasRevenue) }}</td>
-                                    </tr>
-                                    @if($pendingParticipants > 0)
-                                        <tr class="hover:bg-[rgba(0,0,0,0.05)] opacity-60">
-                                            <td class="p-2 text-sm">In afwachting betaling</td>
-                                            <td class="p-2 text-right text-sm">{{ $pendingParticipants }}</td>
-                                            <td class="p-2 text-right text-sm">{{ $activity->price > 0 ? formatPrice($activity->price) : '–' }}</td>
-                                            <td class="p-2 text-right font-semibold text-sm">{{ formatPrice($pendingParticipants * (float) $activity->price) }}</td>
-                                        </tr>
-                                    @endif
-                                    @if($reserveParticipants > 0)
-                                        <tr class="hover:bg-[rgba(0,0,0,0.05)] opacity-60">
-                                            <td class="p-2 text-sm">Reserves</td>
-                                            <td class="p-2 text-right text-sm">{{ $reserveParticipants }}</td>
-                                            <td class="p-2 text-right text-sm">{{ $activity->price > 0 ? formatPrice($activity->price) : '–' }}</td>
-                                            <td class="p-2 text-right font-semibold text-sm">{{ formatPrice($reserveParticipants * (float) $activity->price) }}</td>
-                                        </tr>
-                                    @endif
-                                    <tr class="bg-[rgba(0,0,0,0.1)] font-semibold border-t-2 border-[rgba(0,0,0,0.3)]">
-                                        <td colspan="3" class="p-2 text-right">Totaal ontvangen:</td>
-                                        <td class="p-2 text-right">{{ formatPrice($totalPaid) }}</td>
-                                    </tr>
                                 </tbody>
                             </table>
                         </div>

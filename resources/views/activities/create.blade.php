@@ -79,6 +79,13 @@
                     />
                 </x-input-group>
 
+                <div class="mt-5">
+                @include('activities.partials.manual-finance-fields', [
+                    'prefix' => 'create-manual-finance',
+                    'manualFinanceEntries' => [],
+                ])
+                </div>
+
                 <flux:separator variant="subtle"/>
 
                 <div class="grid lg:grid-cols-2 grid-cols-1 gap-x-2 relative">

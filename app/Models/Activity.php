@@ -43,7 +43,10 @@ class Activity extends Model
         'cancellationEnd',
         'imagePath',
         'type',
-        'free_organizer_count'
+        'free_organizer_count',
+        'manual_income_entries',
+        'manual_expense_entries',
+        'manual_budget',
     ];
 
     protected $casts = [
@@ -54,6 +57,9 @@ class Activity extends Model
         'registrationEnd' => 'datetime',
         'cancellationEnd' => 'datetime',
         'personal_confirmation_enabled' => 'boolean',
+        'manual_income_entries' => 'array',
+        'manual_expense_entries' => 'array',
+        'manual_budget' => 'decimal:2',
     ];
 
     public function applications()
@@ -123,9 +129,47 @@ class Activity extends Model
     protected function personalConfirmationHTML(): Attribute
     {
         return Attribute::make(
-            get: fn () => $this->personal_confirmation
-                ? EditorPhp::make($this->personal_confirmation)->toHtml()
-                : null
+            get: function () {
+                $rawConfirmation = (string) $this->getRawOriginal('personal_confirmation');
+
+                if (blank($rawConfirmation)) {
+                    return null;
+                }
+
+                // Prefer editor-json rendering, but gracefully handle plain text content as fallback.
+                try {
+                    $decoded = json_decode($rawConfirmation, true);
+
+                    if (is_array($decoded) && array_key_exists('blocks', $decoded)) {
+                        $renderedHtml = EditorPhp::make($rawConfirmation)->toHtml();
+
+                        if (!blank(trim(strip_tags((string) $renderedHtml)))) {
+                            return $renderedHtml;
+                        }
+
+                        $plainTextFallback = collect(data_get($decoded, 'blocks', []))
+                            ->pluck('data.text')
+                            ->filter()
+                            ->implode("\n");
+
+                        if (!blank($plainTextFallback)) {
+                            $escaped = e($plainTextFallback);
+                            $withLinks = preg_replace('/(https?:\/\/[^\s<]+)/i', '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>', $escaped) ?? $escaped;
+
+                            return nl2br($withLinks);
+                        }
+
+                        return $renderedHtml;
+                    }
+                } catch (\Throwable) {
+                    // Fall through to plain text fallback.
+                }
+
+                $escaped = e($rawConfirmation);
+                $withLinks = preg_replace('/(https?:\/\/[^\s<]+)/i', '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>', $escaped) ?? $escaped;
+
+                return nl2br($withLinks);
+            }
         );
     }
 

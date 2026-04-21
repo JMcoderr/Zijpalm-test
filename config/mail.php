@@ -121,6 +121,8 @@ return [
         'name' => env('MAIL_REPLY_TO_NAME', 'App Name')
     ],
 
+    'debug' => (bool) env('MAIL_DEBUG', false),
+
     'bestuur' => [
         'address' => env('BESTUUR_EMAIL', 'bestuur@example.com'),
         'name' => env('BESTUUR_NAME', 'Bestuur')

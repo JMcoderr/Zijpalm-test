@@ -37,6 +37,11 @@ class UpdateActivityRequest extends FormRequest
             'free_organizer_count' => ['nullable', 'integer', 'min:0'],
             'personalConfirmationEnabled' => ['nullable'],
             'personalConfirmation' => ['nullable', 'required_if:personalConfirmationEnabled,on'],
+            'manual_budget' => ['nullable', 'regex:/^\d+([.,]\d{1,2})?$/'],
+            'manual_finance_entries' => ['nullable', 'array'],
+            'manual_finance_entries.*.description' => ['nullable', 'string', 'max:255'],
+            'manual_finance_entries.*.quantity' => ['nullable', 'numeric', 'min:0'],
+            'manual_finance_entries.*.unit_price' => ['nullable', 'regex:/^\d+([.,]\d{1,2})?$/'],
 
             // Times
             'start-date' => ['nullable', 'date'],
@@ -62,11 +67,14 @@ class UpdateActivityRequest extends FormRequest
         ];
     }
 
+
     public function messages(): array
     {
         return [
             'end-date.required' => 'De einddatum is verplicht.',
             'personalConfirmation.required_if' => 'Persoonlijke bevestiging is verplicht wanneer deze optie aan staat.',
+            'manual_budget.regex' => 'Begroot bedrag moet een geldig bedrag zijn.',
+            'manual_finance_entries.*.unit_price.regex' => 'Bijdrage per deelnemer moet in formaat 0.00 staan.',
         ];
     }
 }

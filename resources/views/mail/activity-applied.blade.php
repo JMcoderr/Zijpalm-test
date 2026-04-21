@@ -31,12 +31,12 @@
 
 <x-layouts.mail.header :user="$user">
     @if($reserve)
-        {!! $reserveContent->textHTML !!}
-        {!! $content->textHTML !!}
+        {!! $reserveContentHtml ?? $reserveContent->textHTML !!}
+        {!! $defaultContentHtml ?? $content->textHTML !!}
     @elseif($activity->personal_confirmation_enabled && !empty($personalConfirmationHtml))
         {!! $personalConfirmationHtml !!}
     @else
-        {!! $content->textHTML !!}
+        {!! $defaultContentHtml ?? $content->textHTML !!}
     @endif
 
 

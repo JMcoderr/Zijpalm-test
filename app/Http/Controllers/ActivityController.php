@@ -110,6 +110,56 @@ class ActivityController extends Controller
         return $errorArray;
     }
 
+    /**
+     * Normalize and sanitize manually entered finance rows.
+     */
+    private function sanitizeManualFinanceEntries(?array $entries): array
+    {
+        if (!is_array($entries)) {
+            return [];
+        }
+
+        $sanitized = [];
+
+        foreach ($entries as $entry) {
+            $description = trim((string) ($entry['description'] ?? ''));
+            $quantityRaw = $entry['quantity'] ?? null;
+            $unitPriceRaw = $entry['unit_price'] ?? null;
+
+            $hasQuantityInput = $quantityRaw !== null && $quantityRaw !== '';
+            $hasUnitPriceInput = $unitPriceRaw !== null && $unitPriceRaw !== '';
+
+            $quantity = $hasQuantityInput ? max(0, (float) str_replace(',', '.', (string) $quantityRaw)) : 0.0;
+            $unitPrice = $hasUnitPriceInput ? formatPriceForDb((string) $unitPriceRaw) : 0.0;
+
+            $hasDescription = $description !== '';
+            $isCompleteRow = $hasDescription && $hasQuantityInput && $hasUnitPriceInput;
+
+            // Persist only fully completed rows.
+            if (!$isCompleteRow) {
+                continue;
+            }
+
+            $sanitized[] = [
+                'description' => $description,
+                'quantity' => $quantity,
+                'unit_price' => $unitPrice,
+                'total' => round($quantity * $unitPrice, 2),
+            ];
+        }
+
+        return $sanitized;
+    }
+
+    private function parseManualBudget(mixed $budget): ?float
+    {
+        if ($budget === null || $budget === '') {
+            return null;
+        }
+
+        return formatPriceForDb((string) $budget);
+    }
+
     /***
      * Sends a reminder email to participants registered for a given activity.
      * @param Activity $activity
@@ -176,17 +226,7 @@ class ActivityController extends Controller
      */
     public function sendUpcomingActivitiesDigest(Request $request)
     {
-        $validatedData = $request->validate([
-            'batch_size' => 'required|integer|min:' . config('mail.power_automate.batch_size.min', 10) . '|max:' . config('mail.power_automate.batch_size.max', 500),
-            'delay' => 'required|integer|min:' . config('mail.power_automate.delay.min', 10) . '|max:' . config('mail.power_automate.delay.max', 300),
-        ]);
-
-        $validatedData = castValidatedInts($validatedData, ['delay', 'batch_size']);
-
-        $exitCode = Artisan::call('app:send-upcoming-activities-digest', [
-            '--batch_size' => $validatedData['batch_size'],
-            '--delay' => $validatedData['delay'],
-        ]);
+        $exitCode = Artisan::call('app:send-upcoming-activities-digest');
 
         if ($exitCode !== 0) {
             return redirect()->route('activity.index')
@@ -211,6 +251,8 @@ class ActivityController extends Controller
     public function store(StoreActivityRequest $request){
         // Store all the request data in a temp variable
         $data = $request->all();
+        $manualFinanceEntries = $this->sanitizeManualFinanceEntries($data['manual_finance_entries'] ?? null);
+        $manualBudget = $this->parseManualBudget($data['manual_budget'] ?? null);
 
         // Check if an activity is recurring, if not a start-date is required.
         if(!isset($data['start-date']) && !isset($data['recurring'])) {
@@ -268,6 +310,9 @@ class ActivityController extends Controller
             'registrationEnd' => $data['registrationEnd'],
             'cancellationEnd' => isset($data['noCancellation']) ? null : ($data['cancellationEnd'] ?? null),
             'free_organizer_count' => $data['free_organizer_count'],
+            'manual_income_entries' => !empty($manualFinanceEntries) ? $manualFinanceEntries : null,
+            'manual_expense_entries' => null,
+            'manual_budget' => $manualBudget,
         ]);
 
         // If there are questions, and they're a valid array, loop through each
@@ -372,6 +417,8 @@ class ActivityController extends Controller
     public function update(UpdateActivityRequest $request, Activity $activity){
         // Collect data from request
         $data = $request->all();
+        $manualFinanceEntries = $this->sanitizeManualFinanceEntries($data['manual_finance_entries'] ?? null);
+        $manualBudget = $this->parseManualBudget($data['manual_budget'] ?? null);
 
         // Determine activity type
         $type = ActivityType::OneDay;
@@ -406,6 +453,9 @@ class ActivityController extends Controller
             'registrationEnd' => $data['registrationEnd'] ?? $activity->registrationEnd,
             'cancellationEnd' => isset($data['noCancellation']) ? null : ($data['cancellationEnd'] ?? $activity->cancellationEnd),
             'free_organizer_count' => $data['free_organizer_count'] ?? $activity->free_organizer_count,
+            'manual_income_entries' => !empty($manualFinanceEntries) ? $manualFinanceEntries : null,
+            'manual_expense_entries' => null,
+            'manual_budget' => $manualBudget,
         ]);
 
         // Handle questions - first delete all old questions, then create new ones
