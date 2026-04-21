@@ -5,7 +5,6 @@ namespace App\Console\Commands;
 use App\ActivityType;
 use App\Mail\UpcomingActivitiesDigest;
 use App\Models\Activity;
-use App\Models\User;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -30,16 +29,13 @@ class SendUpcomingActivitiesDigest extends Command
      *
      * @var string
      */
-    protected $description = 'Send a mail with upcoming activities to all active members';
+    protected $description = 'Send a mail with upcoming activities to the fixed digest recipients';
 
     /**
      * Execute the console command.
      */
     public function handle(): int
     {
-        $batchSize = (int) ($this->option('batch_size') ?: config('mail.power_automate.batch_size.default', 50));
-        $delay = (int) ($this->option('delay') ?: config('mail.power_automate.delay.default', 30));
-
         $activities = Activity::query()
             ->whereNotNull('start')
             ->where('start', '>=', now()->startOfDay())
@@ -61,7 +57,7 @@ class SendUpcomingActivitiesDigest extends Command
             return self::SUCCESS;
         }
 
-        $emails = collect(self::DIGEST_RECIPIENTS)
+        $emails = $this->recipientEmails()
             ->filter(fn (string $email) => filter_var($email, FILTER_VALIDATE_EMAIL))
             ->values();
 
@@ -70,6 +66,8 @@ class SendUpcomingActivitiesDigest extends Command
             return self::SUCCESS;
         }
 
+        $batchSize = $this->option('batch_size') ?? config('mail.power_automate.batch_size.default', 50);
+        $delay = $this->option('delay') ?? config('mail.power_automate.delay.default', 30);
         try {
             Mail::to(config('mail.bestuur.address'), config('mail.bestuur.name'))
                 ->send(new UpcomingActivitiesDigest($emails, $activities, $runningActivities, [
@@ -82,8 +80,6 @@ class SendUpcomingActivitiesDigest extends Command
                 'activities' => $activities->count(),
                 'running_activities' => $runningActivities->count(),
                 'emails' => $emails->count(),
-                'batch_size' => $batchSize,
-                'delay' => $delay,
             ]);
 
             $this->error('Mail kon niet worden verzonden door een mailtransportfout.');
@@ -93,5 +89,10 @@ class SendUpcomingActivitiesDigest extends Command
         $this->info("Mail verzonden voor {$activities->count()} activiteiten naar {$emails->count()} ontvangers.");
 
         return self::SUCCESS;
+    }
+
+    private function recipientEmails()
+    {
+        return collect(self::DIGEST_RECIPIENTS);
     }
 }
