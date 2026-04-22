@@ -30,32 +30,29 @@
                     @endif
                 @endif
 
-                {{-- If the user is an admin, show the update activity button --}}
-                @if(auth()->user()?->isAdmin() && !$activity->end?->isPast())
+                {{-- If the user is an admin, always show edit/copy/announce/delete buttons --}}
+                @if(auth()->user()?->isAdmin())
                     <x-zijpalm-button :href="route('activity.edit', $activity)" label="Bewerk activiteit" variant="obvious" type="redirect"/>
                     <x-zijpalm-button label="Verstuur aankondiging" type="action" x-on:click="announcementMailModal = true" variant="obvious"/>
                     <x-zijpalm-modal text="Activiteit aankondiging" livewire include="activity-announcement-mail" modal="announcementMailModal" :variables="['activity' => $activity, 'errors' => $errors->announcementMail->all()]"/>
-                    {{-- If the activity has not ended --}}
-                    @if(!$activity->end?->isPast())
-                        <div class="flex flex-wrap gap-4 justify-center">
-                            <form id="activity-copy" method="POST" action="{{route('activity.copy', $activity)}}" onsubmit="return confirm('Je staat op het punt de activiteit {{$activity->title}} te kopieren. Doorgaan?')">
-                                @csrf
-                                <x-zijpalm-button type="submit" form="activity-copy" label="Kopieer activiteit" variant="obvious"/>
-                            </form>
+                    <div class="flex flex-wrap gap-4 justify-center mt-2">
+                        <form id="activity-copy" method="POST" action="{{route('activity.copy', $activity)}}" onsubmit="return confirm('Je staat op het punt de activiteit {{$activity->title}} te kopiëren. Doorgaan?')">
+                            @csrf
+                            <x-zijpalm-button type="submit" form="activity-copy" label="Kopieer activiteit" variant="obvious"/>
+                        </form>
 
-                            <form id="activity-destroy" method="POST" action="{{route('activity.destroy', $activity)}}" onsubmit="return confirm('Je staat op het punt de activiteit {{$activity->title}} te annuleren. Alle ingeschreven leden krijgen hun inschrijvingskosten teruggestort.')">
-                                @csrf
-                                @method('delete')
-                                <x-zijpalm-button type="submit" form="activity-destroy" label="Annuleer activiteit" variant="obvious"/>
-                            </form>
+                        <form id="activity-destroy" method="POST" action="{{route('activity.destroy', $activity)}}" onsubmit="return confirm('Je staat op het punt de activiteit {{$activity->title}} te annuleren. Alle ingeschreven leden krijgen hun inschrijvingskosten teruggestort.')">
+                            @csrf
+                            @method('delete')
+                            <x-zijpalm-button type="submit" form="activity-destroy" label="Annuleer activiteit" variant="obvious"/>
+                        </form>
 
-                            <form id="activity-permanentDelete-inline" method="POST" action="{{route('activity.permanentDelete', $activity)}}" onsubmit="return confirm('Je staat op het punt de activiteit {{$activity->title}} permanent te verwijderen. Betaalde inschrijfgelden worden niet teruggestort. Deze actie kan niet ongedaan worden gemaakt.')">
-                                @csrf
-                                @method('delete')
-                                <x-zijpalm-button type="submit" form="activity-permanentDelete-inline" label="Permanent verwijderen" variant="obvious"/>
-                            </form>
-                        </div>
-                    @endif
+                        <form id="activity-permanentDelete-inline" method="POST" action="{{route('activity.permanentDelete', $activity)}}" onsubmit="return confirm('Je staat op het punt de activiteit {{$activity->title}} permanent te verwijderen. Betaalde inschrijfgelden worden niet teruggestort. Deze actie kan niet ongedaan worden gemaakt.')">
+                            @csrf
+                            @method('delete')
+                            <x-zijpalm-button type="submit" form="activity-permanentDelete-inline" label="Permanent verwijderen" variant="obvious"/>
+                        </form>
+                    </div>
                 @endif
 
                 @if(auth()->user()?->isAdmin() && ($activity->type === \App\ActivityType::Weekly || $activity->end?->isPast()))
