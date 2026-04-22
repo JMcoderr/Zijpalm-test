@@ -24,43 +24,35 @@
                 {{-- If the activity has ended, and there is a report, link to the report, or to create if one is not available --}}
                 @if($activity->end?->isPast())
                     @if($activity->hasReport())
-                        <x-zijpalm-button :href="route('report.show', $activity->report)" label="Bekijk verslag" variant="obvious"/>
-                        @elseif(auth()->user()?->isAdmin() && !$activity->hasReport())
-                        <x-zijpalm-button :href="route('report.create', $activity)" label="Creëer verslag" variant="obvious"/>
                     @endif
                 @endif
 
                 {{-- If the user is an admin, always show edit/copy/announce/delete buttons --}}
                 @if(auth()->user()?->isAdmin())
-                    <x-zijpalm-button :href="route('activity.edit', $activity)" label="Bewerk activiteit" variant="obvious" type="redirect"/>
-                    <x-zijpalm-button label="Verstuur aankondiging" type="action" x-on:click="announcementMailModal = true" variant="obvious"/>
-                    <x-zijpalm-modal text="Activiteit aankondiging" livewire include="activity-announcement-mail" modal="announcementMailModal" :variables="['activity' => $activity, 'errors' => $errors->announcementMail->all()]"/>
-                    <div class="flex flex-wrap gap-4 justify-center mt-2">
-                        <form id="activity-copy" method="POST" action="{{route('activity.copy', $activity)}}" onsubmit="return confirm('Je staat op het punt de activiteit {{$activity->title}} te kopiëren. Doorgaan?')">
+                    <div class="flex flex-row flex-wrap gap-4 justify-center items-stretch mt-2 w-full">
+                        @if($activity->end?->isPast() && $activity->hasReport())
+                            <x-zijpalm-button :href="route('report.show', $activity->report)" label="Bekijk verslag" variant="obvious" class="h-full"/>
+                        @elseif($activity->end?->isPast() && !$activity->hasReport())
+                            <x-zijpalm-button :href="route('report.create', $activity)" label="Creëer verslag" variant="obvious" class="h-full"/>
+                        @endif
+                        <x-zijpalm-button :href="route('activity.edit', $activity)" label="Bewerk activiteit" variant="obvious" type="redirect" class="h-full"/>
+                        <x-zijpalm-button label="Verstuur aankondiging" type="action" x-on:click="announcementMailModal = true" variant="obvious" class="h-full"/>
+                        <x-zijpalm-modal text="Activiteit aankondiging" livewire include="activity-announcement-mail" modal="announcementMailModal" :variables="['activity' => $activity, 'errors' => $errors->announcementMail->all()]"/>
+                        <form id="activity-copy" method="POST" action="{{route('activity.copy', $activity)}}" onsubmit="return confirm('Je staat op het punt de activiteit {{$activity->title}} te kopiëren. Doorgaan?')" class="h-full">
                             @csrf
-                            <x-zijpalm-button type="submit" form="activity-copy" label="Kopieer activiteit" variant="obvious"/>
+                            <x-zijpalm-button type="submit" form="activity-copy" label="Kopieer activiteit" variant="obvious" class="h-full"/>
                         </form>
-
-                        <form id="activity-destroy" method="POST" action="{{route('activity.destroy', $activity)}}" onsubmit="return confirm('Je staat op het punt de activiteit {{$activity->title}} te annuleren. Alle ingeschreven leden krijgen hun inschrijvingskosten teruggestort.')">
+                        <form id="activity-destroy" method="POST" action="{{route('activity.destroy', $activity)}}" onsubmit="return confirm('Je staat op het punt de activiteit {{$activity->title}} te annuleren. Alle ingeschreven leden krijgen hun inschrijvingskosten teruggestort.')" class="h-full">
                             @csrf
                             @method('delete')
-                            <x-zijpalm-button type="submit" form="activity-destroy" label="Annuleer activiteit" variant="obvious"/>
+                            <x-zijpalm-button type="submit" form="activity-destroy" label="Annuleer activiteit" variant="obvious" class="h-full"/>
                         </form>
-
-                        <form id="activity-permanentDelete-inline" method="POST" action="{{route('activity.permanentDelete', $activity)}}" onsubmit="return confirm('Je staat op het punt de activiteit {{$activity->title}} permanent te verwijderen. Betaalde inschrijfgelden worden niet teruggestort. Deze actie kan niet ongedaan worden gemaakt.')">
+                        <form id="activity-permanentDelete" method="POST" action="{{route('activity.permanentDelete', $activity)}}" onsubmit="return confirm('Je staat op het punt de activiteit {{$activity->title}} permanent te verwijderen. Betaalde inschrijfgelden worden niet teruggestort. Deze actie kan niet ongedaan worden gemaakt.')" class="h-full">
                             @csrf
                             @method('delete')
-                            <x-zijpalm-button type="submit" form="activity-permanentDelete-inline" label="Permanent verwijderen" variant="obvious"/>
+                            <x-zijpalm-button type="submit" form="activity-permanentDelete" label="Permanent verwijderen" variant="obvious" class="h-full"/>
                         </form>
                     </div>
-                @endif
-
-                @if(auth()->user()?->isAdmin() && ($activity->type === \App\ActivityType::Weekly || $activity->end?->isPast()))
-                    <form id="activity-permanentDelete" method="POST" action="{{route('activity.permanentDelete', $activity)}}" onsubmit="return confirm('Je staat op het punt de activiteit {{$activity->title}} permanent te verwijderen. Betaalde inschrijfgelden worden niet teruggestort. Deze actie kan niet ongedaan worden gemaakt.')">
-                        @csrf
-                        @method('delete')
-                        <x-zijpalm-button type="submit" form="activity-permanentDelete" label="Permanent verwijderen" variant="obvious"/>
-                    </form>
                 @endif
             </div>
 
