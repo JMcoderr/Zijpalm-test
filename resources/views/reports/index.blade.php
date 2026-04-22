@@ -30,13 +30,12 @@
                     <div id="reports-activities" class="flex flex-wrap w-full justify-center" x-show="tab === 'activity'" x-transition>
                         <div class="p-5 flex flex-wrap gap-4 w-fit">
                             @foreach($activities as $report)
-                                    <x-zijpalm-div :editable="false" title="" color="light" class="flex flex-col items-center justify-between gap-2 relative w-[16.5rem] h-[16.5rem]" width="">
+                                <x-zijpalm-div :editable="false" title="" color="light" class="flex flex-col items-center justify-between gap-2 relative w-[20rem] h-[20rem]" width="">
                                     <x-edit-content :id="$report->content->id" :name="$report->content->name" :editables="['Titel', 'Bestand']" />
-                                    <div class="w-24 h-24 rounded-xl overflow-hidden bg-white/70 flex items-center justify-center shrink-0">
-                                        <img src="{{ $report->image ?? asset($reportCardImage) }}" alt="Verslag omslag" class="w-full h-full object-contain" style="width: 100%; height: 100%; object-fit: contain;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                                    <div class="flex-1 w-full rounded-xl overflow-hidden bg-white/70 flex items-center justify-center">
+                                        <img src="{{ $report->image ?? asset($reportCardImage) }}" alt="Verslag omslag" class="size-full object-cover flex-1" style="object-fit: cover;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
                                         <flux:icon.document-text variant="solid" class="size-10" style="display:none;" />
                                     </div>
-                                    {{-- <h3 class="text-lg font-medium">{{$bylaws->title}}</h3> --}}
                                     <x-zijpalm-button :href="$report->content->file" target="_blank" :label="$report->content->title" />
                                 </x-zijpalm-div>
                             @endforeach
@@ -49,19 +48,17 @@
                     <div id="reports-years" class="flex flex-wrap w-full justify-center" x-show="tab === 'year'" x-transition>
                         <div class="p-5 flex flex-wrap gap-4 w-fit">
                             @foreach($years as $report)
-                                    <x-zijpalm-div :editable="false" title="" color="light" class="flex flex-col items-center justify-between gap-2 relative w-[16.5rem] h-[16.5rem]" width="">
+                                <x-zijpalm-div :editable="false" title="" color="light" class="flex flex-col items-center justify-between gap-2 relative w-[20rem] h-[20rem]" width="">
                                     @if(!empty($report->year))
                                         <span class="absolute top-2 left-2 bg-blue-600 text-white text-xs font-semibold px-2 py-1 rounded-md shadow">
                                             {{ $report->year }}
                                         </span>
                                     @endif
-
                                     <x-edit-content :id="$report->content->id" :name="$report->content->name" :editables="['Titel', 'Bestand']" />
-                                    <div class="w-24 h-24 rounded-xl overflow-hidden bg-white/70 flex items-center justify-center shrink-0">
-                                        <img src="{{ $report->image ?? asset($reportCardImage) }}" alt="Verslag omslag" class="w-full h-full object-contain" style="width: 100%; height: 100%; object-fit: contain;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                                    <div class="flex-1 w-full rounded-xl overflow-hidden bg-white/70 flex items-center justify-center">
+                                        <img src="{{ $report->image ?? asset($reportCardImage) }}" alt="Verslag omslag" class="size-full object-cover flex-1" style="object-fit: cover;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
                                         <flux:icon.document-text variant="solid" class="size-10" style="display:none;" />
                                     </div>
-                                    {{-- <h3 class="text-lg font-medium">{{$bylaws->title}}</h3> --}}
                                     <x-zijpalm-button :href="$report->content->file" target="_blank" :label="$report->content->title" />
                                 </x-zijpalm-div>
                             @endforeach
