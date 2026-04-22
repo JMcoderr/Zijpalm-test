@@ -7,56 +7,49 @@
                         $watch('reminderMailModal', v => document.body.classList.toggle('overflow-hidden', v));
                         $watch('announcementMailModal', v => document.body.classList.toggle('overflow-hidden', v));">
     <x-zijpalm-div title="{{$activity->title}}" color="transparent" :editable="false"/>
-        {{-- If a user is logged in, show buttons --}}
+        {{-- Show buttons if a user is logged in --}}
         @if(auth()->user())
-            {{-- Buttons --}}
-            <div class="flex justify-center flex-wrap gap-4">
-                {{-- If the activity is not cancelled, show the register and cancel buttons --}}
-                @if(!$activity->isCancelled() && $activity->type !== \App\ActivityType::Weekly)
-                    @if(!$activity->userApplied() && $activity->period->registration)
-                        <x-zijpalm-button :label="$activity->participants->capacity === 0 ? 'Meld je aan voor de reservelijst' : 'Meld je aan!'" type="action" variant="obvious" x-on:click="signupModal = true"/>
-                    @elseif($activity->userApplied() && $activity->period->cancellation)
-                        <x-zijpalm-button label="Afmelden" variant="obvious" x-on:click.prevent="$el.nextElementSibling.submit()"/>
-                        <form method="POST" action="{{route('application.destroy', $activity->userApplied())}}" class="hidden"> @csrf @method('DELETE')</form>
-                    @endif
+            {{-- Action buttons --}}
+
+            <div class="flex flex-row flex-wrap gap-4 justify-center items-stretch mt-2 w-full">
+                {{-- Sign up button (always left) --}}
+                @if(!$activity->isCancelled() && $activity->type !== \App\ActivityType::Weekly && !$activity->userApplied() && $activity->period->registration)
+                    <x-zijpalm-button :label="$activity->participants->capacity === 0 ? 'Meld je aan voor de reservelijst' : 'Meld je aan!'" type="action" variant="obvious" x-on:click="signupModal = true" class="h-full"/>
+                @endif
+                {{-- Unsubscribe button if applicable --}}
+                @if(!$activity->isCancelled() && $activity->type !== \App\ActivityType::Weekly && $activity->userApplied() && $activity->period->cancellation)
+                    <x-zijpalm-button label="Afmelden" variant="obvious" x-on:click.prevent="$el.nextElementSibling.submit()" class="h-full"/>
+                    <form method="POST" action="{{route('application.destroy', $activity->userApplied())}}" class="hidden"> @csrf @method('DELETE')</form>
                 @endif
 
-                {{-- If the activity has ended, and there is a report, link to the report, or to create if one is not available --}}
-                @if($activity->end?->isPast())
-                    @if($activity->hasReport())
-                    @endif
-                @endif
-
-                {{-- If the user is an admin, always show edit/copy/announce/delete buttons --}}
+                {{-- Admin buttons --}}
                 @if(auth()->user()?->isAdmin())
-                    <div class="flex flex-row flex-wrap gap-4 justify-center items-stretch mt-2 w-full">
-                        @if($activity->end?->isPast() && $activity->hasReport())
-                            <x-zijpalm-button :href="route('report.show', $activity->report)" label="Bekijk verslag" variant="obvious" class="h-full"/>
-                        @elseif($activity->end?->isPast() && !$activity->hasReport())
-                            <x-zijpalm-button :href="route('report.create', $activity)" label="Creëer verslag" variant="obvious" class="h-full"/>
-                        @endif
-                        <x-zijpalm-button :href="route('activity.edit', $activity)" label="Bewerk activiteit" variant="obvious" type="redirect" class="h-full"/>
-                        <x-zijpalm-button label="Verstuur aankondiging" type="action" x-on:click="announcementMailModal = true" variant="obvious" class="h-full"/>
-                        <x-zijpalm-modal text="Activiteit aankondiging" livewire include="activity-announcement-mail" modal="announcementMailModal" :variables="['activity' => $activity, 'errors' => $errors->announcementMail->all()]"/>
-                        <form id="activity-copy" method="POST" action="{{route('activity.copy', $activity)}}" onsubmit="return confirm('Je staat op het punt de activiteit {{$activity->title}} te kopiëren. Doorgaan?')" class="h-full">
-                            @csrf
-                            <x-zijpalm-button type="submit" form="activity-copy" label="Kopieer activiteit" variant="obvious" class="h-full"/>
-                        </form>
-                        <form id="activity-destroy" method="POST" action="{{route('activity.destroy', $activity)}}" onsubmit="return confirm('Je staat op het punt de activiteit {{$activity->title}} te annuleren. Alle ingeschreven leden krijgen hun inschrijvingskosten teruggestort.')" class="h-full">
-                            @csrf
-                            @method('delete')
-                            <x-zijpalm-button type="submit" form="activity-destroy" label="Annuleer activiteit" variant="obvious" class="h-full"/>
-                        </form>
-                        <form id="activity-permanentDelete" method="POST" action="{{route('activity.permanentDelete', $activity)}}" onsubmit="return confirm('Je staat op het punt de activiteit {{$activity->title}} permanent te verwijderen. Betaalde inschrijfgelden worden niet teruggestort. Deze actie kan niet ongedaan worden gemaakt.')" class="h-full">
-                            @csrf
-                            @method('delete')
-                            <x-zijpalm-button type="submit" form="activity-permanentDelete" label="Permanent verwijderen" variant="obvious" class="h-full"/>
-                        </form>
-                    </div>
+                    @if($activity->end?->isPast() && $activity->hasReport())
+                        <x-zijpalm-button :href="route('report.show', $activity->report)" label="Bekijk verslag" variant="obvious" class="h-full"/>
+                    @elseif($activity->end?->isPast() && !$activity->hasReport())
+                        <x-zijpalm-button :href="route('report.create', $activity)" label="Creëer verslag" variant="obvious" class="h-full"/>
+                    @endif
+                    <x-zijpalm-button :href="route('activity.edit', $activity)" label="Bewerk activiteit" variant="obvious" type="redirect" class="h-full"/>
+                    <x-zijpalm-button label="Verstuur aankondiging" type="action" x-on:click="announcementMailModal = true" variant="obvious" class="h-full"/>
+                    <x-zijpalm-modal text="Activiteit aankondiging" livewire include="activity-announcement-mail" modal="announcementMailModal" :variables="['activity' => $activity, 'errors' => $errors->announcementMail->all()]"/>
+                    <form id="activity-copy" method="POST" action="{{route('activity.copy', $activity)}}" onsubmit="return confirm('Je staat op het punt de activiteit {{$activity->title}} te kopiëren. Doorgaan?')" class="h-full">
+                        @csrf
+                        <x-zijpalm-button type="submit" form="activity-copy" label="Kopieer activiteit" variant="obvious" class="h-full"/>
+                    </form>
+                    <form id="activity-destroy" method="POST" action="{{route('activity.destroy', $activity)}}" onsubmit="return confirm('Je staat op het punt de activiteit {{$activity->title}} te annuleren. Alle ingeschreven leden krijgen hun inschrijvingskosten teruggestort.')" class="h-full">
+                        @csrf
+                        @method('delete')
+                        <x-zijpalm-button type="submit" form="activity-destroy" label="Annuleer activiteit" variant="obvious" class="h-full"/>
+                    </form>
+                    <form id="activity-permanentDelete" method="POST" action="{{route('activity.permanentDelete', $activity)}}" onsubmit="return confirm('Je staat op het punt de activiteit {{$activity->title}} permanent te verwijderen. Betaalde inschrijfgelden worden niet teruggestort. Deze actie kan niet ongedaan worden gemaakt.')" class="h-full">
+                        @csrf
+                        @method('delete')
+                        <x-zijpalm-button type="submit" form="activity-permanentDelete" label="Permanent verwijderen" variant="obvious" class="h-full"/>
+                    </form>
                 @endif
             </div>
 
-            {{-- To Do: Show when Updating applications becomes a thing as well --}}
+            {{-- To Do: Show when updating applications becomes a thing as well --}}
             {{-- Modal, only shown if not applied --}}
             @if(auth()->user() && !$activity->userApplied())
                 <x-zijpalm-modal title="Aanmeldformulier" text="{{$activity->title}}" livewire include="application-form" modal="signupModal" :variables="['activity' => $activity, 'errors' => $errors->signupActivity->all()]"/>
