@@ -122,7 +122,6 @@ class ActivityApplied extends Mailable
                 : '';
 
             $renderedContent =
-                '<p>Beste ' . e($this->user->name) . ',</p>' .
                 $introHtml .
                 '<p><strong>Activiteit:</strong> ' . e($this->activity->title) . '</p>' .
                 '<p><strong>Locatie:</strong> ' . e((string) $this->activity->location) . '</p>' .
