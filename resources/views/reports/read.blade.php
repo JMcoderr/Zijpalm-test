@@ -9,8 +9,8 @@
         <div class="rounded-2xl overflow-hidden">
 
             @if($report->image)
-                <div class="flex flex-col justify-center w-full max-h-[50dvh] overflow-clip">
-                    <img src="{{$report->image}}" alt="Verslag omslag" class="object-cover w-full">
+                <div class="flex flex-col justify-center w-full max-h-[90vh]">
+                    <img src="{{$report->image}}" alt="Verslag omslag" class="object-cover w-full max-h-[90vh]">
                 </div>
             @endif
             
