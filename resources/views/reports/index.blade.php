@@ -27,8 +27,8 @@
 
                 @if(!empty($activities))
                     {{--                <x-card-holder :cards="$activityReports" cardType="report" :alpine="['x-show' => 'tab === tabs[0]']"/>--}}
-                    <div id="reports-activities" class="flex flex-wrap w-full justify-center" x-show="tab === 'activity'" x-transition>
-                        <div class="p-5 flex flex-wrap gap-4 w-fit">
+                    <div id="reports-activities" class="w-full" x-show="tab === 'activity'" x-transition>
+                        <div class="p-5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 w-full justify-items-center">
                             @foreach($activities as $report)
                                 <x-zijpalm-div :editable="false" title="" color="light" class="flex flex-col items-center justify-between gap-2 relative w-[20rem] h-[20rem]" width="">
                                     <x-edit-content :id="$report->content->id" :name="$report->content->name" :editables="['Titel', 'Bestand']" />
@@ -45,8 +45,8 @@
 
                 @if(!empty($years))
                     {{--                <x-card-holder :cards="$yearReports" cardType="report" :alpine="['x-show' => 'tab === tabs[1]']"/>--}}
-                    <div id="reports-years" class="flex flex-wrap w-full justify-center" x-show="tab === 'year'" x-transition>
-                        <div class="p-5 flex flex-wrap gap-4 w-fit">
+                    <div id="reports-years" class="w-full" x-show="tab === 'year'" x-transition>
+                        <div class="p-5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 w-full justify-items-center">
                             @foreach($years as $report)
                                 <x-zijpalm-div :editable="false" title="" color="light" class="flex flex-col items-center justify-between gap-2 relative w-[20rem] h-[20rem]" width="">
                                     @if(!empty($report->year))
