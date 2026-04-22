@@ -32,8 +32,8 @@
                             @foreach($activities as $report)
                                 <x-zijpalm-div :editable="false" title="" color="light" class="flex flex-col items-center justify-between gap-2 relative w-[20rem] h-[20rem]" width="">
                                     <x-edit-content :id="$report->content->id" :name="$report->content->name" :editables="['Titel', 'Bestand']" />
-                                    <div class="flex-1 w-full rounded-xl overflow-hidden bg-white/70 flex items-center justify-center">
-                                        <img src="{{ $report->image ?? asset($reportCardImage) }}" alt="Verslag omslag" class="size-full object-cover flex-1" style="object-fit: cover;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                                    <div class="w-full aspect-square rounded-xl overflow-hidden bg-white/70 flex items-center justify-center">
+                                        <img src="{{ $report->image ?? asset($reportCardImage) }}" alt="Verslag omslag" class="w-full h-full object-cover" style="object-fit: cover;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
                                         <flux:icon.document-text variant="solid" class="size-10" style="display:none;" />
                                     </div>
                                     <x-zijpalm-button :href="$report->content->file" target="_blank" :label="$report->content->title" />
@@ -55,8 +55,8 @@
                                         </span>
                                     @endif
                                     <x-edit-content :id="$report->content->id" :name="$report->content->name" :editables="['Titel', 'Bestand']" />
-                                    <div class="flex-1 w-full rounded-xl overflow-hidden bg-white/70 flex items-center justify-center">
-                                        <img src="{{ $report->image ?? asset($reportCardImage) }}" alt="Verslag omslag" class="size-full object-cover flex-1" style="object-fit: cover;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                                    <div class="w-full aspect-square rounded-xl overflow-hidden bg-white/70 flex items-center justify-center">
+                                        <img src="{{ $report->image ?? asset($reportCardImage) }}" alt="Verslag omslag" class="w-full h-full object-cover" style="object-fit: cover;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
                                         <flux:icon.document-text variant="solid" class="size-10" style="display:none;" />
                                     </div>
                                     <x-zijpalm-button :href="$report->content->file" target="_blank" :label="$report->content->title" />
