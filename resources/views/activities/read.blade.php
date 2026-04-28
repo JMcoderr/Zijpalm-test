@@ -6,11 +6,11 @@
                 x-init="$watch('signupModal', v => document.body.classList.toggle('overflow-hidden', v));
                         $watch('reminderMailModal', v => document.body.classList.toggle('overflow-hidden', v));
                         $watch('announcementMailModal', v => document.body.classList.toggle('overflow-hidden', v));">
-    <x-zijpalm-div title="{{$activity->title}}" color="transparent" :editable="false"/>
+                <x-zijpalm-div title="{{$activity->title}}" color="transparent" :editable="false"/>
         {{-- Show buttons if a user is logged in --}}
-        @if(auth()->user())
-            {{-- Action buttons --}}
+            @if(auth()->user())
 
+        {{-- Action buttons --}}
             <div class="flex flex-row flex-wrap gap-4 justify-center items-stretch mt-2 w-full">
                 {{-- Sign up button (always left) --}}
                 @if(!$activity->isCancelled() && $activity->type !== \App\ActivityType::Weekly && !$activity->userApplied() && $activity->period->registration)

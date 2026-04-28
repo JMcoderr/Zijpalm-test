@@ -45,7 +45,37 @@ class Content extends Model
     protected function textHTML(): Attribute
     {
         return Attribute::make(
-            get: fn () => EditorPhp::make($this->text)->toHtml()
+            get: function () {
+                if (blank($this->text)) {
+                    return '';
+                }
+
+                try {
+                    $raw = (string) $this->text;
+
+                    // Decode till JSON works
+                    $attempts = 0;
+                    while ($attempts < 3) {
+                        $decoded = json_decode($raw, true);
+                        if (is_array($decoded) && array_key_exists('blocks', $decoded)) {
+                            return EditorPhp::make($raw)->toHtml();
+                        }
+                        $raw = html_entity_decode($raw, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                        $attempts++;
+                    }
+
+                    // Plain text fallback
+                    return '<p>' . e((string) $this->text) . '</p>';
+
+                } catch (\Throwable $e) {
+                    \Log::warning('[Content] textHTML fallback to plain text', [
+                        'content_id' => $this->id,
+                        'name'       => $this->name,
+                        'error'      => $e->getMessage(),
+                    ]);
+                    return '<p>' . e((string) $this->text) . '</p>';
+                }
+            }
         );
     }
 

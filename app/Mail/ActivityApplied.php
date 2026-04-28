@@ -21,8 +21,6 @@ use Throwable;
 
 class ActivityApplied extends Mailable
 {
-    use SerializesModels;
-
     public User $user;
     public Activity $activity;
     public ?Application $application;
@@ -48,8 +46,8 @@ class ActivityApplied extends Mailable
         $this->forceDefaultTemplate = $forceDefaultTemplate;
 
         // Get the dynamic content for the email and cache it for 1 hour
-        $this->content = getFromCache('email-activiteit-aangemeld');
-        $this->reserveContent = getFromCache('email-activiteit-aangemeld-reserve');
+        $this->content = ContentModel::where('name', 'email-activiteit-aangemeld')->first();
+        $this->reserveContent = ContentModel::where('name', 'email-activiteit-aangemeld-reserve')->first();
     }
 
     /**
@@ -72,18 +70,34 @@ class ActivityApplied extends Mailable
             $this->qrcode = (string) QrCode::size(192)->format('png')->generate($this->activity->whatsappUrl);
         }
 
+        // Sanitize and validate Editor.js output for all content blocks
         $defaultContentHtml = $this->sanitizeMailHtml((string) ($this->content->textHTML ?? ''));
+        if (empty($defaultContentHtml) || !$this->isValidHtml($defaultContentHtml)) {
+            Log::error('[ActivityApplied] Invalid defaultContentHtml from Editor.js, using fallback.');
+            $defaultContentHtml = '<p>Inschrijving ontvangen voor ' . e($this->activity->title) . '.</p>';
+        }
+
         $reserveContentHtml = $this->sanitizeMailHtml((string) ($this->reserveContent->textHTML ?? ''));
+        if (empty($reserveContentHtml) || !$this->isValidHtml($reserveContentHtml)) {
+            Log::error('[ActivityApplied] Invalid reserveContentHtml from Editor.js, using fallback.');
+            $reserveContentHtml = '<p>Inschrijving ontvangen voor ' . e($this->activity->title) . '.</p>';
+        }
+
         $personalConfirmationHtml = null;
         if ($this->activity->personal_confirmation_enabled) {
             try {
                 $personalConfirmationHtml = $this->sanitizeMailHtml((string) $this->activity->personalConfirmationHTML);
+                if (empty($personalConfirmationHtml) || !$this->isValidHtml($personalConfirmationHtml)) {
+                    Log::error('[ActivityApplied] Invalid personalConfirmationHtml from Editor.js, using fallback.');
+                    $personalConfirmationHtml = '<p>Inschrijving ontvangen voor ' . e($this->activity->title) . '.</p>';
+                }
             } catch (Throwable $exception) {
                 Log::error('[ActivityApplied] Personal confirmation render failed, falling back to default content', [
                     'activity_id' => $this->activity->id,
                     'user_id' => $this->user->id,
                     'error' => $exception->getMessage(),
                 ]);
+                $personalConfirmationHtml = '<p>Inschrijving ontvangen voor ' . e($this->activity->title) . '.</p>';
             }
         }
 
@@ -155,6 +169,15 @@ class ActivityApplied extends Mailable
                 'jsonBody' => $jsonBody
             ],
         );
+    }
+
+    /**
+     * Checks if the given HTML contains at least one valid HTML tag and is not just plain text.
+     */
+    private function isValidHtml(string $html): bool
+    {
+        // Basic check: must contain at least one HTML tag and not be just plain text
+        return preg_match('/<([a-z][\w-]*)(?:\s[^>]*)?>.*?<\/\1>/is', $html) === 1;
     }
 
     /**

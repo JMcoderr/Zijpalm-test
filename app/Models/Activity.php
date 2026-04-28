@@ -122,7 +122,21 @@ class Activity extends Model
     protected function descriptionHTML(): Attribute
     {
         return Attribute::make(
-            get: fn () => EditorPhp::make($this->description)->toHtml()
+            get: function () {
+                try {
+                    $decoded = json_decode((string) $this->description, true);
+                    if (!is_array($decoded) || !array_key_exists('blocks', $decoded)) {
+                        return '<p>' . e((string) $this->description) . '</p>';
+                    }
+                    return EditorPhp::make($this->description)->toHtml();
+                } catch (\Throwable $e) {
+                    \Log::warning('[Activity] descriptionHTML fallback', [
+                        'activity_id' => $this->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                    return '<p>' . e((string) $this->description) . '</p>';
+                }
+            }
         );
     }
 
