@@ -15,8 +15,6 @@ use Throwable;
 
 class UpcomingActivitiesDigest extends Mailable
 {
-    use SerializesModels;
-
     public Collection $emails;
     public Collection $activities;
     public Collection $runningActivities;
@@ -51,12 +49,26 @@ class UpcomingActivitiesDigest extends Mailable
     public function content(): Content
     {
         $mailSubject = 'Zijpalm | Komende activiteiten';
-        $introHtml = $this->content?->text
-            ? EditorPhp::make($this->content->text)->toHtml()
-            : '<p>Beste leden,</p><p>Hieronder vinden jullie de komende activiteiten van Zijpalm.</p>';
+            $introHtml = '<p>Beste leden,</p><p>Hieronder vinden jullie de komende activiteiten van Zijpalm.</p>';
 
+            if ($this->content?->text) {
+                try {
+                    $raw = html_entity_decode((string) $this->content->text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                    $decoded = json_decode($raw, true);
+
+                    if (is_array($decoded) && array_key_exists('blocks', $decoded)) {
+                        $introHtml = EditorPhp::make($raw)->toHtml();
+                    } else {
+                        $introHtml = '<p>' . e($this->content->text) . '</p>';
+                    }
+                } catch (Throwable $exception) {
+                    Log::warning('[UpcomingActivitiesDigest] introHtml fallback to plain text', [
+                        'error' => $exception->getMessage(),
+                    ]);
+                }
+            }
+            
         $introHtml = $this->sanitizeIntroHtml($this->normalizeIntroLinks($this->plainTextLinks($introHtml)));
-
         try {
             $renderedContent = view('mail.upcoming-activities-digest', [
                 'user' => null,
