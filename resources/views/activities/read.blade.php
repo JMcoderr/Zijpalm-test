@@ -315,7 +315,7 @@
                                             <tr class="hover:bg-[rgba(0,0,0,0.05)]">
                                                 <td class="p-2 font-semibold">{{ ($entry['description'] ?? '') !== '' ? $entry['description'] : 'Zonder omschrijving' }}</td>
                                                 <td class="p-2 text-right">{{ $entry['quantity'] ?? 0 }}</td>
-                                                <td class="p-2 text-right">{{ formatPrice((float) ($entry['unit_price'] ?? 0)) }}</td>
+                                                <td class="p-2 text-right">€{{ number_format((float) $entry['unit_price'], 2, ',', '.') }}</td>
                                                 <td class="p-2 text-right font-bold">{{ formatPrice((float) ($entry['total'] ?? 0)) }}</td>
                                             </tr>
                                         @endforeach

@@ -49,12 +49,8 @@
             <td>{{ $activity->location }}</td>
         </tr>
         <tr>
-            <td><strong>Starttijd</strong></td>
-            <td>{{ formatDate($activity->start) }} om {{ formatTime($activity->start) }} uur</td>
-        </tr>
-        <tr>
-            <td><strong>Eindtijd</strong></td>
-            <td>{{ formatDate($activity->end) }} om {{ formatTime($activity->end) }} uur</td>
+            <td><strong>Wanneer</strong></td>
+            <td>{{ formatDate($activity->start) }}</td>
         </tr>
         <tr>
             <td><strong>Organisator(en)</strong></td>

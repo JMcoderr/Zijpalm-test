@@ -39,8 +39,8 @@ class StoreActivityRequest extends FormRequest
             'manual_budget' => ['nullable', 'regex:/^\d+([.,]\d{1,2})?$/'],
             'manual_finance_entries' => ['nullable', 'array'],
             'manual_finance_entries.*.description' => ['nullable', 'string', 'max:255'],
-            'manual_finance_entries.*.quantity' => ['nullable', 'numeric', 'min:0'],
-            'manual_finance_entries.*.unit_price' => ['nullable', 'regex:/^\d+([.,]\d{1,2})?$/'],
+            'manual_finance_entries.*.quantity' => ['nullable', 'numeric'],
+            'manual_finance_entries.*.unit_price' => ['nullable', 'numeric'],
 
             // Times
             'start-date' => ['nullable', 'date'],
