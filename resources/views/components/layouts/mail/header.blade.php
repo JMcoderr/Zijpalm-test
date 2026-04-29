@@ -1,4 +1,4 @@
-@props(['user'])
+@props(['user', 'hideGreeting' => false])
 
 <!DOCTYPE html>
 <html lang="nl">
@@ -19,10 +19,12 @@
                 <x-app-logo />
                 <p style="margin-bottom: 15px;">Beste {{$user->name ?? "Collega"}},</p>
                 {{$slot}}
-                <div style="margin-top: 15px;">
-                    <p style="margin: 0px;">Met vriendelijke groet,</p>
-                    <p style="margin: 0px;">Zijpalm</p>
-                </div>
+                @if(!$hideGreeting)
+                    <div style="margin-top: 15px;">
+                        <p style="margin: 0px;">Met vriendelijke groet,</p>
+                        <p style="margin: 0px;">Zijpalm</p>
+                    </div>
+                @endif
             </div>
         </div>
     </body>
