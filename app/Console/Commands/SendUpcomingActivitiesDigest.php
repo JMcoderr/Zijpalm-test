@@ -40,6 +40,8 @@ class SendUpcomingActivitiesDigest extends Command
             ->whereNotNull('start')
             ->where('start', '>=', now()->startOfDay())
             ->where('type', '!=', ActivityType::Cancelled)
+            ->where('registrationStart', '<=', now())
+            ->where('registrationEnd', '>=', now())
             ->orderBy('start')
             ->get();
 

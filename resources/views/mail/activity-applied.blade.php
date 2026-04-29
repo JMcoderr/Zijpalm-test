@@ -39,9 +39,10 @@
         {!! $defaultContentHtml ?? $content->textHTML !!}
     @endif
 
-
+    @if(!$activity->personal_confirmation_enabled)
     <table style="margin-top: 10px; margin-bottom: 10px; width: 100%;">
         <tr>
+
             <td><strong>{{ $activity->title }}</strong></td>
         </tr>
         <tr>
