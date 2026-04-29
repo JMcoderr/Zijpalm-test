@@ -16,8 +16,6 @@ use Illuminate\Support\Collection;
 
 class ActivityReminder extends Mailable
 {
-    use SerializesModels;
-
     public Activity $activity;
     public ContentModel $content;
     public Collection $emails;
@@ -58,7 +56,7 @@ class ActivityReminder extends Mailable
         ])->render();
 
         $jsonBody = json_encode([
-            'emails' => $this->emails,
+            'emails' => $this->emails->values()->all(),
             'subject' => $this->content->title . ' ' . $this->activity->title,
             'body' => $renderedContent,
             'batch_size' => $this->validatedData['batch_size'],

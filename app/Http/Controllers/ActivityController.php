@@ -216,7 +216,12 @@ class ActivityController extends Controller
         }
 
         // Power Automate json mail
-        Mail::to(config('mail.bestuur.address'), config('mail.bestuur.name'))->send(new NewActivity($activity, $nonParticipantEmails));
+        Mail::to(config('mail.bestuur.address'), config('mail.bestuur.name'))->send(
+            new NewActivity($activity, $nonParticipantEmails, [
+                'batch_size' => $validatedData['batch_size'] ?? 50,
+                'delay' => $validatedData['delay'] ?? 30,
+            ])
+        );
 
         return redirect()->route('activity.show', $activity)->with('success', 'De aankondiging is verstuurt');
     }

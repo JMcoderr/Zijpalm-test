@@ -17,7 +17,7 @@
         <div id="header" style="padding: 20px; background-color: #96c8e6; width: 100%; max-width: 100%; box-sizing: border-box;">
             <div id="inner" style="margin: auto; max-width: 400px; width: 100%;">
                 <x-app-logo />
-                <p style="margin-bottom: 15px;">Beste {{$user->name ?? "Collega"}},</p>
+                <p style="margin-bottom: 15px;">Beste {{$user->name}},</p>
                 {{$slot}}
                 @if(!$hideGreeting)
                     <div style="margin-top: 15px;">

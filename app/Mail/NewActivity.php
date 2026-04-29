@@ -15,21 +15,22 @@ use Illuminate\Support\Collection;
 
 class NewActivity extends Mailable
 {
-    use SerializesModels;
-
     public Activity $activity;
     public Collection $emails;
     public ContentModel $content;
+    public int $batchSize;
+    public int $delay;
 
     /**
      * Create a new message instance.
      */
-    public function __construct(Activity $activity, Collection $emails)
+    public function __construct(Activity $activity, Collection $emails, array $options = [])
     {
         $this->activity = $activity;
         $this->emails = $emails;
-
-        $this->content = getFromCache('email-nieuwe-activiteit');
+        $this->content = ContentModel::where('name', 'email-nieuwe-activiteit')->first();
+        $this->batchSize = $options['batch_size'] ?? 50;
+        $this->delay = $options['delay'] ?? 30;
     }
 
     /**
@@ -55,11 +56,11 @@ class NewActivity extends Mailable
         ])->render();
 
         $jsonBody = json_encode([
-            'emails' => $this->emails,
+            'emails' => $this->emails->values()->all(),
             'subject' => $this->content->title,
             'body' => $renderedContent,
-            'batch_size' => 50,
-            'delay' => 30,
+            'batch_size' => $this->batchSize,
+            'delay' => $this->delay,
         ], JSON_PRETTY_PRINT);
 
         return new Content(

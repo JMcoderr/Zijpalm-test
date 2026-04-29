@@ -16,7 +16,7 @@ use App\Models\Payment;
 
 class ApplicationCancelled extends Mailable
 {
-    use Queueable, SerializesModels;
+    use Queueable;
 
     public Application $application;
     public Activity $activity;
@@ -35,7 +35,7 @@ class ApplicationCancelled extends Mailable
         $this->user = $application->user;
 
         // Get the dynamic content for the email and cache it for 1 hour
-        $this->content = getFromCache('email-activiteit-afgemeld');
+        $this->content = ContentModel::where('name', 'email-activiteit-afgemeld')->first();
     }
 
     /**
@@ -54,7 +54,9 @@ class ApplicationCancelled extends Mailable
     public function content(): Content
     {
         // Calculate the total refunded amount
-        $this->refundedAmount = $this->application->payments->sum('price');
+        $this->refundedAmount = $this->application->payments
+            ->where('status', \App\PaymentStatus::paid)
+            ->sum('price');
 
         $renderedContent = view('mail.application-cancelled', [
             'application' => $this->application,
