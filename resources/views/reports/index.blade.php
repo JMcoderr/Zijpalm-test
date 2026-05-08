@@ -30,9 +30,9 @@
                     <div id="reports-activities" class="w-full" x-show="tab === 'activity'" x-transition>
                         <div class="p-5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 w-full justify-items-center">
                             @foreach($activities as $report)
-                                <x-zijpalm-div :editable="false" title="" color="light" class="flex flex-col items-center justify-between gap-2 relative w-[22rem] h-[18rem]" width="">
+                                <x-zijpalm-div :editable="false" title="" color="light" class="flex flex-col items-center justify-between gap-2 relative w-full max-w-[22rem] h-full min-h-[18rem]">
                                     <x-edit-content :id="$report->content->id" :name="$report->content->name" :editables="['Titel', 'Bestand']" />
-                                    <div class="w-[20rem] h-[12rem] rounded-xl overflow-hidden bg-white/70 flex items-center justify-center">
+                                    <div class="w-full flex-1 rounded-xl overflow-hidden bg-white/70 flex items-center justify-center min-h-[12rem]">
                                         <img src="{{ $report->image ?? asset($reportCardImage) }}" alt="Verslag omslag" class="w-full h-full object-cover" style="object-fit: cover;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
                                         <flux:icon.document-text variant="solid" class="size-10" style="display:none;" />
                                     </div>
@@ -48,14 +48,14 @@
                     <div id="reports-years" class="w-full" x-show="tab === 'year'" x-transition>
                         <div class="p-5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 w-full justify-items-center">
                             @foreach($years as $report)
-                                <x-zijpalm-div :editable="false" title="" color="light" class="flex flex-col items-center justify-between gap-2 relative w-[22rem] h-[18rem]" width="">
+                                <x-zijpalm-div :editable="false" title="" color="light" class="flex flex-col items-center justify-between gap-2 relative w-full max-w-[22rem] h-full min-h-[18rem]">
                                     @if(!empty($report->year))
                                         <span class="absolute top-2 left-2 bg-blue-600 text-white text-xs font-semibold px-2 py-1 rounded-md shadow">
                                             {{ $report->year }}
                                         </span>
                                     @endif
                                     <x-edit-content :id="$report->content->id" :name="$report->content->name" :editables="['Titel', 'Bestand']" />
-                                    <div class="w-[20rem] h-[12rem] rounded-xl overflow-hidden bg-white/70 flex items-center justify-center">
+                                    <div class="w-full flex-1 rounded-xl overflow-hidden bg-white/70 flex items-center justify-center min-h-[12rem]">
                                         <img src="{{ $report->image ?? asset($reportCardImage) }}" alt="Verslag omslag" class="w-full h-full object-cover" style="object-fit: cover;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
                                         <flux:icon.document-text variant="solid" class="size-10" style="display:none;" />
                                     </div>
