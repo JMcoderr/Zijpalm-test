@@ -102,15 +102,15 @@
 
                 <div class="grid lg:grid-cols-2 grid-cols-1 gap-x-2 relative">
                     <x-input-group id="times" title="Wanneer" height="h-max" grid="grid grid-cols-2">
-                        <x-input-field type="date" label="Startdatum" id="start-date" required/>
-                        <x-input-field type="date" label="Einddatum" id="end-date" required/>
+                        <x-input-field type="date" label="Startdatum" id="start-date" name="start-date" required/>
+                        <x-input-field type="date" label="Einddatum" id="end-date" name="end-date" required/>
                         {{-- Standaard tijdwaarden zodat de backend correct blijft werken --}}
                         <input type="hidden" name="start-time" value="00:00"/>
                         <input type="hidden" name="end-time" value="23:59"/>
                         <x-input-field type="date" label="Start Aanmeldperiode" id="registrationStart" required/>
                         <x-input-field type="date" label="Eind Aanmeldperiode" id="registrationEnd" required/>
-                        <x-input-field type="checkbox" label="Herhalend" id="recurring" :checked="old('recurring')"/>
-                        <x-input-field type="select" label="Dag van de week" id="recurring_weekday" :options="$weekdayOptions" optionValuePair :selected="old('recurring_weekday')" :hidden="!old('recurring')"/>
+                        <x-input-field type="checkbox" label="Herhalend" id="recurring" name="recurring" :checked="old('recurring')"/>
+                        <x-input-field type="select" label="Dag van de week" id="recurring_weekday" name="recurring_weekday" :options="$weekdayOptions" optionValuePair :selected="old('recurring_weekday')" :hidden="!old('recurring')"/>
                         <x-input-field type="checkbox" label="Kosteloos annuleren is niet mogelijk" id="noCancellation" action="toggleCancellationField(this)"/>
                         <x-input-field type="date" label="Kosteloos annuleren kan t/m" id="cancellationEnd"/>
                     </x-input-group>
@@ -152,8 +152,6 @@
             const registrationStart = document.getElementById('registrationStart');
             const registrationEnd = document.getElementById('registrationEnd');
             const noCancellation = document.getElementById('noCancellation');
-            const cancellationEnd = document.getElementById('cancellationEnd');
-            const cancellationWrapper = document.getElementById('cancellationEnd-wrapper');
 
             if (checkbox) {
                 togglePersonalConfirmationField(checkbox);
@@ -186,12 +184,8 @@
                 recurringWeekday.required = isRecurring;
                 recurringWeekdayWrapper?.classList.toggle('hidden', !isRecurring);
 
-                document.getElementById('noCancellation-wrapper')?.classList.toggle('hidden', isRecurring);
-                if (isRecurring) {
-                    cancellationEnd && (cancellationEnd.value = '');
-                    cancellationWrapper?.classList.add('hidden');
-                } else if (noCancellation && window.toggleCancellationField) {
-                    window.toggleCancellationField(noCancellation);
+                if (window.applyRecurringCancellationVisibility) {
+                    window.applyRecurringCancellationVisibility(recurring);
                 }
             }
 

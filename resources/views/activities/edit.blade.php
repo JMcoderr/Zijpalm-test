@@ -6,6 +6,25 @@
     <x-zijpalm-div title="Bewerk Activiteit" color="transparent" :editable="false"/>
     <div class="flex flex-col">
         <x-zijpalm-div color="light" :editable=false width="w-full" form>
+            {{-- Show errors, if any --}}
+            @if($errors->any())
+                <x-zijpalm-div color="light" title="Foutmelding(en)" :editable="false" width="min-w-min" error id="error-messages" onclick="this.remove()">
+                    <ul class="text-center">
+                        @foreach($errors->all() as $error)
+                            <li class="">{{$error}}</li>
+                        @endforeach
+                    </ul>
+                </x-zijpalm-div>
+                <script>
+                    setTimeout(function(){
+                        const errorDiv = document.getElementById('error-messages');
+                        if(errorDiv){
+                            errorDiv.remove();
+                        }
+                    }, 5000);
+                </script>
+            @endif
+
             <div class="mb-3 px-3 py-2 rounded-lg border border-red-200 bg-white/90 text-sm font-medium text-zinc-800 shadow-sm w-max max-w-full mx-auto">
                 <span class="text-red-500 font-black text-base align-middle">*</span>
                 <span class="align-middle">Verplichte velden</span>
@@ -122,13 +141,13 @@
                 <div class="grid lg:grid-cols-2 grid-cols-1 gap-x-2 relative">
                     <x-input-group id="times" title="Wanneer" height="h-max" grid="grid grid-cols-2">
                         <x-input-field type="date" label="Startdatum" id="start-date" name="start-date" value="{{ old('start-date', $activity->start ? $activity->start->format('Y-m-d') : '') }}" required/>
-                        <x-input-field type="date" label="Einddatum" id="end-date" name="end-date" value="{{ old('end-date', $activity->end ? $activity->end->format('Y-m-d') : '') }}"/>
+                        <x-input-field type="date" label="Einddatum" id="end-date" name="end-date" value="{{ old('end-date', $activity->end ? $activity->end->format('Y-m-d') : '') }}" required/>
                         <input type="hidden" name="start-time" value="00:00"/>
                         <input type="hidden" name="end-time" value="23:59"/>
                         <x-input-field type="date" label="Start Aanmeldperiode" id="registrationStart" name="registrationStart" value="{{ old('registrationStart', $activity->registrationStart ? $activity->registrationStart->format('Y-m-d') : '') }}" required/>
                         <x-input-field type="date" label="Eind Aanmeldperiode" id="registrationEnd" name="registrationEnd" value="{{ old('registrationEnd', $activity->registrationEnd ? $activity->registrationEnd->format('Y-m-d') : '') }}" required/>
                         <x-input-field type="checkbox" label="Herhalend" id="recurring" name="recurring" :checked="old('recurring', $activity->type === \App\ActivityType::Weekly)"/>
-                        <x-input-field type="select" label="Dag van de week" id="recurring_weekday" name="recurring_weekday" :options="$weekdayOptions" optionValuePair :selected="$selectedRecurringWeekday" :hidden="!old('recurring', $activity->type === \App\ActivityType::Weekly)"/>
+                        <x-input-field type="select" label="Dag van de week" id="recurring_weekday" name="recurring_weekday" :options="$weekdayOptions" optionValuePair :selected="old('recurring_weekday', $selectedRecurringWeekday)" :hidden="!old('recurring', $activity->type === \App\ActivityType::Weekly)"/>
                         <x-input-field type="checkbox" label="Kosteloos annuleren is niet mogelijk" id="noCancellation" name="noCancellation" :checked="old('noCancellation', is_null($activity->cancellationEnd))" action="toggleCancellationField(this)"/>
                         <x-input-field type="date" label="Kosteloos annuleren kan t/m" id="cancellationEnd" name="cancellationEnd" value="{{ old('cancellationEnd', $activity->cancellationEnd ? $activity->cancellationEnd->format('Y-m-d') : '') }}"/>
                     </x-input-group>
@@ -177,11 +196,9 @@
                             if (recurringWeekday) {
                                 recurringWeekday.required = true;
                             }
-                            noCancellationWrapper?.classList.add('hidden');
-                            if (cancellationEnd) {
-                                cancellationEnd.value = '';
+                            if (window.applyRecurringCancellationVisibility) {
+                                window.applyRecurringCancellationVisibility(recurring);
                             }
-                            cancellationWrapper?.classList.add('hidden');
                             if(startDate) {
                                 startDate.required = false;
                             }
@@ -201,7 +218,9 @@
                             if (recurringWeekday) {
                                 recurringWeekday.required = false;
                             }
-                            noCancellationWrapper?.classList.remove('hidden');
+                            if (window.applyRecurringCancellationVisibility) {
+                                window.applyRecurringCancellationVisibility(recurring);
+                            }
                             if(startDate) {
                                 startDate.required = true;
                             }
@@ -216,8 +235,8 @@
                             }
                         }
 
-                        if(noCancel && window.toggleCancellationField) {
-                            window.toggleCancellationField(noCancel);
+                        if (window.applyRecurringCancellationVisibility) {
+                            window.applyRecurringCancellationVisibility(recurring);
                         }
                     }
 

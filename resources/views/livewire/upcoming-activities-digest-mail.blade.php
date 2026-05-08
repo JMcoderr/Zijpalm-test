@@ -19,33 +19,35 @@
         @endif
 
         <p class="mb-4 text-gray-900">
-            Met deze actie verstuurt u direct een mail met alle toekomstige activiteiten naar de ingestelde ontvangers.<br>
+            Met deze actie verstuurt u direct een mail met alle toekomstige activiteiten naar de ingestelde ontvangers.
         </p>
 
-        <form id="upcoming-activities-digest-form" method="POST" action="{{ route('activity.sendUpcomingActivitiesDigest') }}" class="flex flex-col gap-4" onsubmit="const submitButton = this.querySelector('button'); if (submitButton) { submitButton.disabled = true; const buttonLabel = submitButton.querySelector('p'); if (buttonLabel) { buttonLabel.innerText = 'Bezig met versturen...'; } }">
+        <form id="upcoming-activities-digest-form" method="POST" action="{{ route('activity.sendUpcomingActivitiesDigest') }}" onsubmit="const submitButton = this.querySelector('button'); if (submitButton) { submitButton.disabled = true; const buttonLabel = submitButton.querySelector('p'); if (buttonLabel) { buttonLabel.innerText = 'Bezig met versturen...'; } }">
             @csrf
-            <div class="flex gap-4 items-end">
-                <div class="flex-1">
-                    <label class="block text-sm font-medium text-gray-700">Aantal ontvangers per mail (batch size)</label>
-                    <input type="number" name="batch_size" required class="mt-1 block w-full" min="{{ config('mail.power_automate.batch_size.min') }}" max="{{ config('mail.power_automate.batch_size.max') }}" value="{{ old('batch_size', $batch_size ?? config('mail.power_automate.batch_size.default')) }}" />
-                </div>
-
-                <div class="flex-1">
-                    <label class="block text-sm font-medium text-gray-700">Wachttijd tussen batches (seconden)</label>
-                    <input type="number" name="delay" required class="mt-1 block w-full" min="{{ config('mail.power_automate.delay.min') }}" max="{{ config('mail.power_automate.delay.max') }}" value="{{ old('delay', $delay ?? config('mail.power_automate.delay.default')) }}" />
-                </div>
-            </div>
-            <div class="mt-2 text-sm text-gray-700">
-                <p>Ontvangers: <span id="digest-recipient-count">{{ $recipientCount ?? 0 }}</span></p>
-                <p>Geschatte duur: <span id="digest-estimate">-</span></p>
-            </div>
-            <x-zijpalm-button form="upcoming-activities-digest-form" type="submit" label="Mail toekomstige activiteiten versturen" center="horizontal" class="mt-2"/>
+            <x-input-group grid grid="grid grid-cols-1 grid-rows-[auto] auto-rows-auto">
+                <x-input-group grid="grid grid-cols-1">
+                    <x-input-field id="batch_size" label="Aantal ontvangers per mail (batch size)" type="number"
+                                   value="{{ old('batch_size', $batch_size ?? config('mail.power_automate.batch_size.default')) }}"
+                                   :min="config('mail.power_automate.batch_size.min')"
+                                   :max="config('mail.power_automate.batch_size.max')" required/>
+                    <x-input-field id="delay" label="Wachttijd tussen batches (seconden)" type="number"
+                                   value="{{ old('delay', $delay ?? config('mail.power_automate.delay.default')) }}"
+                                   :min="config('mail.power_automate.delay.min')"
+                                   :max="config('mail.power_automate.delay.max')" required/>
+                    <div class="mt-2 text-sm text-gray-700 text-center">
+                        <p>Ontvangers: <span id="digest-recipient-count">{{ $recipientCount ?? 0 }}</span></p>
+                        <p>Geschatte duur: <span id="digest-estimate">-</span></p>
+                    </div>
+                    <x-zijpalm-button form="upcoming-activities-digest-form" type="submit" label="Mail toekomstige activiteiten versturen"
+                                      center="horizontal" class="mt-2"/>
+                </x-input-group>
+            </x-input-group>
         </form>
         <script>
             (function(){
                 // English comment: update display estimate and persist digest settings when modal closes
-                const batchInput = document.querySelector('input[name="batch_size"]');
-                const delayInput = document.querySelector('input[name="delay"]');
+                const batchInput = document.getElementById('batch_size');
+                const delayInput = document.getElementById('delay');
                 const recipients = parseInt(document.getElementById('digest-recipient-count').innerText, 10) || 0;
                 const estimateEl = document.getElementById('digest-estimate');
 

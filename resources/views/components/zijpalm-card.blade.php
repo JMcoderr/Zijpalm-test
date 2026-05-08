@@ -174,7 +174,15 @@
                     <div class="flex flex-col w-1/2">
                         <span @class($textClasses)>Wanneer</span>
                         <span class="text-wrap">
-                            {{ $activityStartDate }}@if($showEndDate) t/m {{ $activityEndDate }}@endif
+                            @if($activity->type === \App\ActivityType::Weekly)
+                                @php
+                                    $dayNames = ['maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag', 'zaterdag', 'zondag'];
+                                    $dayIndex = ($activity->start?->dayOfWeekIso ?? 1) - 1;
+                                @endphp
+                                {{ ucfirst($dayNames[$dayIndex] ?? '') }}
+                            @else
+                                {{ $activityStartDate }}@if($showEndDate) t/m {{ $activityEndDate }}@endif
+                            @endif
                         </span>
                     </div>
                     <div class="flex flex-col w-1/2">

@@ -24,7 +24,15 @@
         @foreach($activities as $activity)
             <li style="margin-bottom: 16px;">
                 <strong>{{ $activity->title }}</strong><br>
-                {{ formatDate($activity->start) }}
+                @if($activity->type === \App\ActivityType::Weekly)
+                    @php
+                        $dayNames = ['maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag', 'zaterdag', 'zondag'];
+                        $dayIndex = (intval((new \Illuminate\Support\Carbon($activity->start))->dayOfWeekIso) ?? 1) - 1;
+                    @endphp
+                    {{ ucfirst($dayNames[$dayIndex] ?? '') }}
+                @else
+                    {{ formatDate($activity->start) }}
+                @endif
                 @if($activity->location)
                     - {{ $activity->location }}
                 @endif

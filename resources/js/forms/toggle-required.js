@@ -9,6 +9,10 @@ window.toggleRecurringOnChecked = toggleRecurringOnChecked;
 
 window.toggleCancellationField = toggleCancellationField;
 
+window.toggleCancellationOnRecurring = toggleCancellationOnRecurring;
+
+window.applyRecurringCancellationVisibility = applyRecurringCancellationVisibility;
+
 /**
  * Toggles the visibility of the cancellation date field based on the checkbox state.
  * When checked: hides the date field (cancellation is not possible)
@@ -28,6 +32,69 @@ function toggleCancellationField(checkbox) {
     } else {
         // Show the date field
         fieldWrapper.classList.remove('hidden');
+    }
+}
+
+/**
+ * Toggles the visibility of cancellation fields when recurring is checked.
+ * When recurring is checked: hides both noCancellation and cancellationEnd fields
+ * When recurring is unchecked: shows the fields again
+ */
+function toggleCancellationOnRecurring(recurringCheckbox) {
+    const noCancellationCheckbox = document.getElementById('noCancellation');
+    const cancellationInput = document.getElementById('cancellationEnd');
+    
+    if (!noCancellationCheckbox || !cancellationInput) return;
+
+    // Get wrapper elements
+    const noCancellationWrapper = noCancellationCheckbox.parentElement.parentElement;
+    const cancellationWrapper = cancellationInput.parentElement.parentElement;
+
+    recurringCheckbox.addEventListener('change', () => {
+        if (recurringCheckbox.checked) {
+            // Hide both cancellation fields when recurring is checked
+            noCancellationWrapper.classList.add('hidden');
+            cancellationWrapper.classList.add('hidden');
+            noCancellationCheckbox.checked = false;
+            cancellationInput.value = '';
+        } else {
+            // Show both cancellation fields when recurring is unchecked
+            noCancellationWrapper.classList.remove('hidden');
+            cancellationWrapper.classList.remove('hidden');
+        }
+    });
+}
+
+/**
+ * Keeps recurring and cancellation fields in sync.
+ * When recurring is checked, cancellation options are hidden immediately.
+ */
+function applyRecurringCancellationVisibility(recurringCheckbox) {
+    const noCancellationCheckbox = document.getElementById('noCancellation');
+    const cancellationInput = document.getElementById('cancellationEnd');
+
+    if (!recurringCheckbox || !noCancellationCheckbox || !cancellationInput) {
+        return;
+    }
+
+    const noCancellationWrapper = noCancellationCheckbox.parentElement?.parentElement;
+    const cancellationWrapper = cancellationInput.parentElement?.parentElement;
+
+    if (recurringCheckbox.checked) {
+        noCancellationCheckbox.checked = false;
+        noCancellationWrapper?.classList.add('hidden');
+        cancellationInput.value = '';
+        cancellationWrapper?.classList.add('hidden');
+        return;
+    }
+
+    noCancellationWrapper?.classList.remove('hidden');
+
+    if (noCancellationCheckbox.checked) {
+        cancellationWrapper?.classList.add('hidden');
+        cancellationInput.value = '';
+    } else {
+        cancellationWrapper?.classList.remove('hidden');
     }
 }
 

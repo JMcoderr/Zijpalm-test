@@ -162,13 +162,22 @@
                             <div class="flex justify-evenly items-center flex-wrap bg-[rgba(0,0,0,0.1)] rounded-xl p-1 gap-x-2 flex-1">
                                 {{-- Start and end dates/times --}}
                                 <div class="flex flex-col">
-                                    <span class="text-lg font-bold">Datum</span>
-                                    <span>
-                                        {{$activity->formattedDatesAndTimes->activity->start->date}}
-                                        @if($activity->formattedDatesAndTimes->activity->end->date !== $activity->formattedDatesAndTimes->activity->start->date)
-                                            t/m {{$activity->formattedDatesAndTimes->activity->end->date}}
-                                        @endif
-                                    </span>
+                                    @if($activity->type === App\ActivityType::Weekly)
+                                        <span class="text-lg font-bold">Dag van de week</span>
+                                        @php
+                                            $dayNames = ['maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag', 'zaterdag', 'zondag'];
+                                            $dayIndex = ($activity->start?->dayOfWeekIso ?? 1) - 1;
+                                        @endphp
+                                        <span>{{ ucfirst($dayNames[$dayIndex] ?? '') }}</span>
+                                    @else
+                                        <span class="text-lg font-bold">Datum</span>
+                                        <span>
+                                            {{$activity->formattedDatesAndTimes->activity->start->date}}
+                                            @if($activity->formattedDatesAndTimes->activity->end->date !== $activity->formattedDatesAndTimes->activity->start->date)
+                                                t/m {{$activity->formattedDatesAndTimes->activity->end->date}}
+                                            @endif
+                                        </span>
+                                    @endif
                                 </div>
 
                                 @if($activity->type != App\ActivityType::Weekly)
