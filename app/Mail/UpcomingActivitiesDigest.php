@@ -75,6 +75,8 @@ class UpcomingActivitiesDigest extends Mailable
                 'introHtml' => $introHtml,
                 'activities' => $this->activities,
                 'runningActivities' => $this->runningActivities,
+                'batch_size' => $this->validatedData['batch_size'],
+                'delay' => $this->validatedData['delay'],
             ])->render();
         } catch (Throwable $exception) {
             Log::error('[UpcomingActivitiesDigest] Mail view render failed, using fallback body', [
@@ -84,14 +86,42 @@ class UpcomingActivitiesDigest extends Mailable
             ]);
 
             $renderedContent = '<p>Beste leden,</p><p>Hieronder vinden jullie de komende activiteiten van Zijpalm.</p>';
+
+            if ($this->runningActivities->isNotEmpty()) {
+                $renderedContent .= '<p><strong>Lopende activiteiten:</strong></p><ul>';
+
+                foreach ($this->runningActivities as $activity) {
+                    $renderedContent .= '<li><strong>' . e($activity->title) . '</strong><br>';
+                    $renderedContent .= 'zijpalm.nl/activiteiten/' . e((string) $activity->id) . '</li>';
+                }
+
+                $renderedContent .= '</ul>';
+            }
+
+            if ($this->activities->isNotEmpty()) {
+                $renderedContent .= '<p><strong>Komende activiteiten:</strong></p><ul>';
+
+                foreach ($this->activities as $activity) {
+                    $renderedContent .= '<li><strong>' . e($activity->title) . '</strong><br>';
+                    $renderedContent .= e((string) formatDate($activity->start));
+
+                    if (! empty($activity->location)) {
+                        $renderedContent .= ' - ' . e($activity->location);
+                    }
+
+                    $renderedContent .= '<br>zijpalm.nl/activiteiten/' . e((string) $activity->id) . '</li>';
+                }
+
+                $renderedContent .= '</ul>';
+            }
         }
 
         $jsonBody = json_encode([
             'emails' => $this->emails->values()->all(),
             'subject' => $mailSubject,
             'body' => $renderedContent,
-            'batch_size' => $this->validatedData['batch_size'] ?? config('mail.power_automate.batch_size.default', 50),
-            'delay' => $this->validatedData['delay'] ?? config('mail.power_automate.delay.default', 30),
+            'batch_size' => $this->validatedData['batch_size'],
+            'delay' => $this->validatedData['delay'],
         ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE);
 
         if ($jsonBody === false) {
@@ -106,8 +136,8 @@ class UpcomingActivitiesDigest extends Mailable
                 'emails' => $this->emails->values()->all(),
                 'subject' => $mailSubject,
                 'body' => '<p>Komende activiteiten van Zijpalm.</p>',
-                'batch_size' => $this->validatedData['batch_size'] ?? config('mail.power_automate.batch_size.default', 50),
-                'delay' => $this->validatedData['delay'] ?? config('mail.power_automate.delay.default', 30),
+                'batch_size' => $this->validatedData['batch_size'],
+                'delay' => $this->validatedData['delay'],
             ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE) ?: '{}';
         }
 

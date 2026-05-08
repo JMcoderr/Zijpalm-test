@@ -28,11 +28,13 @@
 @endphp
 
 {{-- Background --}}
-<div x-show="{{$modal}}" x-cloak x-effect="{{$modal}} && window.scrollTo({top: 0, behavior: 'smooth'})" x-init="$watch('{{$modal}}', v => { if(v) $nextTick(() => { if(typeof window.initializeEditorJsHolders === 'function') window.initializeEditorJsHolders(); }) })" x-transition.opacity.duration.500ms {{$backgroundAttributes}}>
+<div x-show="{{$modal}}" x-cloak x-effect="{{$modal}} && window.scrollTo({top: 0, behavior: 'smooth'})" x-init="$watch('{{$modal}}', v => { if(v) $nextTick(() => { if(typeof window.initializeEditorJsHolders === 'function') window.initializeEditorJsHolders(); }) })" x-transition.opacity.duration.500ms x-on:zijpalm-modal-close-ack.window="if($event.detail?.modal === '{{$modal}}') {{$modal}} = false" {{$backgroundAttributes}}>
 
     {{-- Modal --}}
-    <x-zijpalm-div :$title :$text color="light" titleFontSize="text-5xl" titleColor="text-zijpalm-400" textColor="text-zijpalm-400" textSize="text-2xl" :editable="false" :$width padding="p-4" x-on:click.away="{{$modal}} = false" class="top-10 md:top-0 max-h-[95dvh] overflow-y-auto scrollbar-container">
-        <x-zijpalm-button type="action" variant="close" x-on:click="{{$modal}} = false" class="fixed md:absolute top-2 right-2"/>
+    {{-- English comment: when clicking outside we also dispatch the closing event so code can save state before modal hides --}}
+    <x-zijpalm-div :$title :$text color="light" titleFontSize="text-5xl" titleColor="text-zijpalm-400" textColor="text-zijpalm-400" textSize="text-2xl" :editable="false" :$width padding="p-4" x-on:click.away="$dispatch('zijpalm-modal-request-close', {modal: '{{$modal}}'})" class="top-10 md:top-0 max-h-[95dvh] overflow-y-auto scrollbar-container">
+        {{-- English comment: dispatch a DOM event when the modal close button is clicked so callers can react (e.g. save settings). The modal will close only after an explicit ack event. --}}
+        <x-zijpalm-button type="action" variant="close" x-on:click="$dispatch('zijpalm-modal-request-close', {modal: '{{$modal}}'})" class="fixed md:absolute top-2 right-2"/>
         <flux:separator/>
         @if($include)
             @if($livewire)

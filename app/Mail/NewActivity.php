@@ -29,8 +29,11 @@ class NewActivity extends Mailable
         $this->activity = $activity;
         $this->emails = $emails;
         $this->content = ContentModel::where('name', 'email-nieuwe-activiteit')->first();
-        $this->batchSize = $options['batch_size'] ?? 50;
-        $this->delay = $options['delay'] ?? 30;
+        if (!isset($options['batch_size']) || !isset($options['delay'])) {
+            throw new \InvalidArgumentException('batch_size and delay must be provided in options');
+        }
+        $this->batchSize = (int) $options['batch_size'];
+        $this->delay = (int) $options['delay'];
     }
 
     /**

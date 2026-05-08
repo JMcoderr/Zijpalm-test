@@ -104,6 +104,19 @@
                 ])
                 </div>
 
+                @php
+                    $weekdayOptions = [
+                        ['id' => 1, 'option' => 'maandag'],
+                        ['id' => 2, 'option' => 'dinsdag'],
+                        ['id' => 3, 'option' => 'woensdag'],
+                        ['id' => 4, 'option' => 'donderdag'],
+                        ['id' => 5, 'option' => 'vrijdag'],
+                        ['id' => 6, 'option' => 'zaterdag'],
+                        ['id' => 7, 'option' => 'zondag'],
+                    ];
+                    $selectedRecurringWeekday = old('recurring_weekday', $activity->start ? $activity->start->dayOfWeekIso : null);
+                @endphp
+
                 <flux:separator variant="subtle"/>
 
                 <div class="grid lg:grid-cols-2 grid-cols-1 gap-x-2 relative">
@@ -115,6 +128,7 @@
                         <x-input-field type="date" label="Start Aanmeldperiode" id="registrationStart" name="registrationStart" value="{{ old('registrationStart', $activity->registrationStart ? $activity->registrationStart->format('Y-m-d') : '') }}" required/>
                         <x-input-field type="date" label="Eind Aanmeldperiode" id="registrationEnd" name="registrationEnd" value="{{ old('registrationEnd', $activity->registrationEnd ? $activity->registrationEnd->format('Y-m-d') : '') }}" required/>
                         <x-input-field type="checkbox" label="Herhalend" id="recurring" name="recurring" :checked="old('recurring', $activity->type === \App\ActivityType::Weekly)"/>
+                        <x-input-field type="select" label="Dag van de week" id="recurring_weekday" name="recurring_weekday" :options="$weekdayOptions" optionValuePair :selected="$selectedRecurringWeekday" :hidden="!old('recurring', $activity->type === \App\ActivityType::Weekly)"/>
                         <x-input-field type="checkbox" label="Kosteloos annuleren is niet mogelijk" id="noCancellation" name="noCancellation" :checked="old('noCancellation', is_null($activity->cancellationEnd))" action="toggleCancellationField(this)"/>
                         <x-input-field type="date" label="Kosteloos annuleren kan t/m" id="cancellationEnd" name="cancellationEnd" value="{{ old('cancellationEnd', $activity->cancellationEnd ? $activity->cancellationEnd->format('Y-m-d') : '') }}"/>
                     </x-input-group>
@@ -136,6 +150,11 @@
                     var endDate = document.getElementById('end-date');
                     var registrationStart = document.getElementById('registrationStart');
                     var registrationEnd = document.getElementById('registrationEnd');
+                    var recurringWeekday = document.getElementById('recurring_weekday');
+                    var recurringWeekdayWrapper = document.getElementById('recurring_weekday-wrapper');
+                    var noCancellationWrapper = document.getElementById('noCancellation-wrapper');
+                    var cancellationWrapper = document.getElementById('cancellationEnd-wrapper');
+                    var cancellationEnd = document.getElementById('cancellationEnd');
 
                     if(!timesGroup || !recurring) {
                         return;
@@ -154,6 +173,15 @@
                         if(recurring.checked) {
                             toToggle.forEach(function(el){ el.classList.add('hidden'); });
                             if(recurringField) recurringField.classList.remove('hidden');
+                            recurringWeekdayWrapper?.classList.remove('hidden');
+                            if (recurringWeekday) {
+                                recurringWeekday.required = true;
+                            }
+                            noCancellationWrapper?.classList.add('hidden');
+                            if (cancellationEnd) {
+                                cancellationEnd.value = '';
+                            }
+                            cancellationWrapper?.classList.add('hidden');
                             if(startDate) {
                                 startDate.required = false;
                             }
@@ -169,6 +197,11 @@
                         } else {
                             toToggle.forEach(function(el){ el.classList.remove('hidden'); });
                             if(recurringField) recurringField.classList.remove('hidden');
+                            recurringWeekdayWrapper?.classList.add('hidden');
+                            if (recurringWeekday) {
+                                recurringWeekday.required = false;
+                            }
+                            noCancellationWrapper?.classList.remove('hidden');
                             if(startDate) {
                                 startDate.required = true;
                             }

@@ -11,6 +11,24 @@ class UpcomingActivitiesDigestMail extends Component
 {
     public array $errors = [];
     public string $successMessage = '';
+    public ?int $batch_size = null;
+    public ?int $delay = null;
+    public int $recipientCount = 0;
+
+    /**
+     * English comment: load persisted digest settings so the modal pre-fills last used values.
+     */
+    public function mount(): void
+    {
+        $settings = \App\Models\MailSetting::where('name', 'digest')->first();
+        if ($settings) {
+            $this->batch_size = $settings->batch_size;
+            $this->delay = $settings->delay;
+        }
+
+        // Count all active users (members) to whom the digest will be sent
+        $this->recipientCount = \App\Models\User::notSoftDeleted()->count();
+    }
 
     public function sendDigest()
     {
@@ -18,7 +36,18 @@ class UpcomingActivitiesDigestMail extends Component
         $this->successMessage = '';
 
         try {
-            $exitCode = Artisan::call('app:send-upcoming-activities-digest');
+            $batchSize = request()->input('batch_size');
+            $delay = request()->input('delay');
+
+            if ($batchSize === null || $delay === null) {
+                $this->errors = ['Batch size en delay moeten worden opgegeven voordat de mail verstuurd kan worden.'];
+                return;
+            }
+
+            $exitCode = Artisan::call('app:send-upcoming-activities-digest', [
+                '--batch_size' => (int) $batchSize,
+                '--delay' => (int) $delay,
+            ]);
 
             if ($exitCode !== 0) {
                 $this->errors = ['Mail toekomstige activiteiten kon niet worden verstuurd. Controleer de logs en SMTP-configuratie.'];
@@ -39,6 +68,6 @@ class UpcomingActivitiesDigestMail extends Component
 
     public function render()
     {
-        return view('livewire.upcoming-activities-digest-mail');
+        return view('livewire.upcoming-activities-digest-mail')->with('recipientCount', $this->recipientCount);
     }
 }

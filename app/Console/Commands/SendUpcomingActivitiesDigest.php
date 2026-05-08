@@ -68,8 +68,13 @@ class SendUpcomingActivitiesDigest extends Command
             return self::SUCCESS;
         }
 
-        $batchSize = $this->option('batch_size') ?? config('mail.power_automate.batch_size.default', 50);
-        $delay = $this->option('delay') ?? config('mail.power_automate.delay.default', 30);
+        // Only use values provided by the user (no fallback)
+        $batchSize = $this->option('batch_size');
+        $delay = $this->option('delay');
+        if ($batchSize === null || $delay === null) {
+            $this->error('You must provide both --batch_size and --delay options.');
+            return self::FAILURE;
+        }
         try {
             Mail::to(config('mail.bestuur.address'), config('mail.bestuur.name'))
                 ->send(new UpcomingActivitiesDigest($emails, $activities, $runningActivities, [
@@ -84,7 +89,7 @@ class SendUpcomingActivitiesDigest extends Command
                 'emails' => $emails->count(),
             ]);
 
-            $this->error('Mail kon niet worden verzonden door een mailtransportfout.');
+            $this->error('Mail could not be sent due to a mail transport error.');
             return self::FAILURE;
         }
 

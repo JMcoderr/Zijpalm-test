@@ -188,8 +188,18 @@ class ActivityController extends Controller
             throw ValidationException::withMessages($errorArray)->errorBag('reminderMail');
         }
 
-        // Power Automate Json mail
-        Mail::to(config('mail.bestuur.address'), config('mail.bestuur.name'))->send(new ActivityReminder($activity, $emails, $validatedData));
+            // English comment: Persist reminder mail settings so they are shown next time the modal opens.
+            try {
+                \App\Models\MailSetting::updateOrCreate(
+                    ['name' => 'reminder'],
+                    ['batch_size' => $validatedData['batch_size'], 'delay' => $validatedData['delay']]
+                );
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('[ActivityController] could not persist reminder settings', ['error' => $e->getMessage()]);
+            }
+
+            // Power Automate Json mail
+            Mail::to(config('mail.bestuur.address'), config('mail.bestuur.name'))->send(new ActivityReminder($activity, $emails, $validatedData));
 
         return redirect()->route('activity.show', $activity)->with('success', 'De herinnering is verstuurt');
     }
@@ -215,11 +225,22 @@ class ActivityController extends Controller
             throw ValidationException::withMessages($errorArray)->errorBag('announcementMail');
         }
 
+        // English comment: Persist the chosen announcement mail settings so they are shown next time the modal opens.
+        try {
+            \App\Models\MailSetting::updateOrCreate(
+                ['name' => 'announcement'],
+                ['batch_size' => $validatedData['batch_size'], 'delay' => $validatedData['delay']]
+            );
+        } catch (\Throwable $e) {
+            // Log but don't block sending the mail
+            \Illuminate\Support\Facades\Log::warning('[ActivityController] could not persist announcement settings', ['error' => $e->getMessage()]);
+        }
+
         // Power Automate json mail
         Mail::to(config('mail.bestuur.address'), config('mail.bestuur.name'))->send(
             new NewActivity($activity, $nonParticipantEmails, [
-                'batch_size' => $validatedData['batch_size'] ?? 50,
-                'delay' => $validatedData['delay'] ?? 30,
+                'batch_size' => $validatedData['batch_size'],
+                'delay' => $validatedData['delay'],
             ])
         );
 
@@ -231,7 +252,25 @@ class ActivityController extends Controller
      */
     public function sendUpcomingActivitiesDigest(Request $request)
     {
-        $exitCode = Artisan::call('app:send-upcoming-activities-digest');
+        $validated = $request->validate([
+            'batch_size' => 'required|integer|between:' . config('mail.power_automate.batch_size.min') . ',' . config('mail.power_automate.batch_size.max'),
+            'delay' => 'required|integer|between:' . config('mail.power_automate.delay.min') . ',' . config('mail.power_automate.delay.max'),
+        ]);
+
+        // English comment: persist digest settings so user input is remembered across modal opens
+        try {
+            \App\Models\MailSetting::updateOrCreate(
+                ['name' => 'digest'],
+                ['batch_size' => $validated['batch_size'], 'delay' => $validated['delay']]
+            );
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('[ActivityController] could not persist digest settings', ['error' => $e->getMessage()]);
+        }
+
+        $exitCode = Artisan::call('app:send-upcoming-activities-digest', [
+            '--batch_size' => $validated['batch_size'],
+            '--delay' => $validated['delay'],
+        ]);
 
         if ($exitCode !== 0) {
             return redirect()->route('activity.index')
@@ -290,9 +329,16 @@ class ActivityController extends Controller
             $type = ActivityType::MultiDay;
         }
 
-        // Set start and end times to avoid having a date with null.
-        $start = isset($data['start-date']) && $type !== ActivityType::Weekly ? $data['start-date'] . ' ' . $data['start-time'] : null;
-        $end = isset($data['end-date']) && $type !== ActivityType::Weekly ? $data['end-date'] . ' ' . $data['end-time'] : null;
+        // Set start and end values.
+        if ($type === ActivityType::Weekly) {
+            $weekday = isset($data['recurring_weekday']) ? (int) $data['recurring_weekday'] : null;
+            $baseDate = $weekday ? now()->copy()->setISODate((int) now()->isoWeekYear(), (int) now()->isoWeek(), $weekday) : null;
+            $start = $baseDate ? $baseDate->copy()->startOfDay() : null;
+            $end = $baseDate ? $baseDate->copy()->endOfDay() : null;
+        } else {
+            $start = isset($data['start-date']) ? $data['start-date'] . ' ' . $data['start-time'] : null;
+            $end = isset($data['end-date']) ? $data['end-date'] . ' ' . $data['end-time'] : null;
+        }
 
         // Create a new Activity
         $activity = Activity::create([
@@ -433,9 +479,16 @@ class ActivityController extends Controller
             $type = ActivityType::MultiDay;
         }
 
-        // Combine start and end time
-        $start = isset($data['start-date']) && $type !== ActivityType::Weekly ? $data['start-date'] . ' ' . ($data['start-time'] ?? '00:00') : null;
-        $end = isset($data['end-date']) && $type !== ActivityType::Weekly ? $data['end-date'] . ' ' . ($data['end-time'] ?? '23:59') : null;
+        // Combine start and end values
+        if ($type === ActivityType::Weekly) {
+            $weekday = isset($data['recurring_weekday']) ? (int) $data['recurring_weekday'] : null;
+            $baseDate = $weekday ? now()->copy()->setISODate((int) now()->isoWeekYear(), (int) now()->isoWeek(), $weekday) : null;
+            $start = $baseDate ? $baseDate->copy()->startOfDay() : null;
+            $end = $baseDate ? $baseDate->copy()->endOfDay() : null;
+        } else {
+            $start = isset($data['start-date']) ? $data['start-date'] . ' ' . ($data['start-time'] ?? '00:00') : null;
+            $end = isset($data['end-date']) ? $data['end-date'] . ' ' . ($data['end-time'] ?? '23:59') : null;
+        }
 
         // Update activity
         $activity->update([

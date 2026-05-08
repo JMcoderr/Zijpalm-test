@@ -1,7 +1,10 @@
 <x-layouts.mail.header :user="$user">
-    <p><strong>Let op:</strong> de link staat hieronder als gewone tekst. Kopieer de link en plak die in de adresbalk van je browser om de activiteit te openen.</p>
-
     {!! $introHtml !!}
+
+    <p><strong>Batch size:</strong> {{ $batch_size }}</p>
+    <p><strong>Delay (seconds):</strong> {{ $delay }}</p>
+
+    <p><strong>Let op:</strong> de link staat hieronder als gewone tekst. Kopieer de link en plak die in de adresbalk van je browser om de activiteit te openen. Of ga naar de website zijpalm.nl</p>
 
     @if($runningActivities->isNotEmpty())
         <p><strong>Lopende activiteiten:</strong></p>

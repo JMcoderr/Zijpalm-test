@@ -71,25 +71,30 @@ class ActivityApplied extends Mailable
         }
 
         // Sanitize and validate Editor.js output for all content blocks
+
         $defaultContentHtml = $this->sanitizeMailHtml((string) ($this->content->textHTML ?? ''));
+        $defaultContentHtml = $this->stripGenericGreeting($defaultContentHtml);
         if (empty($defaultContentHtml) || !$this->isValidHtml($defaultContentHtml)) {
             Log::error('[ActivityApplied] Invalid defaultContentHtml from Editor.js, using fallback.');
-            $defaultContentHtml = '<p>Inschrijving ontvangen voor ' . e($this->activity->title) . '.</p>';
+            $defaultContentHtml = '';
         }
 
+
         $reserveContentHtml = $this->sanitizeMailHtml((string) ($this->reserveContent->textHTML ?? ''));
+        $reserveContentHtml = $this->stripGenericGreeting($reserveContentHtml);
         if (empty($reserveContentHtml) || !$this->isValidHtml($reserveContentHtml)) {
             Log::error('[ActivityApplied] Invalid reserveContentHtml from Editor.js, using fallback.');
-            $reserveContentHtml = '<p>Inschrijving ontvangen voor ' . e($this->activity->title) . '.</p>';
+            $reserveContentHtml = '';
         }
 
         $personalConfirmationHtml = null;
         if ($this->activity->personal_confirmation_enabled) {
             try {
                 $personalConfirmationHtml = $this->sanitizeMailHtml((string) $this->activity->personalConfirmationHTML);
+                $personalConfirmationHtml = $this->stripGenericGreeting($personalConfirmationHtml);
                 if (empty($personalConfirmationHtml) || !$this->isValidHtml($personalConfirmationHtml)) {
                     Log::error('[ActivityApplied] Invalid personalConfirmationHtml from Editor.js, using fallback.');
-                    $personalConfirmationHtml = '<p>Inschrijving ontvangen voor ' . e($this->activity->title) . '.</p>';
+                    $personalConfirmationHtml = '';
                 }
             } catch (Throwable $exception) {
                 Log::error('[ActivityApplied] Personal confirmation render failed, falling back to default content', [
@@ -97,7 +102,7 @@ class ActivityApplied extends Mailable
                     'user_id' => $this->user->id,
                     'error' => $exception->getMessage(),
                 ]);
-                $personalConfirmationHtml = '<p>Inschrijving ontvangen voor ' . e($this->activity->title) . '.</p>';
+                $personalConfirmationHtml = '';
             }
         }
 
@@ -159,7 +164,7 @@ class ActivityApplied extends Mailable
             $jsonBody = json_encode([
                 'email' => $this->user->email,
                 'subject' => $this->content->title . ' ' . $this->activity->title,
-                'body' => '<p>Inschrijving ontvangen voor ' . e($this->activity->title) . '.</p>',
+                'body' => '',
             ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE) ?: '{}';
         }
 
@@ -335,6 +340,17 @@ class ActivityApplied extends Mailable
         ) ?? $html;
 
         return $html;
+    }
+
+    /**
+     * Remove generic greetings like 'Beste Collega' from content to avoid duplicate salutations.
+     */
+    private function stripGenericGreeting(string $html): string
+    {
+        // Remove 'Beste Collega' or similar generic greetings at the start
+        $html = preg_replace('/<p[^>]*>\s*Beste\s+(?:Collega|Leden)[^<]*<\/p>/i', '', $html) ?? $html;
+        
+        return trim($html);
     }
 
     /**

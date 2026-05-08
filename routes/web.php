@@ -61,6 +61,8 @@ Route::prefix('activiteiten')->name('activity.')->controller(ActivityController:
 
             // Notify
             Route::post('{activity}/informeer-leden', 'notifyMembers')->name('notifyMembers');
+            // Endpoint to persist mail settings (batch_size/delay) for UI forms/modals
+            Route::post('mail-settings', [App\Http\Controllers\MailSettingController::class, 'store'])->name('mail-settings.store');
             Route::post('{activity}/informeer-deelnemers', 'notifyParticipants')->name('notifyParticipants');
 
             //Update
