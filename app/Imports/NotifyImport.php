@@ -18,6 +18,6 @@ class NotifyImport implements ToCollection, WithStartRow
 
     public function startRow(): int
     {
-        return 17;
+        return 2;
     }
 }

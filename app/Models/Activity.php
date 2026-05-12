@@ -124,17 +124,50 @@ class Activity extends Model
         return Attribute::make(
             get: function () {
                 try {
-                    $decoded = json_decode((string) $this->description, true);
-                    if (!is_array($decoded) || !array_key_exists('blocks', $decoded)) {
-                        return '<p>' . e((string) $this->description) . '</p>';
+                    $raw = (string) $this->description;
+
+                    // Try progressively decoding HTML entities until we can decode JSON
+                    $attempts = 0;
+                    $maxAttempts = 5;
+                    while ($attempts < $maxAttempts) {
+                        $decoded = json_decode($raw, true);
+                        if (is_array($decoded) && array_key_exists('blocks', $decoded)) {
+                            return EditorPhp::make($raw)->toHtml();
+                        }
+                        $new = html_entity_decode($raw, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                        if ($new === $raw) {
+                            break;
+                        }
+                        $raw = $new;
+                        $attempts++;
                     }
-                    return EditorPhp::make($this->description)->toHtml();
+
+                    // Plain text fallback: decode any lingering HTML entities fully before escaping
+                    $decodedText = (string) $this->description;
+                    $prev = null;
+                    $tries = 0;
+                    while ($tries < $maxAttempts && $decodedText !== $prev) {
+                        $prev = $decodedText;
+                        $decodedText = html_entity_decode($decodedText, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                        $tries++;
+                    }
+
+                    return '<p>' . e($decodedText) . '</p>';
                 } catch (\Throwable $e) {
                     \Log::warning('[Activity] descriptionHTML fallback', [
                         'activity_id' => $this->id,
                         'error' => $e->getMessage(),
                     ]);
-                    return '<p>' . e((string) $this->description) . '</p>';
+                    $decodedText = (string) $this->description;
+                    $prev = null;
+                    $tries = 0;
+                    $maxAttempts = 5;
+                    while ($tries < $maxAttempts && $decodedText !== $prev) {
+                        $prev = $decodedText;
+                        $decodedText = html_entity_decode($decodedText, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                        $tries++;
+                    }
+                    return '<p>' . e($decodedText) . '</p>';
                 }
             }
         );

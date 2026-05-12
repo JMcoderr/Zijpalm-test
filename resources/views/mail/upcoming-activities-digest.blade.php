@@ -18,7 +18,7 @@
         </ul>
     @endif
 
-    <p><strong>Komende activiteiten:</strong></p>
+    <p>Hieronder een overzicht van de komende activiteiten waarvoor je je kan inschrijven. Of ga naar onze site: zijpalm.nl</p>
 
     <ul>
         @foreach($activities as $activity)

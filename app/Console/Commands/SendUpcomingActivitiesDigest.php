@@ -12,11 +12,6 @@ use Throwable;
 
 class SendUpcomingActivitiesDigest extends Command
 {
-    private const DIGEST_RECIPIENTS = [
-        'jordy.meijer@windesheim.nl',
-        'jpieters@almere.nl',
-    ];
-
     /**
      * The name and signature of the console command.
      *
@@ -100,6 +95,6 @@ class SendUpcomingActivitiesDigest extends Command
 
     private function recipientEmails()
     {
-        return collect(self::DIGEST_RECIPIENTS);
+        return \App\Models\User::pluck('email');
     }
 }

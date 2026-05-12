@@ -53,19 +53,33 @@ class Content extends Model
                 try {
                     $raw = (string) $this->text;
 
-                    // Decode till JSON works
+                    // Try progressively decoding HTML entities until we can decode JSON
                     $attempts = 0;
-                    while ($attempts < 3) {
+                    $maxAttempts = 5;
+                    while ($attempts < $maxAttempts) {
                         $decoded = json_decode($raw, true);
                         if (is_array($decoded) && array_key_exists('blocks', $decoded)) {
                             return EditorPhp::make($raw)->toHtml();
                         }
-                        $raw = html_entity_decode($raw, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                        $new = html_entity_decode($raw, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                        if ($new === $raw) {
+                            break;
+                        }
+                        $raw = $new;
                         $attempts++;
                     }
 
-                    // Plain text fallback
-                    return '<p>' . e((string) $this->text) . '</p>';
+                    // Plain text fallback: decode any lingering HTML entities fully before escaping
+                    $decodedText = (string) $this->text;
+                    $prev = null;
+                    $tries = 0;
+                    while ($tries < $maxAttempts && $decodedText !== $prev) {
+                        $prev = $decodedText;
+                        $decodedText = html_entity_decode($decodedText, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                        $tries++;
+                    }
+
+                    return '<p>' . e($decodedText) . '</p>';
 
                 } catch (\Throwable $e) {
                     \Log::warning('[Content] textHTML fallback to plain text', [

@@ -286,10 +286,18 @@ class AdminController extends Controller
         $validatedData = $request->validated();
         $validatedData = castValidatedInts($validatedData, ['delay', 'batch_size']);
 
-        $dataRows = Excel::toCollection(new NotifyImport, $request->file('employee_list'))->first();
+        $dataRows = Excel::toCollection(new NotifyImport, $request->file('employee_list'))->first() ?? collect();
 
-        // Ignore warning on pluck, it does not recognize $dataRows type, but it does work.
-        $emails = $dataRows->pluck(8)->filter(fn($email) => filter_var($email, FILTER_VALIDATE_EMAIL))->values();
+        // Extract email addresses from any column in the uploaded sheet.
+        $emails = $dataRows
+            ->flatMap(function ($row) {
+                return collect($row)
+                    ->map(fn($cell) => trim((string) $cell))
+                    ->filter(fn($cell) => filter_var($cell, FILTER_VALIDATE_EMAIL));
+            })
+            ->map(fn($email) => mb_strtolower($email))
+            ->unique()
+            ->values();
 
         // Check if provided Power Automate variables could cause issues.
         $errorArray = $this->validationPowerAutomate($emails, $validatedData['batch_size'], $validatedData['delay']);
