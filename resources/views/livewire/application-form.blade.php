@@ -85,6 +85,19 @@
 </div>
 
 <script>
+    // Acknowledge close requests immediately so the top-right close button and click-away both work.
+    window.addEventListener('zijpalm-modal-request-close', function (ev) {
+        if (ev?.detail?.modal !== 'signupModal') {
+            return;
+        }
+
+        window.dispatchEvent(new CustomEvent('zijpalm-modal-close-ack', {
+            detail: { modal: 'signupModal' }
+        }));
+    });
+</script>
+
+<script>
 // function setupTooltip(inputSelector, message) {
 //     const input = document.querySelector(inputSelector);
 //     if (!input) return;

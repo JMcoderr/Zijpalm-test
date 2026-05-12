@@ -32,7 +32,7 @@
                 @if (count($years) > 0)
                     <x-dropdown title="Jaarverslagen">
                         @foreach ($years as $report)
-                            <x-admin.card :title="$report->content->title" :href="$report->content->file" :variables="[['text' => $report->content->name, 'class' => 'italic text-sm text-gray-400'], ['text' => $report->year, 'class' => 'bg-blue-600 flex justify-center w-[3rem] h-fit text-white text-xs font-semibold px-2 py-1 rounded-md shadow']]" :buttons="['link' => $report->content->file, 'edit' => route('report.edit', $report->content), 'delete' => route('report.destroy', $report)]"/>
+                            <x-admin.card :title="$report->content->title" :href="$report->content->file" :variables="[['text' => $report->content->name, 'class' => 'italic text-sm text-gray-400'], ['text' => $report->year, 'class' => 'bg-blue-600 flex justify-center w-[3rem] h-fit text-white text-xs font-semibold px-2 py-1 rounded-md shadow']]" :buttons="['link' => $report->content->file, 'edit' => route('content.edit', $report->content), 'delete' => route('report.destroy', $report)]"/>
                         @endforeach
                     </x-dropdown>
                 @endif
