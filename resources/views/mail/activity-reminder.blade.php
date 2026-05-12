@@ -1,4 +1,6 @@
-<x-layouts.mail.header :user="$user">
+<x-layouts.mail.header :user="$user" :hideGreeting="true">
+    <p>Beste leden en (eventuele) introducees,</p>
+
     {!! $content->textHTML !!}
 
     <h3>{{$activity->title}}</h3>

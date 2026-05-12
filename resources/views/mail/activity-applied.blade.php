@@ -143,9 +143,8 @@
             </x-mail.button>
         @endif
 
-        @if($activity->cancellationEnd)
-            <p>Kosteloos annuleren kan tot en met: {{ formatDate($activity->cancellationEnd) }}</p>
-        @else
+        @if(!$reserve && $activity->cancellationEnd)
+        @elseif(!$reserve)
             <p>Annuleren is niet mogelijk.</p>
         @endif
     @endif

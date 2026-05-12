@@ -218,7 +218,35 @@ class AdminController extends Controller
         $textContent = Content::getByType('text')->sortBy('name');
         $boardMemberContent = Content::getByType('bestuurslid')->sortBy('name');
         $files = Content::getByType('file')->sortBy('name');
-        $emails = Content::getByType('email')->sortBy('name');
+        
+        // Define the custom email order
+        $emailOrder = [
+            'email-activiteit-aangemeld',
+            'email-activiteit-afgemeld',
+            'email-betaling-mislukt',
+            'email-nieuwe-activiteit',
+            'email-toekomstige-activiteiten',
+            'email-herinnering-activiteit-deelnemers',
+            'email-activiteit-aangemeld-reserve',
+            'email-reserve-upgrade',
+            'email-reset-wachtwoord',
+            'email-bestelling-betaald',
+            'email-nieuw-lid',
+            'email-bestuur-activiteit-aanmeldingen',
+            'email-bestuur-nieuwe-bestelling',
+            'email-bestuur-nieuwe-leden',
+            'email-herinnering-activiteit-niet-deelnemers',
+        ];
+        
+        // Create a position map for sorting
+        $positionMap = array_flip($emailOrder);
+        
+        $allEmails = Content::getByType('email');
+        $emails = $allEmails->sort(function ($a, $b) use ($positionMap) {
+            $posA = $positionMap[$a->name] ?? PHP_INT_MAX;
+            $posB = $positionMap[$b->name] ?? PHP_INT_MAX;
+            return $posA <=> $posB;
+        })->values();
 
         $contentGroups = [
             'Tekst' => $textContent,
