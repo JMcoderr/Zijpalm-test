@@ -64,8 +64,8 @@ class ApplicationForm extends Component{
 
     // Whenever a participant is added or removed from the GuestBuilder component
     public function updateParticipants($guestCount){
-        // Update the participants count: if user adds an intro, count as 2 participants
-        $this->participants = ($guestCount > 0) ? 2 : 1;
+        // Count the user plus all added introducees
+        $this->participants = max(1, (int) $guestCount + 1);
         $this->updateBaseCost();
     }
 
