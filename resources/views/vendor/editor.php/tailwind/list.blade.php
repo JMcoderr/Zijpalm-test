@@ -1,3 +1,4 @@
+{{-- This view file shows part of the interface and is kept simple so it is easy to follow. --}}
 @if ($data('style') === 'ordered')
     <ol class="pl-8 mb-4 list-decimal list-inside text-left">
         @foreach ($data('items', []) as $item)

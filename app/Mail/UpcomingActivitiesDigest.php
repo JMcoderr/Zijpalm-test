@@ -1,4 +1,6 @@
 <?php
+// This file is part of the app logic and has a short comment so it is easier to read.
+
 
 namespace App\Mail;
 
@@ -26,6 +28,7 @@ class UpcomingActivitiesDigest extends Mailable
      */
     public function __construct(Collection $emails, Collection $activities, Collection $runningActivities, array $validatedData = [])
     {
+        // Store the data for this mail so the view can use it later.
         $this->emails = $emails;
         $this->activities = $activities;
         $this->runningActivities = $runningActivities;
@@ -38,6 +41,7 @@ class UpcomingActivitiesDigest extends Mailable
      */
     public function envelope(): Envelope
     {
+        // Build the subject line for this mail.
         return new Envelope(
             subject: 'AUTOMATE BATCH upcoming_activities_digest',
         );
@@ -48,6 +52,7 @@ class UpcomingActivitiesDigest extends Mailable
      */
     public function content(): Content
     {
+        // Pass the values to the Blade template that builds the message body.
         $mailSubject = 'Zijpalm | Komende activiteiten';
             $introHtml = '<p>Beste leden,</p><p>Hieronder vinden jullie de komende activiteiten van Zijpalm.</p>';
 
@@ -156,6 +161,7 @@ class UpcomingActivitiesDigest extends Mailable
      */
     public function attachments(): array
     {
+        // Attach files here if this mail needs them.
         return [];
     }
 

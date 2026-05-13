@@ -19,6 +19,7 @@ window.applyRecurringCancellationVisibility = applyRecurringCancellationVisibili
  * When unchecked: shows the date field (cancellation date can be set)
  */
 function toggleCancellationField(checkbox) {
+    // This field is only needed when cancellation is allowed.
     const cancellationInput = document.getElementById('cancellationEnd');
     if (!cancellationInput) return;
 
@@ -26,11 +27,11 @@ function toggleCancellationField(checkbox) {
     const fieldWrapper = cancellationInput.parentElement.parentElement;
 
     if (checkbox.checked) {
-        // Hide the date field and clear its value
+        // Hide the date field and clear its value so the form stays clean.
         fieldWrapper.classList.add('hidden');
         cancellationInput.value = '';
     } else {
-        // Show the date field
+        // Show the date field again when cancellation is possible.
         fieldWrapper.classList.remove('hidden');
     }
 }
@@ -41,6 +42,7 @@ function toggleCancellationField(checkbox) {
  * When recurring is unchecked: shows the fields again
  */
 function toggleCancellationOnRecurring(recurringCheckbox) {
+    // Recurring activities use a slightly different form layout.
     const noCancellationCheckbox = document.getElementById('noCancellation');
     const cancellationInput = document.getElementById('cancellationEnd');
     
@@ -50,15 +52,16 @@ function toggleCancellationOnRecurring(recurringCheckbox) {
     const noCancellationWrapper = noCancellationCheckbox.parentElement.parentElement;
     const cancellationWrapper = cancellationInput.parentElement.parentElement;
 
+    // Listen for changes so the fields stay in sync when the checkbox is clicked.
     recurringCheckbox.addEventListener('change', () => {
         if (recurringCheckbox.checked) {
-            // Hide both cancellation fields when recurring is checked
+            // Hide both cancellation fields when recurring is checked.
             noCancellationWrapper.classList.add('hidden');
             cancellationWrapper.classList.add('hidden');
             noCancellationCheckbox.checked = false;
             cancellationInput.value = '';
         } else {
-            // Show both cancellation fields when recurring is unchecked
+            // Show both cancellation fields again when recurring is unchecked.
             noCancellationWrapper.classList.remove('hidden');
             cancellationWrapper.classList.remove('hidden');
         }
@@ -70,6 +73,7 @@ function toggleCancellationOnRecurring(recurringCheckbox) {
  * When recurring is checked, cancellation options are hidden immediately.
  */
 function applyRecurringCancellationVisibility(recurringCheckbox) {
+    // This is a helper so the form starts in the right state on page load.
     const noCancellationCheckbox = document.getElementById('noCancellation');
     const cancellationInput = document.getElementById('cancellationEnd');
 
@@ -81,6 +85,7 @@ function applyRecurringCancellationVisibility(recurringCheckbox) {
     const cancellationWrapper = cancellationInput.parentElement?.parentElement;
 
     if (recurringCheckbox.checked) {
+        // When recurring is enabled, cancellation is not used.
         noCancellationCheckbox.checked = false;
         noCancellationWrapper?.classList.add('hidden');
         cancellationInput.value = '';
@@ -88,12 +93,15 @@ function applyRecurringCancellationVisibility(recurringCheckbox) {
         return;
     }
 
+    // Otherwise keep the normal cancellation fields visible.
     noCancellationWrapper?.classList.remove('hidden');
 
     if (noCancellationCheckbox.checked) {
+        // If cancellation is disabled, hide the date input too.
         cancellationWrapper?.classList.add('hidden');
         cancellationInput.value = '';
     } else {
+        // If cancellation is allowed, make sure the field is shown.
         cancellationWrapper?.classList.remove('hidden');
     }
 }
@@ -120,7 +128,7 @@ function toggleRecurringOnChecked(checkbox, inputs) {
                 if(input !== checkbox){
                     // Expects custom component <x-input-field>, as they always have a tooltip with the correct format for id
                     if(document.getElementById(`${input.id}tooltip`) != null){
-                        // Change required status based on invert
+                        // Change required status based on whether the checkbox is checked.
                         input.required = !checkbox.checked;
                         // Forcibly hide the tooltip, which includes the asterisk
                         document.getElementById(`${input.id}tooltip`).classList.toggle('hidden');
@@ -157,7 +165,7 @@ function toggleRequiredOnChecked(checkbox, inputs, invert = false){
                 if(input != checkbox){
                     // Expects custom component <x-input-field>, as they always have a tooltip with the correct format for id
                     if(document.getElementById(`${input.id}tooltip`) != null){
-                        // Change required status based on invert
+                        // Change required status based on the checkbox state and the invert setting.
                         input.required = invert ? !checkbox.checked : checkbox.checked;
                         // Forcibly hide the tooltip, which includes the asterisk
                         document.getElementById(`${input.id}tooltip`).classList.toggle('hidden');

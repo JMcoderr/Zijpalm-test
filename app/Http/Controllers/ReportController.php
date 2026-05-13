@@ -1,4 +1,6 @@
 <?php
+// This file is part of the app logic and has a short comment so it is easier to read.
+
 
 namespace App\Http\Controllers;
 
@@ -25,7 +27,10 @@ class ReportController extends Controller
         // Merge activity reports without existing activities
 //        $activityReports = $activityReports->merge(Report::orderByDesc('created_at')->doesntHave('activity')->whereNull('year')->get());
 
+        // Load report records that are linked to PDF content.
         $reports = Report::query()->orderbyDesc('created_at')->withWhereHas('content', fn($q) => $q->where('fileType', FileType::Pdf))->get();
+
+        // Split into activity reports and yearly reports for separate sections in the view.
         $activities = $reports->whereNull('year');
         $years = $reports->whereNotNull('year')->sortBy('year')->values();
         // Return the view, compact the variables to send with
@@ -57,7 +62,7 @@ class ReportController extends Controller
         // Needs the boolean from request, for some reason
 //        $yearly = request()->boolean('yearly');
 
-        // Return all reports without years
+        // Calculate which year options are still available for yearly reports.
         $yearsAvailable = collect(range(now()->year, now()->subDecade()->year))->diff(Report::whereNotNull('year')->pluck('year'))->values();
         // Return the view, compact the variables to send with
         return view('reports.create', compact(['yearsAvailable']));
@@ -74,12 +79,13 @@ class ReportController extends Controller
      */
     public function store(ReportRequest $request): \Illuminate\Http\RedirectResponse
     {
+        // Validate and optionally upload an image for the report card.
         $validated = $request->validated();
         $imagePath = $request->hasFile('report-image')
             ? uploadImage($request->file('report-image'), 'images/reports/')
             : null;
 
-        // Create the hollow shell of a report
+        // Wrap creation in one transaction so report/content stay consistent.
         DB::transaction(function () use ($validated, $imagePath) {
             $report = Report::query()->create([
                 'year' => $validated['report-is-year'] != '-' ? $validated['report-is-year'] : null,
@@ -94,9 +100,11 @@ class ReportController extends Controller
                 'filePath' => $validated['report-file']->store('content/pdf', 'public'),
             ]);
 
-            // Now manually set the foreign key on the report
+            // Set the reverse link so report and content point to each other.
             $report->update(['content_id' => $content->id]);
         });
+
+        // Return to the overview page after successful creation.
         return redirect()->route('report.index')->with('success', $request['report-title'].' succesvol aangemaakt!');
 //
 //
@@ -166,7 +174,7 @@ class ReportController extends Controller
      */
     public function destroy(Report $report)
     {
-        //
+        // Delete the report record from the list.
         $report->delete();
 
         return back()->with('success', 'Verslag succesvol verwijderd!');

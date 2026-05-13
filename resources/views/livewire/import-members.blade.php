@@ -1,3 +1,4 @@
+{{-- This view file shows part of the interface and is kept simple so it is easy to follow. --}}
 <div class="size-full">
     <div class="flex flex-col py-2">
         {{-- Show errors, if any --}}

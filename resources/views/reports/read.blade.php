@@ -1,3 +1,4 @@
+{{-- This view file shows part of the interface and is kept simple so it is easy to follow. --}}
 <x-page-wrapper :page="$report->content->title ?? ($report->year ? 'Jaarverslag' : 'Verslag')">
     <x-zijpalm-div :editable="false" color="transparent" :title="$report->content->title"/>
 

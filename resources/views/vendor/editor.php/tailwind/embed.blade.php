@@ -1,3 +1,4 @@
+{{-- This view file shows part of the interface and is kept simple so it is easy to follow. --}}
 <div class="mb-4 bg-gray-100 text-gray-800 p-4 rounded-xl">
     <iframe
         class="block mb-4 rounded-xl bg-white"

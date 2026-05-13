@@ -1,3 +1,4 @@
+{{-- This view file shows part of the interface and is kept simple so it is easy to follow. --}}
 @php
 $classes = Flux::classes('[grid-area:footer]')
     ->add($attributes->has('container') ? '' : 'p-6 lg:p-8')

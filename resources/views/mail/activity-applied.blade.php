@@ -1,3 +1,4 @@
+{{-- This view file shows part of the interface and is kept simple so it is easy to follow. --}}
 @php
     $totalPrice = 0;
     if($application->answers && $application->answers->count() > 0) {
@@ -7,6 +8,7 @@
     }
 @endphp
 @push('styles')
+    {{-- Add a little bit of basic styling for the tables in this mail. --}}
     <style>
         table {
             width: 100%;
@@ -27,18 +29,23 @@
 @endpush
 
 <x-layouts.mail.header :user="$user" :hideGreeting="$activity->personal_confirmation_enabled && !$reserve && !empty($personalConfirmationHtml)">
+    {{-- Short intro text for the person who signed up. --}}
     <p>Leuk dat jij je hebt aangemeld. Hierbij bevestigen wij dat jouw aanmelding is binnengekomen.</p>
     <p>De details vind je hieronder.</p>
     @if($reserve)
+        {{-- For reserve signups we show reserve content first. --}}
         {!! $reserveContentHtml ?? $reserveContent->textHTML !!}
         {!! $defaultContentHtml ?? $content->textHTML !!}
     @elseif($activity->personal_confirmation_enabled && !empty($personalConfirmationHtml))
+        {{-- When personal confirmation is enabled, show that text instead. --}}
         {!! $personalConfirmationHtml !!}
     @else
+        {{-- Otherwise show the normal signup text. --}}
         {!! $defaultContentHtml ?? $content->textHTML !!}
     @endif
 
     @if(!$activity->personal_confirmation_enabled || $reserve)
+        {{-- Basic overview of the signup details. --}}
         <table style="margin-top: 10px; margin-bottom: 10px; width: 100%;">
             <tr>
                 <td><strong>{{ $activity->title }}</strong></td>
@@ -76,6 +83,7 @@
         </table>
 
         @if($application->guests && count($application->guests) > 0)
+            {{-- Show the guests if any were added. --}}
             <br>
             <strong>Gast(en):</strong>
             <table style="margin-top: 10px; margin-bottom: 10px; width: 100%;">
@@ -99,6 +107,7 @@
         @endif
 
         @if($application->answers && $application->answers->count() > 0)
+            {{-- Show the answered questions and their prices. --}}
             <br>
             <strong>Beantwoorde vragen:</strong>
             <table style="margin-top: 10px; margin-bottom: 10px; width: 100%;">
@@ -132,6 +141,7 @@
         @endif
 
         @if(isset($qrcode) && !$reserve)
+            {{-- Show the WhatsApp QR code when the activity has a group. --}}
             <br>
             <div style="text-align: center;">
                 <strong>Whatsapp groep</strong><br>
@@ -145,6 +155,7 @@
 
         @if(!$reserve && $activity->cancellationEnd)
         @elseif(!$reserve)
+            {{-- If cancellation is not possible, say so clearly. --}}
             <p>Annuleren is niet mogelijk.</p>
         @endif
     @endif

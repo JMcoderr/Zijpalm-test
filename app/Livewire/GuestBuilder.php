@@ -1,4 +1,6 @@
 <?php
+// This file is part of the app logic and has a short comment so it is easier to read.
+
 
 namespace App\Livewire;
 
@@ -25,8 +27,10 @@ class GuestBuilder extends Component{
 
     // Mount guests, in case an old value is needed for them
     public function mount(Activity $activity, $guests = []){
+        // Keep a reference to the activity for guest/participant limits.
         $this->activity = $activity;
 
+        // Initialize guest rows (for old input values after validation errors).
         $guests = $guests ?? [];
         $this->guests = collect($guests)->map(fn($item, $key) => array_merge(['id' => $key], $item))->all();
     }
@@ -37,11 +41,11 @@ class GuestBuilder extends Component{
 //        dd(count($this->activity->participants->all));
 //        dd($this->activity->participants, $this->activity->participants->all->count());
 
-        // If the current participants + current guests + 1 (the user) is all below the maxParticipants, continue
+        // Only allow adding guests when total participants stay below activity capacity.
 //        if($this->activity->participants += count($this->guests) + 1 < $this->activity->maxParticipants){
         if(count($this->activity->participants->all) + count($this->guests) + 1 < $this->activity->maxParticipants){
 
-            // If the current amount of guests is below the maxGuests for an activity
+            // Also respect the per-activity guest limit.
             if(count($this->guests) < $this->activity->maxGuests){
                 $this->guestCount++;
                 $guest = $this->templateGuest;
@@ -54,12 +58,14 @@ class GuestBuilder extends Component{
 
     // Remove a guest
     public function removeGuest($guestId){
+        // Remove one guest row and refresh bindings.
         $this->guests = collect($this->guests)->reject(fn($guest) => $guest['id'] == $guestId)->values()->toArray();
         $this->refreshGuestArray();
     }
 
     // Attribute to assign to input fields
     public function inputAttributes(int $id, string $type, string $label, string $field){
+        // Build input attributes for one guest field.
         $guestId = "guests[{$id}][{$field}]";
 
         $attributes = [
@@ -78,6 +84,7 @@ class GuestBuilder extends Component{
     }
 
     public function refreshGuestArray(){
+        // Re-key guests and notify the parent component about the new guest count.
         $this->guests = collect($this->guests)->keyBy('id')->toArray();
         $this->dispatch('guestsUpdated', count($this->guests));
     }

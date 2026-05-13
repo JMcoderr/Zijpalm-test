@@ -1,3 +1,4 @@
+{{-- This view file shows part of the interface and is kept simple so it is easy to follow. --}}
 @php
 $classes = Flux::classes([
     'flex items-center px-4 text-sm whitespace-nowrap',

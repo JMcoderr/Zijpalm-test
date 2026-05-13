@@ -1,4 +1,6 @@
 <?php
+// This file is part of the app logic and has a short comment so it is easier to read.
+
 
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;

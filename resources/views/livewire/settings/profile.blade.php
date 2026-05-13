@@ -1,3 +1,4 @@
+{{-- This view file shows part of the interface and is kept simple so it is easy to follow. --}}
 <section class="w-full bg-white">
     @include('partials.settings-heading')
 

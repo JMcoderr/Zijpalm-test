@@ -1,4 +1,6 @@
 <?php
+// This file is part of the app logic and has a short comment so it is easier to read.
+
 
 namespace App\Http\Controllers;
 
@@ -61,7 +63,7 @@ class UserController extends Controller
      */
     public function update(UpdateUserRequest $request, User $user)
     {
-        // Users can set their own notifications, admins can manage notifications for others.
+        // Users can update their own notifications, admins can do this for other users too.
         if (auth()->user()->is($user) || auth()->user()->isAdmin()) {
             // Reset the notifications
             $user->notifications = 0;
@@ -69,7 +71,7 @@ class UserController extends Controller
             // Get the checked notifications
             $submittedNotifications = $request->input('notifications', []);
 
-            // Itterate over all the notifications and if it is checked in the frontend, set it
+            // Loop through all notification flags and set only the submitted ones.
             foreach (UserNotifications::cases() as $case) {
                 if (array_key_exists($case->name, $submittedNotifications)) {
                     $user->setNotification($case);
@@ -86,8 +88,7 @@ class UserController extends Controller
         $user->phone = $phone === '' ? null : $phone;
         $user->email = $request->input('email', $user->email);
 
-        // Actions only an admin can do
-        // If the user is a system user, we don't want to change is_admin or type
+        // Only admins can change role/admin state, except for protected system users.
         if (auth()->user()->isAdmin() && !$user->isType(UserType::System)) {
             // If the is_admin checkbox is checked, set the user as admin
             $user->is_admin = $request->has('is_admin');
@@ -122,13 +123,14 @@ class UserController extends Controller
             $user = auth()->user();
         }
 
+        // Choose different page text for employees versus normal members.
         if ($user->isType(UserType::Medewerker)) {
             $content = Content::where('name', 'afmelden-zijpalm-medewerker')->first();
         } else {
             $content = Content::where('name', 'afmelden-zijpalm')->first();
         }
 
-        // Determine the route for processing the cancellation
+        // Build the right cancel route depending on who is doing the action.
         if (auth()->user()->is($user)) {
             $route = route('settings.processCancel');
         } else {
@@ -148,19 +150,16 @@ class UserController extends Controller
             $user = auth()->user();
         }
 
+        // Employees and system users must use HRM for cancellation.
         if ($user->isType(UserType::Medewerker) || $user->isType(UserType::System)) {
             return redirect()->back()->withErrors('Je kan je account niet afmelden op deze manier. Meld je af via MijnHRM');
         }
 
-        // Sets the user as deleted
-        // This is a soft delete, so the user will not be removed from the database
-        // but will be marked as deleted
+        // Soft-delete the user by setting deleted_at.
         $user->deleted_at = now();
         $user->save();
 
-        // If the authenticated user is the same as the user being deleted
-        // we log them out to prevent any further actions
-        // If an admin is deleting a user, they will not be logged out
+        // If users cancel themselves, log them out immediately.
         if(auth()->user()->is($user)) {
             // Log the user out
             auth()->logout();

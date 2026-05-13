@@ -1,3 +1,4 @@
+{{-- This view file shows part of the interface and is kept simple so it is easy to follow. --}}
 <aside class="bg-gray-100 rounded-xl p-8 flex gap-4 mb-4">
     <div class="text-slate-400 flex justify-center items-start sm:items-center">
         <svg

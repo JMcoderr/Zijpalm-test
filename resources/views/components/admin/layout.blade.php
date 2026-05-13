@@ -1,3 +1,4 @@
+{{-- This view file shows part of the interface and is kept simple so it is easy to follow. --}}
 <div class="flex items-start max-md:flex-col">
     <div class="mr-10 w-full pb-4 md:w-[160px]">
         <flux:navlist>

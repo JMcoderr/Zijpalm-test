@@ -1,3 +1,4 @@
+{{-- This view file shows part of the interface and is kept simple so it is easy to follow. --}}
 <x-page-wrapper page="Verslagen" xmlns:flux="http://www.w3.org/1999/html">
     @php
         $reportCardImage = 'images/reports/pdf-card-default.svg';

@@ -1,4 +1,6 @@
 <?php
+// This config file keeps the settings for this part of the app.
+
 
 return [
 

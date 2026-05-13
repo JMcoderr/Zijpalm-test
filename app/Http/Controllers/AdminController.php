@@ -1,4 +1,6 @@
 <?php
+// This file is part of the app logic and has a short comment so it is easier to read.
+
 
 namespace App\Http\Controllers;
 
@@ -35,6 +37,7 @@ class AdminController extends Controller
 {
     public function activities()
     {
+        // Split one-day and multi-day first, then merge into one upcoming list.
         $oneDayActivities = Activity::getByType(ActivityType::OneDay);
         $multiDayActivities = Activity::getByType(ActivityType::MultiDay);
 
@@ -54,6 +57,7 @@ class AdminController extends Controller
             'Herhalende activiteiten' => $weeklyActivities,
         ];
 
+        // Send grouped collections to the admin activities page.
         return view('admin.activities', compact('activityGroupsWithDate', 'activityGroupsWithoutDate'));
     }
 
@@ -133,6 +137,7 @@ class AdminController extends Controller
 
     public function exportUsers()
     {
+        // Export only active users and keep a stable sort order for readability.
         $users = User::notSoftDeleted()
             ->orderBy('type')
             ->orderBy('firstName')
@@ -186,6 +191,7 @@ class AdminController extends Controller
         $tempFile = tempnam(sys_get_temp_dir(), 'members_');
         $writer->save($tempFile);
 
+        // Download and remove the temporary file after the response is sent.
         return response()->download($tempFile, $fileName)->deleteFileAfterSend(true);
     }
 
@@ -215,6 +221,7 @@ class AdminController extends Controller
 
     public function content()
     {
+        // Group regular content blocks so they are easy to manage in the admin UI.
         $textContent = Content::getByType('text')->sortBy('name');
         $boardMemberContent = Content::getByType('bestuurslid')->sortBy('name');
         $files = Content::getByType('file')->sortBy('name');
@@ -238,7 +245,7 @@ class AdminController extends Controller
             'email-herinnering-activiteit-niet-deelnemers',
         ];
         
-        // Create a position map for sorting
+        // Create a lookup map so we can sort emails by the custom order.
         $positionMap = array_flip($emailOrder);
         
         $allEmails = Content::getByType('email');
@@ -255,6 +262,7 @@ class AdminController extends Controller
             'E-mail' => $emails,
         ];
 
+        // Render the grouped content overview page.
         return view('admin.content', compact('contentGroups'));
     }
 
@@ -371,6 +379,7 @@ class AdminController extends Controller
 
     public function importEmployees(Request $request)
     {
+        // Validate import input before touching the Excel importer.
         $validator = Validator::make($request->all(), [
             'import-employees-form-members-list' => 'required|file|mimes:xls,xlsx,csv|max:10240',
         ], [
@@ -382,9 +391,12 @@ class AdminController extends Controller
         if ($validator->fails())
             return back()->withErrors($validator, 'importEmployees');
 
+        // Large imports can take a while, so disable execution limits for this request.
         set_time_limit(0);
         ini_set('max_execution_time', 0);
 //        dd($request->all());
+
+        // Disable query logging to reduce memory usage during large imports.
         DB::connection()->disableQueryLog();
         Excel::import(new UsersImport, $request->file('import-employees-form-members-list'));
         DB::connection()->enableQueryLog();
@@ -393,6 +405,7 @@ class AdminController extends Controller
 
     public function importMembers(Request $request)
     {
+        // Validate the uploaded members file first.
         $validator = Validator::make($request->all(), [
             'import-members-form-members-list' => 'required|file|mimes:xls,xlsx,csv|max:10240',
         ], [
@@ -404,9 +417,12 @@ class AdminController extends Controller
         if ($validator->fails())
             return back()->withErrors($validator, 'importMembers');
 
+        // Imports can be heavy, so keep time limit open here as well.
         set_time_limit(0);
         ini_set('max_execution_time', 0);
 //        dd($request->all());
+
+        // Disable query log to avoid memory spikes on big files.
         DB::connection()->disableQueryLog();
         Excel::import(new MembersImport, $request->file('import-members-form-members-list'));
         DB::connection()->enableQueryLog();
@@ -415,12 +431,14 @@ class AdminController extends Controller
 
     public function removeUser(Request $request, User $user)
     {
+        // Soft-delete a user from the admin panel.
         $user->delete();
         return back()->with('success', 'Gebruikers lidmaatschap succesvol afgemeld.');
     }
 
     public function reinstateUser(Request $request, User $user)
     {
+        // Restore a previously soft-deleted user.
         $user->restore();
         return back()->with('success', 'Gebruikers lidmaatschap succesvol hersteld.');
     }

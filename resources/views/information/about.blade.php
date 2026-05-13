@@ -1,3 +1,4 @@
+{{-- This view file shows part of the interface and is kept simple so it is easy to follow. --}}
 <x-page-wrapper page="Over Ons">
         <x-zijpalm-div :id="$banner->id" :name="$banner->name" color='transparent' :editables="['Titel']" :title="$banner->title" width="w-full sm:w-2/3" />
 

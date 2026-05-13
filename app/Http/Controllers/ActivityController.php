@@ -1,4 +1,6 @@
 <?php
+// This file is part of the app logic and has a short comment so it is easier to read.
+
 
 namespace App\Http\Controllers;
 
@@ -32,13 +34,13 @@ class ActivityController extends Controller
         // Show all activities
         // $activities = Activity::all();
 
-        // All ongoing activities that aren't cancelled, sorted by starting date/time
+        // Get ongoing activities that aren't cancelled, sorted by starting date/time
         $activities = Activity::where('end', '>', now())->whereNotIn('type', [ActivityType::Weekly, ActivityType::Cancelled])->get()->sortBy('start');
 
-        // All recurring activities, since they are treated separately
+        // Get all recurring activities, since they are treated separately
         $recurringActivities = Activity::where('type', ActivityType::Weekly)->get()->sortBy('title');
 
-        // All activities that are past the end date/time, from the last year only, with the latest ones on top, excluding weekly or cancelled activities
+        // Get activities that are past the end date/time, from the last year only, with the latest ones on top, excluding weekly or cancelled activities
         $archivedActivities = Activity::where('end', '<', now())->where('end', '>=', now()->subYear())->whereNotIn('type', [ActivityType::Weekly, ActivityType::Cancelled])->get()->sortBy('end');
 
         // Return the index with all 3 as compact

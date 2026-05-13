@@ -1,4 +1,6 @@
 <?php
+// This file is part of the app logic and has a short comment so it is easier to read.
+
 
 namespace App\Mail;
 
@@ -40,12 +42,14 @@ class ActivityApplied extends Mailable
      */
     public function __construct(Activity $activity, User $user, bool $reserve = false, bool $forceDefaultTemplate = false)
     {
+        // Store the data for this mail so the view can use it later.
+        // Save the activity and user so the mail can be built with the right data.
         $this->activity = $activity;
         $this->user = $user;
         $this->reserve = $reserve;
         $this->forceDefaultTemplate = $forceDefaultTemplate;
 
-        // Get the dynamic content for the email and cache it for 1 hour
+        // Load the normal and reserve mail content from the database cache.
         $this->content = ContentModel::where('name', 'email-activiteit-aangemeld')->first();
         $this->reserveContent = ContentModel::where('name', 'email-activiteit-aangemeld-reserve')->first();
     }
@@ -55,6 +59,8 @@ class ActivityApplied extends Mailable
      */
     public function envelope(): Envelope
     {
+        // Build the subject line for this mail.
+        // The subject is a fixed label because the mail is used for automation.
         return new Envelope(
             subject: 'AUTOMATE SINGLE activity_applied',
         );
@@ -65,12 +71,13 @@ class ActivityApplied extends Mailable
      */
     public function content(): Content
     {
-        // Generate the QR code for the WhatsApp URL
+        // Pass the values to the Blade template that builds the message body.
+        // Generate the QR code for the WhatsApp URL when the activity has one.
         if (isset($this->activity->whatsappUrl)) {
             $this->qrcode = (string) QrCode::size(192)->format('png')->generate($this->activity->whatsappUrl);
         }
 
-        // Sanitize and validate Editor.js output for all content blocks
+        // Clean up the mail content first so the HTML stays safe and predictable.
 
         $defaultContentHtml = $this->sanitizeMailHtml((string) ($this->content->textHTML ?? ''));
         $defaultContentHtml = $this->stripGenericGreeting($defaultContentHtml);
@@ -106,13 +113,14 @@ class ActivityApplied extends Mailable
             }
         }
 
-        // Get the application for the user and activity
+        // Get the application record for this user and activity.
         $this->application = $this->activity->applications()
             ->where('user_id', $this->user->id)
             ->whereNot('status', ApplicationStatus::Cancelled)
             ->first();
 
         try {
+            // Render the normal Blade mail template first.
             $renderedContent = view('mail.activity-applied', [
                 'activity' => $this->activity,
                 'application' => $this->application,
@@ -126,6 +134,7 @@ class ActivityApplied extends Mailable
                 'personalConfirmationHtml' => $personalConfirmationHtml,
             ])->render();
         } catch (Throwable $exception) {
+            // If the template fails, fall back to a very simple HTML body.
             Log::error('[ActivityApplied] Mail view render failed, using fallback body', [
                 'activity_id' => $this->activity->id,
                 'user_id' => $this->user->id,
@@ -148,6 +157,7 @@ class ActivityApplied extends Mailable
                 $applicationSummary;
         }
 
+        // Send the rendered HTML to the automation system as JSON.
         $jsonBody = json_encode([
             'email' => $this->user->email,
             'subject' => $this->content->title . ' ' . $this->activity->title,
@@ -155,6 +165,7 @@ class ActivityApplied extends Mailable
         ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE);
 
         if ($jsonBody === false) {
+            // If JSON encoding fails, fall back to an empty body instead of breaking the mail.
             Log::error('[ActivityApplied] JSON encode failed', [
                 'activity_id' => $this->activity->id,
                 'user_id' => $this->user->id,
@@ -360,6 +371,7 @@ class ActivityApplied extends Mailable
      */
     public function attachments(): array
     {
+        // Attach files here if this mail needs them.
         return [];
     }
 }

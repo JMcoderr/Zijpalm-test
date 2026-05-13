@@ -1,3 +1,4 @@
+{{-- This view file shows part of the interface and is kept simple so it is easy to follow. --}}
 <x-page-wrapper page="{{$activity->title}}"
                 x-data="{
                     signupModal: {{$errors->signupActivity->any() ? 'true' : 'false'}},

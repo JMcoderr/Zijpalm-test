@@ -1,4 +1,6 @@
 <?php
+// This file is part of the app logic and has a short comment so it is easier to read.
+
 
 namespace App\Livewire;
 
@@ -30,10 +32,10 @@ class ApplicationForm extends Component{
     public $participants = 1;
 
     public function mount(Activity $activity){
-        // Assign variables
+        // Store the activity so all calculations can use the same source data.
         $this->activity = $activity;
 
-        // Take only the necessary data from questions, additionally add input to deal with values
+        // Map question models to a lightweight array structure used by the Livewire form.
         $this->questions = $activity->questions->map(
             fn($question) => [
                 'id' => $question->id,
@@ -47,7 +49,7 @@ class ApplicationForm extends Component{
             ]
         );
 
-        // Update the base cost at the start
+        // Calculate the base cost once on load.
         $this->updateBaseCost();
     }
 
@@ -58,21 +60,21 @@ class ApplicationForm extends Component{
 
     // Get the answer (value) for a question, if the question has options, return the selected option
     public function getAnswer($questionId){
+        // For select questions return the selected option object, otherwise the raw value.
         $question = $this->getQuestion($questionId);
         return ($question['options'] ? collect($question['options'])->firstWhere('option', $question['value']) : $question['value']);
     }
 
     // Whenever a participant is added or removed from the GuestBuilder component
     public function updateParticipants($guestCount){
-        // Count the user plus all added introducees
+        // Count the user plus all added guests.
         $this->participants = max(1, (int) $guestCount + 1);
         $this->updateBaseCost();
     }
 
     // Update the base cost, based on the activity's price and the number of participants
     public function updateBaseCost(){
-        // Check if the user is an organizer and can register for free
-        // Check if the user is an organizer and can register for free
+        // Check if the current user is an organizer and still qualifies for a free organizer spot.
         $isOrganizer = false;
         if (auth()->user() && $this->activity->organizer) {
             $isOrganizer = str_contains($this->activity->organizer, auth()->user()->name);
@@ -84,15 +86,15 @@ class ApplicationForm extends Component{
             })->count();
         $canRegisterFree = $isOrganizer && ($activeFreeOrganizers < $this->activity->free_organizer_count);
 
-        // Show €0 if the organizer is free and there are no guests
+        // If the organizer comes alone, base price is free.
         if($canRegisterFree && $this->participants == 1) {
             $this->costs['base'] = 0;
         } elseif($canRegisterFree && $this->participants > 1) {
-            // Only guests pay: base = number of guests * price
+            // If organizer is free, only guests count towards base cost.
             $guestCount = $this->participants - 1;
             $this->costs['base'] = max(0, $guestCount) * $this->activity->price;
         } else {
-            // Everyone pays: base = participants * price
+            // Otherwise everyone pays the normal base price.
             $this->costs['base'] = $this->activity->price * $this->participants;
         }
         $this->updateTotalCost();
@@ -100,12 +102,14 @@ class ApplicationForm extends Component{
 
     // Update the options cost whenever a question is updated
     public function updateOptionsCost(){
+        // Sum all extra option costs from answered questions.
         $this->costs['options'] = $this->questions->sum(
             function($question){
                 // If the question is of the text type or empty, return 0 in the sum
                 if($question['type'] === 'text' || $question['value'] === null){
                     return;
                 }
+                // For select inputs use option price, otherwise use question price.
                 $option = collect($question['options'])->firstWhere('option', $question['value']);
                 $price = $option ? (float)$option['price'] : (float)$question['price'];
                 return $price * (($option || $question['value'] === true) ? 1 : (int)$question['value']);
@@ -121,7 +125,7 @@ class ApplicationForm extends Component{
 
     // Function to easily assign the questions attributes
     public function questionAttributes($question){
-        // Return the attributes for the question
+        // Build dynamic input attributes for each question component.
         return new ComponentAttributeBag(
                 array_filter([
                     'id' => "questions[{$question['id']}]",
@@ -143,6 +147,7 @@ class ApplicationForm extends Component{
     }
 
     public function render(){
+        // Render the form component and expose helper flags for the Blade view.
         return view('livewire.application-form', [
             // Pass a flag to the view to show '€,-' if the organizer is free
             'showFreeOrganizerBase' => ($canRegisterFree ?? false)

@@ -1,3 +1,4 @@
+{{-- This view file shows part of the interface and is kept simple so it is easy to follow. --}}
 
 @vite('resources/js/forms/toggle-required.js')
 @vite('resources/js/forms/display-uploaded-file-name.js')

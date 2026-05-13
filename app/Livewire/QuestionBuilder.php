@@ -1,4 +1,6 @@
 <?php
+// This file is part of the app logic and has a short comment so it is easier to read.
+
 
 namespace App\Livewire;
 
@@ -50,7 +52,7 @@ class QuestionBuilder extends Component{
         // Stores the case label/value pairs
         $this->questionTypes = QuestionType::labelledCases();
 
-        // If questions are given, assign them to the array and refresh
+        // If existing questions are given, map them to the structure expected by the builder UI.
         if($questions){
             $this->questions = collect($questions)->map(function($item, $key) {
                 if(is_array($item)){
@@ -84,7 +86,7 @@ class QuestionBuilder extends Component{
             $questionId = "questions[{$id}][options][{$optionId}][{$field}]";
         }
 
-        // Attributes to assign to the field
+        // Base attributes shared by all generated input fields.
         $questionAttributes = [
             'id' => $questionId,
             'name' => $questionId,
@@ -97,7 +99,7 @@ class QuestionBuilder extends Component{
             $questionAttributes['span'] = 'col-span-4 sm:col-span-6';
         }
 
-        // If given type is select, and options are given
+        // For select inputs we also pass option data to the component.
         if($type === 'select' && !empty($options)){
             $questionAttributes['options'] = $options;
             $questionAttributes['span'] = 'col-span-4';
@@ -137,7 +139,7 @@ class QuestionBuilder extends Component{
             $questionAttributes['wiremodel'] = "questions.{$id}.options.{$optionId}.{$field}";
         }
 
-        // If any type but option, make sure it doesn't contain any 'option'
+        // For normal question fields, bind directly to the top-level question key.
         if($type != 'option' && !str_contains($type, 'option')){
             $questionAttributes['wiremodel'] = "questions.{$id}.{$field}";
         }
@@ -217,7 +219,7 @@ class QuestionBuilder extends Component{
         // Base id on question count
         $question['id'] = $this->questionCount;
 
-        // Place the question in the array of questions
+        // Add the new question to the collection and normalize keys afterwards.
         $this->questions[] = $question;
 
         $this->refreshQuestionsArray();
@@ -235,12 +237,13 @@ class QuestionBuilder extends Component{
 
     // Removing questions
     public function removeQuestion($questionId){
-        // Remove the question from the array
+        // Remove one question row from the builder.
         unset($this->questions[$questionId]);
     }
 
     // Add option
     public function addOption($questionId){
+        // Add one selectable option to the selected question.
         $this->questions[$questionId]['options'][] = ['id' => count($this->questions[$questionId]['options'])];
     }
 
@@ -255,6 +258,7 @@ class QuestionBuilder extends Component{
     }
 
     public function refreshQuestionsArray(){
+        // Re-key by question id so Livewire bindings remain stable.
         $this->questions = collect($this->questions)->keyBy('id')->toArray();
     }
 

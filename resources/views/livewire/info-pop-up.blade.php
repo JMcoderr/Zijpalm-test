@@ -1,3 +1,4 @@
+{{-- This view file shows part of the interface and is kept simple so it is easy to follow. --}}
 <x-zijpalm-div :editable="false" width="w-min-max">
     <div id="info" class="flex flex-col size-full font-semibold text-center text-sm">
         @foreach($tabs as $index => $tab)

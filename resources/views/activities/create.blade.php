@@ -1,3 +1,4 @@
+{{-- This view file shows part of the interface and is kept simple so it is easy to follow. --}}
 {{-- Load used JavaScripts --}}
 {{-- Used for changing required fields based on checkbox --}}
 @vite('resources/js/forms/toggle-required.js')

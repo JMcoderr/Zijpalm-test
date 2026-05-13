@@ -1,3 +1,4 @@
+{{-- This view file shows part of the interface and is kept simple so it is easy to follow. --}}
 <x-layouts.mail.header>
     {!! $content->textHTML !!}
     {{-- <p style="margin: 10px; text-align: center; padding: 10px 20px;">

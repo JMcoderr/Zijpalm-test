@@ -1,4 +1,6 @@
 <?php
+// This file is part of the app logic and has a short comment so it is easier to read.
+
 
 namespace App\Http\Controllers;
 
@@ -71,21 +73,23 @@ class PaymentController extends Controller
 
     public function status(int $paymentId)
     {
-        // Get the order from the database
+        // Load the payment record from the database first.
         $payment = Payment::findOrFail($paymentId);
 
-        // Check if the payment is a payment link or a regular payment
-            // If it is a payment link, use the payment links API, otherwise use the payments API
+        // Check if this is a payment link or a normal payment.
+        // The Mollie API is different for both cases, so we handle them separately.
         if ($payment->isPaymentLink) {
             $payments = Mollie::api()->paymentLinkPayments->iteratorForId($payment->mollieId)->all();
-            // Check every payment for the paid status
+
+            // Look through all linked payments and prefer the first one that is paid.
             foreach ($payments as $p) {
                 if ($p->status === 'paid') {
                     $paymentMollie = $p;
                     break;
                 }
             }
-            // If there is no paid payment, get the first payment or set it to null
+
+            // If none of them is paid yet, use the first one so we still have a status.
             if (!isset($paymentMollie)) {
                 count($payments) === 0 ? $paymentMollie = null : $paymentMollie = $payments[0];
             }
@@ -93,45 +97,45 @@ class PaymentController extends Controller
             $paymentMollie = Mollie::api()->payments->get($payment->mollieId);
         }
 
-        // Redirect to the home page with the payment status
+        // Send the status back to the home page so the UI can show it.
         return redirect()->route('home')->with('payment_status', $paymentMollie->status ?? "unknown");
     }
 
     public function webhook(Request $request)
     {
-        // Get the payment ID from the request
+        // Mollie sends the payment ID in the webhook request.
         $paymentId = $request->input('id');
 
-        // If the payment ID is not set, return 400
+        // If the payment ID is missing, the request is not valid.
         if (!$paymentId) {
             return response('Bad Request', 400);
         }
 
-        // Get the payment from the database
+        // Find the local payment record that belongs to this Mollie payment.
         $paymentDB = Payment::where('mollieId', $paymentId)->first();
 
-        // If the payment does not exist, return 404 because the payment is not in the database
+        // If we do not know this payment, return 404 so Mollie can retry later.
         if (!$paymentDB) {
             return response('Not Found', 404);
         }
 
-        // Get the payment from Mollie
-        // This will throw an exception if the payment does not exist
+        // Get the latest payment status from Mollie.
+        // This can throw an exception if Mollie no longer knows the payment.
         try {
-            // Check if the payment is a payment link or a regular payment
-            // If it is a payment link, use the payment links API, otherwise use the payments API
+            // Use the correct Mollie endpoint depending on the payment type.
             if ($paymentDB->isPaymentLink) {
                 $payments = Mollie::api()->paymentLinkPayments->iteratorForId($paymentDB->mollieId)->all();
                 $payment = null;
 
-                // Check every payment for the paid status
+                // Again, prefer the first payment that is marked as paid.
                 foreach ($payments as $p) {
                     if ($p->status === 'paid') {
                         $payment = $p;
                         break;
                     }
                 }
-                // If there is no paid payment, get the first payment or set it to null
+
+                // If nothing is paid yet, fall back to the first payment in the list.
                 if (!isset($payment)) {
 //                    count($payments) === 0 ? $payment = null : $payment = $payments[0];
                     $payment = $payments[0] ?? null;
@@ -144,52 +148,28 @@ class PaymentController extends Controller
             return response('Not Found', 404);
         }
 
-//        // If the payment has not changed, return 200
-//        if ($paymentDB->status == $payment->status) {
-//            return response('OK');
-//        } else { // If the payment has changed, update the payment status
-//            $paymentDB->status = $payment->status;
-//
-//            // If the payment is paid, set the paidAt date
-//            if ($payment->isPaid() && !$paymentDB->paidAt) {
-//                $paymentDB->paidAt = $payment->paidAt ?? now();
-//            }
-//            $paymentDB->save();
-//
-//            // Handle status update for related entities
-//            $paymentDB->orders()->each(function ($order) use ($paymentDB) {
-//                $order->handleNewStatus($paymentDB);
-//            });
-//
-//            $paymentDB->application()->each(function ($application) use ($paymentDB) {
-//                $application->handleNewStatus($paymentDB);
-//            });
-//        }
-        // If the payment has not changed, return 200
+        // If nothing changed, just confirm the webhook.
         if ($paymentDB->status == $payment->status) {
             return response('OK');
         }
 
-        // If the payment has changed, update the payment status
+        // Update the stored payment status to match Mollie.
         $paymentDB->status = $payment->status;
 
-        // If the payment is paid, set the paidAt date
+        // Store the paid time once, but only if it is not saved yet.
         if ($payment->isPaid() && !$paymentDB->paidAt) {
             $paymentDB->paidAt = $payment->paidAt ?? now();
         }
 
-//        // Set refundedAt only once using Mollie's timestamp
-//        if($payment->isRefunded() && !$paymentDB->refundedAt) {
-//            $paymentDB->refundedAt = $payment->refundedAt ?? now();
-//        }
-
+        // Save the new payment state before handling related records.
         $paymentDB->save();
 
-        // Handle status update for related entities
+        // Update all linked orders with the new payment status.
         $paymentDB->orders()->each(function ($order) use ($paymentDB) {
             $order->handleNewStatus($paymentDB);
         });
 
+        // Update the application too, because a payment change can affect the signup status.
         $paymentDB->application()->each(function ($application) use ($paymentDB) {
             Log::debug("[PaymentController]Mollie Webhook received for payment of application\n".
                 json_encode([
@@ -197,20 +177,13 @@ class PaymentController extends Controller
                     'paymentDb' => $paymentDB,
                     'this' => $this,
             ], JSON_PRETTY_PRINT));
-//            Log::debug("[PaymentController]Mollie Webhook received for payment of application\n",
-//                [
-//                    'application' => $application,
-//                    'paymentDb' => $paymentDB,
-//                    'this' => $this,
-//                ]);
             $application->handleNewStatus($paymentDB);
         });
 
-        // Log the payment status
+        // Log the webhook so it is easier to debug when Mollie sends something unexpected.
         Log::debug("[PaymentController] Webhook: Mollie Webhook received for payment ID: {$paymentId}, status: {$payment->status}");
 
-        // Return 200
-        // Mollie will retry the webhook if it doesn't receive a 200 response
+        // Return 200 so Mollie knows the webhook was received correctly.
         return response('OK');
     }
 }

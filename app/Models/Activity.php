@@ -1,4 +1,6 @@
 <?php
+// This file is part of the app logic and has a short comment so it is easier to read.
+
 
 namespace App\Models;
 
@@ -25,6 +27,7 @@ class Activity extends Model
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory;
 
+    // Fields that can be mass assigned
     protected $fillable = [
         'title',
         'location',
@@ -49,6 +52,7 @@ class Activity extends Model
         'manual_budget',
     ];
 
+    // How to cast fields
     protected $casts = [
         'type' => ActivityType::class,
         'start' => 'datetime',
@@ -62,32 +66,36 @@ class Activity extends Model
         'manual_budget' => 'decimal:2',
     ];
 
+    // Relationship: activity has many applications
     public function applications()
     {
         return $this->hasMany(Application::class);
     }
 
+    // Relationship: activity has one report
     public function report()
     {
         return $this->hasOne(Report::class);
     }
 
+    // Relationship: activity has many questions
     public function questions()
     {
         return $this->hasMany(Question::class);
     }
 
+    // Get if certain periods are ongoing
     /**
      * Return whether or not a certain period is ongoing
      */
     public function getPeriodAttribute()
     {
-        // Return true for all if it's a weekly activity
+        // Weekly activities are always treated as active for all periods.
         if($this->type === ActivityType::Weekly){
             return (object)['registration' => true, 'cancellation' => true, 'activity' => true];
         }
 
-        // Return object, $activity->period->periodName will result in a true or false
+        // For normal activities we check each period separately and return true or false.
         return (object)[
             'registration' => $this->registrationStart && $this->registrationEnd
                 ? now()->between($this->registrationStart->startOfDay(), $this->registrationEnd->endOfDay())
@@ -111,6 +119,7 @@ class Activity extends Model
      */
     protected function image(): Attribute
     {
+        // Convert the stored path to a public URL so Blade can use it directly.
         return Attribute::make(
             get: fn () => Storage::url($this->imagePath)
         );
@@ -121,12 +130,13 @@ class Activity extends Model
      */
     protected function descriptionHTML(): Attribute
     {
+        // This accessor tries to render EditorJS content first and falls back to plain text if needed.
         return Attribute::make(
             get: function () {
                 try {
                     $raw = (string) $this->description;
 
-                    // Try progressively decoding HTML entities until we can decode JSON
+                    // Try a few times to decode the stored JSON because it may be double-encoded.
                     $attempts = 0;
                     $maxAttempts = 5;
                     while ($attempts < $maxAttempts) {
@@ -142,7 +152,7 @@ class Activity extends Model
                         $attempts++;
                     }
 
-                    // Plain text fallback: decode any lingering HTML entities fully before escaping
+                    // If it is still not valid JSON, show it as safe plain text.
                     $decodedText = (string) $this->description;
                     $prev = null;
                     $tries = 0;
@@ -175,25 +185,29 @@ class Activity extends Model
 
     protected function personalConfirmationHTML(): Attribute
     {
+        // This accessor renders the confirmation text in HTML, but also keeps plain text working.
         return Attribute::make(
             get: function () {
                 $rawConfirmation = (string) $this->getRawOriginal('personal_confirmation');
 
+                // If nothing was stored, there is nothing to show.
                 if (blank($rawConfirmation)) {
                     return null;
                 }
 
-                // Prefer editor-json rendering, but gracefully handle plain text content as fallback.
+                // Prefer editor JSON rendering, but fall back to plain text if needed.
                 try {
                     $decoded = json_decode($rawConfirmation, true);
 
                     if (is_array($decoded) && array_key_exists('blocks', $decoded)) {
                         $renderedHtml = EditorPhp::make($rawConfirmation)->toHtml();
 
+                        // If the rendered editor output is empty, try to build a simple text version.
                         if (!blank(trim(strip_tags((string) $renderedHtml)))) {
                             return $renderedHtml;
                         }
 
+                        // Put the text blocks together and turn URLs into clickable links.
                         $plainTextFallback = collect(data_get($decoded, 'blocks', []))
                             ->pluck('data.text')
                             ->filter()
@@ -221,8 +235,10 @@ class Activity extends Model
     }
 
     public function getParticipantsAttribute(){
+        // Only count applications that are not cancelled.
         $applications = $this->applications->whereNotIn('status', [ApplicationStatus::Cancelled]);
 
+        // Build a small object with all participant groups and the remaining capacity.
         return (object)[
             'all' => $applications,
             'capacity' => $this->maxParticipants ? max(0, $this->maxParticipants - $applications->whereNotIn('status', [ApplicationStatus::Reserve])->sum('participants')) : null,
@@ -248,6 +264,7 @@ class Activity extends Model
     // Returns true if a payment should be created, false if the activity is entirely free
     public function hasAnyCost(): bool
     {
+        // Start with the base participant price.
         // Check if the base price per participant is greater than 0
         if ($this->price > 0.0) {
             return true;

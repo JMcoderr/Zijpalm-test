@@ -1,4 +1,6 @@
 <?php
+// This file is part of the app logic and has a short comment so it is easier to read.
+
 
 namespace App\Models;
 
@@ -18,6 +20,7 @@ class User extends Authenticatable
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable, SoftDeletes;
 
+    // These are the fields that can be filled when creating or updating a user
     /**
      * The attributes that are mass assignable.
      *
@@ -37,6 +40,7 @@ class User extends Authenticatable
         'deleted_at',
     ];
 
+    // These fields won't be shown when the user is converted to JSON or array
     /**
      * The attributes that should be hidden for serialization.
      *
@@ -47,6 +51,7 @@ class User extends Authenticatable
         'remember_token',
     ];
 
+    // How to cast certain fields when retrieving from DB
     /**
      * Get the attributes that should be cast.
      *
@@ -67,6 +72,7 @@ class User extends Authenticatable
         ];
     }
 
+    // Get the user's initials from first and last name
     /**
      * Get the user's initials
      */
@@ -78,6 +84,7 @@ class User extends Authenticatable
             ->implode('');
     }
 
+    // Get the full name by combining first and last name
     /**
      * Get the user's full name
      */
@@ -88,16 +95,19 @@ class User extends Authenticatable
         );
     }
 
+    // Relationship: a user can have many applications
     public function applications()
     {
         return $this->hasMany(Application::class);
     }
 
+    // Relationship: a user can have many orders
     public function orders()
     {
         return $this->hasMany(Order::class);
     }
 
+    // Check if user wants this notification
     /**
      * Checks if the user wants to recieve a specific notification
      *
@@ -106,9 +116,11 @@ class User extends Authenticatable
      */
     public function wantsNotification(UserNotifications $notification): bool
     {
+        // The notifications field is used like a bitmask, so we check if the flag is enabled.
         return ($this->notifications & $notification->value) === $notification->value;
     }
 
+    // Check if user doesn't want this notification
     /**
      * Checks if the user does not want to recieve a specific notification
      *
@@ -117,9 +129,11 @@ class User extends Authenticatable
      */
     public function doesntWantNotification(UserNotifications $notification): bool
     {
+        // This is just the opposite of wantsNotification, so the code stays easy to read.
         return !$this->wantsNotification($notification);
     }
 
+    // Enable this notification for the user
     /**
      * Sets a specific notification.
      * Note: this does not save the update
@@ -128,9 +142,11 @@ class User extends Authenticatable
      */
     public function setNotification(UserNotifications $notification): void
     {
+        // Turn the notification flag on for this user.
         $this->notifications |= $notification->value;
     }
 
+    // Disable this notification for the user
     /**
      * Unset a specific notification.
      * Note: this does not save the update
@@ -140,9 +156,11 @@ class User extends Authenticatable
      */
     public function unsetNotification(UserNotifications $notification): void
     {
+        // Turn the notification flag off for this user.
         $this->notifications &= ~$notification->value;
     }
 
+    // Get users of a specific type
     /**
      * Retrieve a query builder for users of a specific type.
      *
@@ -151,9 +169,11 @@ class User extends Authenticatable
      */
     public static function getByType(UserType $type)
     {
+        // Reuse this helper when we need all users of one specific type.
         return self::query()->where('type', $type);
     }
 
+    // Scope for users that are not soft deleted
     /**
      * Scope a query to only include users that are not soft deleted or deleted in the future.
      *
@@ -162,12 +182,14 @@ class User extends Authenticatable
      */
     public function scopeNotSoftDeleted($query)
     {
+        // Keep users that are still active or deleted in the future.
         return $query->where(function ($q) {
             $q->whereNull('deleted_at')
               ->orWhere('deleted_at', '>', now());
         });
     }
 
+    // Scope for users that are soft deleted in the past
     /**
      * Scope a query to only include users that are soft deleted (deleted_at in the past).
      *
@@ -176,10 +198,12 @@ class User extends Authenticatable
      */
     public function scopeSoftDeletedPast($query)
     {
+        // Only include users that were deleted in the past.
         return $query->onlyTrashed()
                      ->where('deleted_at', '<=', now());
     }
 
+    // Check if user can update their personal info
     /**
      * Determine if the user can update their personalia.
      *
@@ -187,9 +211,11 @@ class User extends Authenticatable
      */
     public function canUpdatePersonalia(): bool
     {
+        // Employees and system users are locked for personal data changes.
         return $this->type !== UserType::Medewerker && $this->type !== UserType::System;
     }
 
+    // Check if user is admin
     /**
      * Determine if the user has admin privileges.
      *
@@ -197,9 +223,11 @@ class User extends Authenticatable
      */
     public function isAdmin(): bool
     {
+        // Simple helper to check admin access.
         return $this->is_admin;
     }
 
+    // Check if user is of a specific type
     /**
      * Check if the user is a specific type.
      *
@@ -208,6 +236,7 @@ class User extends Authenticatable
      */
     public function isType(UserType $type): bool
     {
+        // Compare the stored enum directly with the given type.
         return $this->type === $type;
     }
 
@@ -215,6 +244,8 @@ class User extends Authenticatable
 //    {
 //        $this->notify(new CustomResetPassword($token));
 //    }
+
+    // Send password reset notification
     public function sendPasswordResetNotification($token): void
     {
         $this->notify(new CustomResetPassword(

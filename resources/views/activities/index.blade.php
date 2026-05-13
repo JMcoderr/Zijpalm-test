@@ -1,3 +1,4 @@
+{{-- This view file shows part of the interface and is kept simple so it is easy to follow. --}}
 <x-page-wrapper page="Activiteiten">
     <x-zijpalm-div name="activity-index-banner" color='transparent' title="Activiteiten" :editable="false"/>
     @auth()

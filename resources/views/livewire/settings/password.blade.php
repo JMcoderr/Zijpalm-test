@@ -1,3 +1,4 @@
+{{-- This view file shows part of the interface and is kept simple so it is easy to follow. --}}
 <div>
     <x-zijpalm-div :editable=false color="light">
             <x-settings.layout :heading="__('Update uw wachtwoord')" :subheading="__('')">

@@ -1,3 +1,4 @@
+{{-- This view file shows part of the interface and is kept simple so it is easy to follow. --}}
 @switch($data('level'))
     @case(1)
         <h1 class="text-5xl font-bold mb-4">{!! $data('text') !!}</h1>

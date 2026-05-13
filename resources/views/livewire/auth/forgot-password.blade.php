@@ -1,3 +1,4 @@
+{{-- This view file shows part of the interface and is kept simple so it is easy to follow. --}}
  <div class="flex flex-col gap-6">
     <x-auth-header :title="__('Wachtwoord vergeten?')" :description="__('Vul uw email in om een wachtwoord reset link te ontvangen')" />
 

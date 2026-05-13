@@ -1,3 +1,4 @@
+{{-- This view file shows part of the interface and is kept simple so it is easy to follow. --}}
 <x-page-wrapper page="Admin Content">
     <x-zijpalm-div :editable=false color="light">
         <x-admin.layout :heading="__('Content')" :subheading="__('Bekijk en beheer alle contentstukken van de website')">

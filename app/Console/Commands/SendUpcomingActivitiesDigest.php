@@ -1,4 +1,6 @@
 <?php
+// This file is part of the app logic and has a short comment so it is easier to read.
+
 
 namespace App\Console\Commands;
 
@@ -31,6 +33,7 @@ class SendUpcomingActivitiesDigest extends Command
      */
     public function handle(): int
     {
+        // Get upcoming activities that are open for registration
         $activities = Activity::query()
             ->whereNotNull('start')
             ->where('start', '>=', now()->startOfDay())
@@ -40,6 +43,7 @@ class SendUpcomingActivitiesDigest extends Command
             ->orderBy('start')
             ->get();
 
+        // Get activities that are currently running
         $runningActivities = Activity::query()
             ->whereNotNull('start')
             ->whereNotNull('end')
@@ -49,15 +53,18 @@ class SendUpcomingActivitiesDigest extends Command
             ->orderBy('start')
             ->get();
 
+        // If no upcoming activities, inform and exit
         if ($activities->isEmpty()) {
             $this->info('Geen toekomstige activiteiten gevonden binnen 8 weken.');
             return self::SUCCESS;
         }
 
+        // Get valid recipient emails
         $emails = $this->recipientEmails()
             ->filter(fn (string $email) => filter_var($email, FILTER_VALIDATE_EMAIL))
             ->values();
 
+        // If no valid emails, warn and exit
         if ($emails->isEmpty()) {
             $this->warn('Geen geldige digest-ontvangers gevonden.');
             return self::SUCCESS;
@@ -70,6 +77,8 @@ class SendUpcomingActivitiesDigest extends Command
             $this->error('You must provide both --batch_size and --delay options.');
             return self::FAILURE;
         }
+
+        // Try to send the email
         try {
             Mail::to(config('mail.bestuur.address'), config('mail.bestuur.name'))
                 ->send(new UpcomingActivitiesDigest($emails, $activities, $runningActivities, [
@@ -77,6 +86,7 @@ class SendUpcomingActivitiesDigest extends Command
                     'delay' => $delay,
                 ]));
         } catch (Throwable $exception) {
+            // If sending fails, log error and return failure
             Log::error('[SendUpcomingActivitiesDigest] Mail send failed', [
                 'error' => $exception->getMessage(),
                 'activities' => $activities->count(),
@@ -88,11 +98,13 @@ class SendUpcomingActivitiesDigest extends Command
             return self::FAILURE;
         }
 
+        // If successful, inform about the sent mail
         $this->info("Mail verzonden voor {$activities->count()} activiteiten naar {$emails->count()} ontvangers.");
 
         return self::SUCCESS;
     }
 
+    // Get all user emails for the digest
     private function recipientEmails()
     {
         return \App\Models\User::pluck('email');
