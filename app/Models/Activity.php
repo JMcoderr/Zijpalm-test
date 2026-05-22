@@ -133,6 +133,7 @@ class Activity extends Model
         // This accessor tries to render EditorJS content first and falls back to plain text if needed.
         return Attribute::make(
             get: function () {
+<<<<<<< HEAD
                 try {
                     $raw = (string) $this->description;
 
@@ -178,7 +179,123 @@ class Activity extends Model
                         $tries++;
                     }
                     return '<p>' . e($decodedText) . '</p>';
+=======
+                $rawDesc = (string) $this->description;
+
+                if (blank($rawDesc)) {
+                    return '';
+>>>>>>> feature/us85-fix-activity-description
                 }
+
+                $maxAttempts = 6;
+                $candidate = $rawDesc;
+
+                for ($i = 0; $i < $maxAttempts; $i++) {
+                    $decoded = json_decode($candidate, true);
+
+                    if (is_array($decoded) && array_key_exists('blocks', $decoded)) {
+                        // Decode any HTML entities inside the blocks recursively
+                        try {
+                            array_walk_recursive($decoded, function (&$value, $key) {
+                                if (!is_string($value)) {
+                                    return;
+                                }
+
+                                $tries = 0;
+                                $prev = null;
+                                while ($tries < 6 && $value !== $prev) {
+                                    $prev = $value;
+                                    $value = html_entity_decode($value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                                    $tries++;
+                                }
+                            });
+
+                            // Detect and unwrap nested Editor.js JSON stored as text inside blocks
+                            foreach ($decoded['blocks'] as &$block) {
+                                $text = data_get($block, 'data.text');
+                                if (!is_string($text)) {
+                                    continue;
+                                }
+
+                                $candidateNested = $text;
+                                // Try to decode nested JSON (may be entity-encoded)
+                                for ($j = 0; $j < 5; $j++) {
+                                    $try = json_decode($candidateNested, true);
+                                    if (is_array($try) && array_key_exists('blocks', $try)) {
+                                        // Replace the nested JSON text with concatenated inner block texts
+                                        $innerTexts = collect($try['blocks'])->map(fn($b) => data_get($b, 'data.text'))
+                                            ->filter()
+                                            ->map(fn($t) => html_entity_decode((string) $t, ENT_QUOTES | ENT_HTML5, 'UTF-8'))
+                                            ->filter()
+                                            ->values();
+
+                                        if ($innerTexts->isNotEmpty()) {
+                                            $block['data']['text'] = $innerTexts->map(fn($t) => trim($t))->implode("\n\n");
+                                            break;
+                                        }
+                                    }
+
+                                    $candidateNested = html_entity_decode($candidateNested, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                                    if ($candidateNested === $try) {
+                                        break;
+                                    }
+                                }
+                            }
+
+                            $prepared = json_encode($decoded, JSON_UNESCAPED_UNICODE);
+                        } catch (\Throwable $e) {
+                            \Log::debug('[Activity] descriptionHTML prepare-json-failed', ['activity_id' => $this->id, 'error' => $e->getMessage()]);
+                            $prepared = $candidate;
+                        }
+
+                        // Try rendering with EditorPhp
+                        try {
+                            $rendered = EditorPhp::make($prepared)->toHtml();
+                            if (!blank(trim(strip_tags((string) $rendered)))) {
+                                \Log::debug('[Activity] descriptionHTML rendered-success', ['activity_id' => $this->id]);
+                                return $rendered;
+                            }
+                        } catch (\Throwable $e) {
+                            \Log::debug('[Activity] descriptionHTML render-failed', ['activity_id' => $this->id, 'error' => $e->getMessage()]);
+                        }
+
+                        // Fallback: extract plain text from Editor.js blocks and render paragraphs
+                        try {
+                            $texts = collect($decoded['blocks'])->map(fn($b) => data_get($b, 'data.text'))
+                                ->filter()
+                                ->map(fn($t) => html_entity_decode((string) $t, ENT_QUOTES | ENT_HTML5, 'UTF-8'))
+                                ->filter()
+                                ->values();
+
+                            if ($texts->isNotEmpty()) {
+                                return $texts->map(fn($t) => '<p>' . e(trim($t)) . '</p>')->implode('');
+                            }
+                        } catch (\Throwable $e) {
+                            \Log::debug('[Activity] descriptionHTML extract-text-failed', ['activity_id' => $this->id, 'error' => $e->getMessage()]);
+                        }
+
+                        break;
+                    }
+
+                    // Try to decode HTML entities and retry parsing
+                    $new = html_entity_decode($candidate, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                    if ($new === $candidate) {
+                        break;
+                    }
+                    $candidate = $new;
+                }
+
+                // Plain text fallback: fully decode entities and escape
+                $decodedText = (string) $this->description;
+                $prev = null;
+                $tries = 0;
+                while ($tries < $maxAttempts && $decodedText !== $prev) {
+                    $prev = $decodedText;
+                    $decodedText = html_entity_decode($decodedText, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                    $tries++;
+                }
+
+                return '<p>' . e($decodedText) . '</p>';
             }
         );
     }
@@ -339,57 +456,126 @@ class Activity extends Model
                 'start' => (object)['date' => formatDate($this->start), 'time' => formatTime($this->start)],
                 'end' => (object)['date' => formatDate($this->end), 'time' => formatTime($this->end)],
                 'full' => null,
-            ],
-            'registration' => (object)[
-                'start' => (object)['date' => formatDate($this->registrationStart), 'time' => formatTime($this->registrationStart)],
-                'end' => (object)['date' => formatDate($this->registrationEnd), 'time' => formatTime($this->registrationEnd)],
-                'full' => formatDate($this->registrationStart) . ' t/m ' . formatDate($this->registrationEnd),
-            ],
-            'cancellation' => (object)[
-                'start' => (object)['date' => formatDate($this->registrationStart), 'time' => formatTime($this->registrationStart)],
-                'end' => (object)['date' => formatDate($this->cancellationEnd), 'time' => formatTime($this->cancellationEnd)],
-                'full' => formatDate($this->registrationStart) . ' t/m ' . formatDate($this->cancellationEnd),
-            ],
-        ];
+            // This accessor tries to render EditorJS content first and falls back to plain text if needed.
+            return Attribute::make(
+                get: function () {
+                    $rawDesc = (string) $this->description;
 
-        // Switch based on ActivityType Enum
-        switch($this->type){
+                    if (blank($rawDesc)) {
+                        return '';
+                    }
 
-            // For one-day activities, formatted as '1 januarie, 15:00-17:00'
-            case ActivityType::OneDay:
-                $object->activity->full = formatDate($this->start).", ".formatTime($this->start).($this->end ? " - ".formatTime($this->end) : "");
-                break;
+                    $maxAttempts = 6;
+                    $candidate = $rawDesc;
 
-            // For multi-day activities, formatted as '12 november 2026 t/m 20 januari 2027'
-            case ActivityType::MultiDay:
-                $object->activity->full = formatDate($this->start)." t/m ".($this->end ? formatDate($this->end) : "");
-                break;
+                    for ($i = 0; $i < $maxAttempts; $i++) {
+                        $decoded = json_decode($candidate, true);
 
-            // For weekly activities, formatted as 'Wekelijks' if no start or end dates/times have been given, otherwise formatted as 'Elke Vrijdag, 17:00-18:00'
-            case ActivityType::Weekly:
-                if(!$this->start || !$this->end){
-                    $object->activity->full = 'Wekelijks';
+                        if (is_array($decoded) && array_key_exists('blocks', $decoded)) {
+                            // Decode any HTML entities inside the blocks recursively
+                            try {
+                                array_walk_recursive($decoded, function (&$value, $key) {
+                                    if (!is_string($value)) {
+                                        return;
+                                    }
+
+                                    $tries = 0;
+                                    $prev = null;
+                                    while ($tries < 6 && $value !== $prev) {
+                                        $prev = $value;
+                                        $value = html_entity_decode($value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                                        $tries++;
+                                    }
+                                });
+
+                                // Detect and unwrap nested Editor.js JSON stored as text inside blocks
+                                foreach ($decoded['blocks'] as &$block) {
+                                    $text = data_get($block, 'data.text');
+                                    if (!is_string($text)) {
+                                        continue;
+                                    }
+
+                                    $candidateNested = $text;
+                                    // Try to decode nested JSON (may be entity-encoded)
+                                    for ($j = 0; $j < 5; $j++) {
+                                        $try = json_decode($candidateNested, true);
+                                        if (is_array($try) && array_key_exists('blocks', $try)) {
+                                            // Replace the nested JSON text with concatenated inner block texts
+                                            $innerTexts = collect($try['blocks'])->map(fn($b) => data_get($b, 'data.text'))
+                                                ->filter()
+                                                ->map(fn($t) => html_entity_decode((string) $t, ENT_QUOTES | ENT_HTML5, 'UTF-8'))
+                                                ->filter()
+                                                ->values();
+
+                                            if ($innerTexts->isNotEmpty()) {
+                                                $block['data']['text'] = $innerTexts->map(fn($t) => trim($t))->implode("\n\n");
+                                                break;
+                                            }
+                                        }
+
+                                        $candidateNested = html_entity_decode($candidateNested, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                                        if ($candidateNested === $try) {
+                                            break;
+                                        }
+                                    }
+                                }
+
+                                $prepared = json_encode($decoded, JSON_UNESCAPED_UNICODE);
+                            } catch (\Throwable $e) {
+                                \Log::debug('[Activity] descriptionHTML prepare-json-failed', ['activity_id' => $this->id, 'error' => $e->getMessage()]);
+                                $prepared = $candidate;
+                            }
+
+                            // Try rendering with EditorPhp
+                            try {
+                                $rendered = EditorPhp::make($prepared)->toHtml();
+                                if (!blank(trim(strip_tags((string) $rendered)))) {
+                                    \Log::debug('[Activity] descriptionHTML rendered-success', ['activity_id' => $this->id]);
+                                    return $rendered;
+                                }
+                            } catch (\Throwable $e) {
+                                \Log::debug('[Activity] descriptionHTML render-failed', ['activity_id' => $this->id, 'error' => $e->getMessage()]);
+                            }
+
+                            // Fallback: extract plain text from Editor.js blocks and render paragraphs
+                            try {
+                                $texts = collect($decoded['blocks'])->map(fn($b) => data_get($b, 'data.text'))
+                                    ->filter()
+                                    ->map(fn($t) => html_entity_decode((string) $t, ENT_QUOTES | ENT_HTML5, 'UTF-8'))
+                                    ->filter()
+                                    ->values();
+
+                                if ($texts->isNotEmpty()) {
+                                    return $texts->map(fn($t) => '<p>' . e(trim($t)) . '</p>')->implode('');
+                                }
+                            } catch (\Throwable $e) {
+                                \Log::debug('[Activity] descriptionHTML extract-text-failed', ['activity_id' => $this->id, 'error' => $e->getMessage()]);
+                            }
+
+                            break;
+                        }
+
+                        // Try to decode HTML entities and retry parsing
+                        $new = html_entity_decode($candidate, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                        if ($new === $candidate) {
+                            break;
+                        }
+                        $candidate = $new;
+                    }
+
+                    // Plain text fallback: fully decode entities and escape
+                    $decodedText = (string) $this->description;
+                    $prev = null;
+                    $tries = 0;
+                    while ($tries < $maxAttempts && $decodedText !== $prev) {
+                        $prev = $decodedText;
+                        $decodedText = html_entity_decode($decodedText, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                        $tries++;
+                    }
+
+                    return '<p>' . e($decodedText) . '</p>';
                 }
-                else{
-                    $object->activity->full = "Elke ".$this->start->isoFormat('l').", ".formatTime($this->start).($this->end ? " - ".formatTime($this->end) : "");
-                }
-                break;
-
-            // For cancelled activities, simply set to a string that says it's cancelled
-            case ActivityType::Cancelled:
-                $object->activity->full = 'Geannuleerd';
-                break;
-
-            // For archived activities, simply set to a string that says it's archived
-            case ActivityType::Archived:
-                $object->activity->full = 'Gearchiveerd';
-                break;
-        }
-
-        return $object;
-    }
-
-    /**
+            );
      * Retrieve all activities of a specific type, sorted by start date.
      *
      * @param  \App\ActivityType  $type
