@@ -4,8 +4,10 @@
 
 namespace App\Livewire\Auth;
 
+use App\Models\User;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Str;
@@ -45,31 +47,42 @@ class Login extends Component
      */
     public function login(): void
     {
+        $this->email = mb_strtolower(trim($this->email));
+
         $this->validate();
 
         $this->ensureIsNotRateLimited();
 
-        if (! Auth::attempt(['email' => $this->email, 'password' => $this->password], $this->remember)) {
+        $user = User::withTrashed()
+            ->whereRaw('LOWER(email) = ?', [$this->email])
+            ->first();
+
+        if (! $user) {
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([
-                'email' => __('auth.failed'),
+                'email' => 'E-mailadres klopt niet.',
             ]);
         }
 
-        // Get the user after successful authentication
-        $user = Auth::user();
+        if (! Hash::check($this->password, (string) $user->password)) {
+            RateLimiter::hit($this->throttleKey());
 
-        // Check if the user is deleted
-        if ($user->deleted_at && $user->deleted_at->isPast()) {
-            // Make sure the user is logged out
-            Auth::logout();
-
-            // Send a error message
             throw ValidationException::withMessages([
-                'email' => "U bent geen lid meer",
+                'password' => 'Wachtwoord klopt niet.',
             ]);
         }
+
+        if ($user->deleted_at && $user->deleted_at->isPast()) {
+            RateLimiter::hit($this->throttleKey());
+
+            throw ValidationException::withMessages([
+                'email' => 'U bent geen lid meer',
+            ]);
+        }
+
+        Auth::login($user, $this->remember);
+
 
         RateLimiter::clear($this->throttleKey());
         Session::regenerate();

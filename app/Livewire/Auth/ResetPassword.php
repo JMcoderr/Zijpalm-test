@@ -88,7 +88,7 @@ class ResetPassword extends Component
             return;
         }
 
-        Session::flash('status', __("Uw wachtwoord is gereset"));
+        Session::flash('status', __("Uw wachtwoord is succesvol gereset. U kunt nu inloggen."));
 
         $this->redirectRoute('login', navigate: true);
     }
