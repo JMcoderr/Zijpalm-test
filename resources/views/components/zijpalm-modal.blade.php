@@ -29,7 +29,10 @@
 @endphp
 
 {{-- Background --}}
-<div x-show="{{$modal}}" x-cloak x-effect="{{$modal}} && window.scrollTo({top: 0, behavior: 'smooth'})" x-init="$watch('{{$modal}}', v => { if(v) $nextTick(() => { if(typeof window.initializeEditorJsHolders === 'function') window.initializeEditorJsHolders(); }) })" x-transition.opacity.duration.500ms x-on:zijpalm-modal-close-ack.window="if($event.detail?.modal === '{{$modal}}') {{$modal}} = false" {{$backgroundAttributes}}>
+<div x-show="{{$modal}}" x-cloak x-effect="{{$modal}} && window.scrollTo({top: 0, behavior: 'smooth'})" x-init="$watch('{{$modal}}', v => { if(v) $nextTick(() => { if(typeof window.initializeEditorJsHolders === 'function') window.initializeEditorJsHolders(); }) })" x-transition.opacity.duration.500ms
+     x-on:zijpalm-modal-close-ack.window="if($event.detail?.modal === '{{$modal}}'){ window._zijpalm_modal_autoack && clearTimeout(window._zijpalm_modal_autoack); {{$modal}} = false }"
+     x-on:zijpalm-modal-request-close.window="if($event.detail?.modal === '{{$modal}}'){ window._zijpalm_modal_autoack && clearTimeout(window._zijpalm_modal_autoack); window._zijpalm_modal_autoack = setTimeout(()=> window.dispatchEvent(new CustomEvent('zijpalm-modal-close-ack',{detail:{modal: '{{$modal}}'}})), 300); }"
+    {{$backgroundAttributes}}>
 
     {{-- Modal --}}
     {{-- English comment: when clicking outside we also dispatch the closing event so code can save state before modal hides --}}
