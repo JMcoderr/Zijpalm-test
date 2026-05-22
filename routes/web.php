@@ -39,6 +39,7 @@ Route::middleware('auth')->group(
             function(){
                 Route::get('{user}', [UserController::class, 'edit'])->name('edit')->withTrashed();
                 Route::put('{user}', [UserController::class, 'update'])->name('update')->withTrashed();
+                Route::post('{user}/reset-password', [UserController::class, 'sendPasswordResetLink'])->name('resetPassword')->middleware('admin')->withTrashed();
                 Route::get('{user}/password', Password::class)->name('password')->withTrashed();
                 Route::get('{user}/afmelden', [UserController::class, 'cancelSubscription'])->name('cancel')->withTrashed();
                 Route::delete('{user}/afmelden', [UserController::class, 'processCancelSubscription'])->name('processCancel')->withTrashed();
