@@ -52,10 +52,10 @@ class SendAnnualInvoice implements ShouldQueue
             "Hierbij ontvang je de jaarlijkse factuur voor {$this->year}.\n" .
             "Bedrag: " . formatPrice($this->amount) . "\n\n" .
             "Betaal via deze link:\n{$paymentLink}\n\n" .
-            "Met vriendelijke groet,\nZijpalm",
+            "Met vriendelijke groet,\nHet Bestuur",
             function ($message) use ($user) {
                 $message->to($user->email, $user->name)
-                    ->cc('Zijpalm@almere.nl', 'Zijpalm')
+                    ->cc('Zijpalm@almere.nl', 'Het Bestuur')
                     ->subject("Jaarlijkse factuur {$this->year} - Zijpalm");
             }
         );

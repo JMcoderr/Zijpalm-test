@@ -29,7 +29,7 @@
                 @if(!$hideGreeting)
                     <div style="margin-top: 15px;">
                         <p style="margin: 0px;">Met vriendelijke groet,</p>
-                        <p style="margin: 0px;">Zijpalm</p>
+                        <p style="margin: 0px;">Het Bestuur</p>
                     </div>
                 @endif
             </div>
