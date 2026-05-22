@@ -53,7 +53,7 @@ class MembersImport implements ToCollection, WithHeadingRow, WithChunkReading
                 'email' => $email,
                 'notifications' => 61,
                 'deleted_at' => null,
-                'type' => $type
+                'type' => $type?->value,
             ];
 
             if (count($batch) >= $batchSize) {
@@ -101,9 +101,9 @@ class MembersImport implements ToCollection, WithHeadingRow, WithChunkReading
 
         User::query()
             ->whereIn('type', [
-                UserType::Gepensioneerde,
-                UserType::Inhuur,
-                UserType::EreLid,
+                UserType::Gepensioneerde->value,
+                UserType::Inhuur->value,
+                UserType::EreLid->value,
             ])
             ->whereNotIn('email', $seenMembers)
             ->delete();
