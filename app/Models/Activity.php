@@ -152,13 +152,45 @@ class Activity extends Model
                                 }
                             });
 
+                            // Detect and unwrap nested Editor.js JSON stored as text inside blocks
+                            foreach ($decoded['blocks'] as &$block) {
+                                $text = data_get($block, 'data.text');
+                                if (!is_string($text)) {
+                                    continue;
+                                }
+
+                                $candidateNested = $text;
+                                // Try to decode nested JSON (may be entity-encoded)
+                                for ($j = 0; $j < 5; $j++) {
+                                    $try = json_decode($candidateNested, true);
+                                    if (is_array($try) && array_key_exists('blocks', $try)) {
+                                        // Replace the nested JSON text with concatenated inner block texts
+                                        $innerTexts = collect($try['blocks'])->map(fn($b) => data_get($b, 'data.text'))
+                                            ->filter()
+                                            ->map(fn($t) => html_entity_decode((string) $t, ENT_QUOTES | ENT_HTML5, 'UTF-8'))
+                                            ->filter()
+                                            ->values();
+
+                                        if ($innerTexts->isNotEmpty()) {
+                                            $block['data']['text'] = $innerTexts->map(fn($t) => trim($t))->implode("\n\n");
+                                            break;
+                                        }
+                                    }
+
+                                    $candidateNested = html_entity_decode($candidateNested, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                                    if ($candidateNested === $try) {
+                                        break;
+                                    }
+                                }
+                            }
+
                             $prepared = json_encode($decoded, JSON_UNESCAPED_UNICODE);
                         } catch (\Throwable $e) {
                             \Log::debug('[Activity] descriptionHTML prepare-json-failed', ['activity_id' => $this->id, 'error' => $e->getMessage()]);
                             $prepared = $candidate;
                         }
 
-                        // Try rendering with EditorPhp first
+                        // Try rendering with EditorPhp
                         try {
                             $rendered = EditorPhp::make($prepared)->toHtml();
                             if (!blank(trim(strip_tags((string) $rendered)))) {
