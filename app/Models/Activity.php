@@ -123,12 +123,58 @@ class Activity extends Model
     {
         return Attribute::make(
             get: function () {
+                if (blank($this->description)) {
+                    return '';
+                }
+
                 try {
-                    $decoded = json_decode((string) $this->description, true);
-                    if (!is_array($decoded) || !array_key_exists('blocks', $decoded)) {
-                        return '<p>' . e((string) $this->description) . '</p>';
+                    $raw = (string) $this->description;
+
+                    // Try progressively decoding HTML entities until we can decode JSON
+                    $attempts = 0;
+                    $maxAttempts = 5;
+                    while ($attempts < $maxAttempts) {
+                        $decoded = json_decode($raw, true);
+                        if (is_array($decoded) && array_key_exists('blocks', $decoded)) {
+                            // Ensure any HTML entities inside text blocks are decoded so EditorPhp
+                            // receives clean strings (prevents output like '&amp;quot;')
+                            try {
+                                array_walk_recursive($decoded, function (&$value, $key) {
+                                    if (is_string($value)) {
+                                        $value = html_entity_decode($value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                                    }
+                                });
+                                $prepared = json_encode($decoded, JSON_UNESCAPED_UNICODE);
+                            } catch (\Throwable) {
+                                // Fall back to raw if cleaning fails
+                                $prepared = $raw;
+                            }
+
+                            $rendered = EditorPhp::make($prepared)->toHtml();
+                            \Log::debug('[Activity] descriptionHTML detected editor-json', ['activity_id' => $this->id, 'attempts' => $attempts]);
+                            \Log::debug('[Activity] descriptionHTML rendered sample', ['activity_id' => $this->id, 'sample' => substr(strip_tags((string) $rendered), 0, 300)]);
+                            return $rendered;
+                        }
+                        $new = html_entity_decode($raw, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                        if ($new === $raw) {
+                            break;
+                        }
+                        $raw = $new;
+                        $attempts++;
                     }
-                    return EditorPhp::make($this->description)->toHtml();
+
+                    // Plain text fallback: decode any lingering HTML entities fully before escaping
+                    $decodedText = (string) $this->description;
+                    $prev = null;
+                    $tries = 0;
+                    while ($tries < $maxAttempts && $decodedText !== $prev) {
+                        $prev = $decodedText;
+                        $decodedText = html_entity_decode($decodedText, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                        $tries++;
+                    }
+
+                    \Log::debug('[Activity] descriptionHTML fallback to text', ['activity_id' => $this->id, 'decode_attempts' => $tries, 'sample' => substr($decodedText, 0, 200)]);
+                    return '<p>' . e($decodedText) . '</p>';
                 } catch (\Throwable $e) {
                     \Log::warning('[Activity] descriptionHTML fallback', [
                         'activity_id' => $this->id,
