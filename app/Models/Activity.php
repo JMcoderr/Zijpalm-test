@@ -36,25 +36,33 @@ class Activity extends Model
         'maxGuests',
         'price',
         'whatsappUrl',
-        'start',
-        'end',
-        'registrationStart',
-        'registrationEnd',
-        'cancellationEnd',
-        'imagePath',
-        'type',
-        'free_organizer_count',
-        'manual_income_entries',
-        'manual_expense_entries',
-        'manual_budget',
-    ];
+                try {
+                    $raw = (string) $this->description;
 
-    protected $casts = [
-        'type' => ActivityType::class,
-        'start' => 'datetime',
-        'end' => 'datetime',
-        'registrationStart' => 'datetime',
-        'registrationEnd' => 'datetime',
+                    // If description is Editor.js JSON (possibly entity-encoded), try to decode.
+                    $decoded = json_decode($raw, true);
+                    if (!is_array($decoded)) {
+                        // Try decoding HTML entities and re-parse
+                        $decodedCandidate = html_entity_decode($raw, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                        $decoded = json_decode($decodedCandidate, true);
+                    }
+
+                    if (is_array($decoded) && array_key_exists('blocks', $decoded)) {
+                        // Simple, robust fallback: extract plain text from blocks and show paragraphs.
+                        $texts = collect($decoded['blocks'])->map(function ($block) {
+                            return data_get($block, 'data.text') ?: null;
+                        })->filter()->map(function ($text) {
+                            // decode any entities that remained
+                            $t = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                            return trim($t);
+                        })->filter()->values();
+
+                        if ($texts->isNotEmpty()) {
+                            $html = $texts->map(fn($t) => '<p>' . e($t) . '</p>')->implode("");
+                            return $html;
+                        }
+                        // If we couldn't extract plain text, fall through to EditorPhp attempt below.
+                    }
         'cancellationEnd' => 'datetime',
         'personal_confirmation_enabled' => 'boolean',
         'manual_income_entries' => 'array',
@@ -123,58 +131,12 @@ class Activity extends Model
     {
         return Attribute::make(
             get: function () {
-                if (blank($this->description)) {
-                    return '';
-                }
-
                 try {
-                    $raw = (string) $this->description;
-
-                    // Try progressively decoding HTML entities until we can decode JSON
-                    $attempts = 0;
-                    $maxAttempts = 5;
-                    while ($attempts < $maxAttempts) {
-                        $decoded = json_decode($raw, true);
-                        if (is_array($decoded) && array_key_exists('blocks', $decoded)) {
-                            // Ensure any HTML entities inside text blocks are decoded so EditorPhp
-                            // receives clean strings (prevents output like '&amp;quot;')
-                            try {
-                                array_walk_recursive($decoded, function (&$value, $key) {
-                                    if (is_string($value)) {
-                                        $value = html_entity_decode($value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
-                                    }
-                                });
-                                $prepared = json_encode($decoded, JSON_UNESCAPED_UNICODE);
-                            } catch (\Throwable) {
-                                // Fall back to raw if cleaning fails
-                                $prepared = $raw;
-                            }
-
-                            $rendered = EditorPhp::make($prepared)->toHtml();
-                            \Log::debug('[Activity] descriptionHTML detected editor-json', ['activity_id' => $this->id, 'attempts' => $attempts]);
-                            \Log::debug('[Activity] descriptionHTML rendered sample', ['activity_id' => $this->id, 'sample' => substr(strip_tags((string) $rendered), 0, 300)]);
-                            return $rendered;
-                        }
-                        $new = html_entity_decode($raw, ENT_QUOTES | ENT_HTML5, 'UTF-8');
-                        if ($new === $raw) {
-                            break;
-                        }
-                        $raw = $new;
-                        $attempts++;
+                    $decoded = json_decode((string) $this->description, true);
+                    if (!is_array($decoded) || !array_key_exists('blocks', $decoded)) {
+                        return '<p>' . e((string) $this->description) . '</p>';
                     }
-
-                    // Plain text fallback: decode any lingering HTML entities fully before escaping
-                    $decodedText = (string) $this->description;
-                    $prev = null;
-                    $tries = 0;
-                    while ($tries < $maxAttempts && $decodedText !== $prev) {
-                        $prev = $decodedText;
-                        $decodedText = html_entity_decode($decodedText, ENT_QUOTES | ENT_HTML5, 'UTF-8');
-                        $tries++;
-                    }
-
-                    \Log::debug('[Activity] descriptionHTML fallback to text', ['activity_id' => $this->id, 'decode_attempts' => $tries, 'sample' => substr($decodedText, 0, 200)]);
-                    return '<p>' . e($decodedText) . '</p>';
+                    return EditorPhp::make($this->description)->toHtml();
                 } catch (\Throwable $e) {
                     \Log::warning('[Activity] descriptionHTML fallback', [
                         'activity_id' => $this->id,
