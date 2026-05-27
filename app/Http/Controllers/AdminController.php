@@ -272,7 +272,9 @@ class AdminController extends Controller
      * @return \Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View
      */
     public function notifyAllMembers(){
-        return view('admin.notify-all-members');
+        $recipientCount = User::notSoftDeleted()->count();
+
+        return view('admin.notify-all-members', compact('recipientCount'));
     }
 
     /**
@@ -309,6 +311,38 @@ class AdminController extends Controller
      */
     public function notifyNewEmployees(){
         return view('admin.notify-new-employees');
+    }
+
+    /**
+     * Return the number of unique recipient emails in the uploaded employee list.
+     */
+    public function previewNewEmployeesCount(Request $request)
+    {
+        $validated = Validator::make($request->all(), [
+            'employee_list' => 'required|file|mimes:xls,xlsx,csv|max:10240',
+        ]);
+
+        if ($validated->fails()) {
+            return response()->json([
+                'message' => $validated->errors()->first('employee_list'),
+            ], 422);
+        }
+
+        $dataRows = Excel::toCollection(new NotifyImport, $request->file('employee_list'))->first() ?? collect();
+
+        $emails = $dataRows
+            ->flatMap(function ($row) {
+                return collect($row)
+                    ->map(fn($cell) => trim((string) $cell))
+                    ->filter(fn($cell) => filter_var($cell, FILTER_VALIDATE_EMAIL));
+            })
+            ->map(fn($email) => mb_strtolower($email))
+            ->unique()
+            ->values();
+
+        return response()->json([
+            'recipient_count' => $emails->count(),
+        ]);
     }
 
     /**
