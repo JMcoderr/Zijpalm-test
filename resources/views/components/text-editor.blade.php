@@ -75,24 +75,6 @@
 {{-- Editor input --}}
 <div id="{{$holderId}}" {{$editorAttributes->except(['value'])}} style="position:relative"></div>
 
-{{-- Visible fallback image button (small) placed bottom-left and visually matched to page styles. --}}
-<button id="{{$holderId}}-image-button-fallback" type="button" aria-label="Insert image" title="Image"
-    style="position:absolute; bottom:8px; left:8px; z-index:50; display:flex; align-items:center; gap:6px; padding:6px 8px; background:#ffffff; color:#111827; border-radius:6px; font-size:12px; border:1px solid #e5e7eb; box-shadow:0 1px 2px rgba(0,0,0,0.04); cursor:pointer;">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M21 19V5a2 2 0 0 0-2-2H5C3.895 3 3 3.895 3 5v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2z" fill="#111827"></path><path d="M7.5 13.5l2.5 3 3-4 4.5 6H6l1.5-5.5z" fill="#fff"></path></svg>
-    <span style="line-height:1">Image</span>
-</button>
-
-<script>
-    // bind fallback button to hidden input for this editor instance
-    document.addEventListener('DOMContentLoaded', function () {
-        const btn = document.getElementById(@json($holderId) + '-image-button-fallback');
-        const input = document.getElementById(@json($holderId) + '-image-input');
-        if (btn && input) {
-            btn.addEventListener('click', function () { input.click(); });
-        }
-    });
-</script>
-
 {{-- Hidden file input and status used when admin clicks the EditorJS "+" control --}}
 <input id="{{$holderId}}-image-input" type="file" accept="image/*" class="hidden" />
 <span id="{{$holderId}}-image-status" class="text-sm text-zinc-500 hidden"></span>
@@ -105,6 +87,113 @@
             const status = document.getElementById(holderId + '-image-status');
 
             if (!input) return;
+
+            // Add paste handler to accept images from clipboard (png and jpeg only)
+            const holderElForPaste = document.querySelector('[data-editor-holder="' + holderId + '"]');
+            if (holderElForPaste) {
+                holderElForPaste.addEventListener('paste', async function (ev) {
+                    try {
+                        const items = (ev.clipboardData || ev.originalEvent?.clipboardData)?.items;
+                        if (!items) return;
+
+                        for (const item of items) {
+                            if (item.kind === 'file' && (item.type === 'image/png' || item.type === 'image/jpeg')) {
+                                ev.preventDefault();
+                                const file = item.getAsFile();
+                                if (!file) return;
+
+                                // Basic client-side validation
+                                if (file.size > 5 * 1024 * 1024) { // 5MB
+                                    status.textContent = 'Bestand is te groot (max 5MB).';
+                                    status.classList.remove('hidden');
+                                    return;
+                                }
+
+                                status.textContent = 'Uploaden...';
+                                status.classList.remove('hidden');
+
+                                const fd = new FormData();
+                                fd.append('image', file);
+
+                                const resp = await fetch('/admin/editor/image-upload', {
+                                    method: 'POST',
+                                    credentials: 'same-origin',
+                                    body: fd,
+                                    headers: {
+                                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                                    }
+                                });
+
+                                if (!resp.ok) {
+                                    throw new Error('Upload failed: ' + resp.statusText);
+                                }
+
+                                const data = await resp.json();
+                                const url = data.url;
+
+                                // Insert image into editor (prefer image block insertion at caret)
+                                try {
+                                    if (holderElForPaste?.editorInstance && holderElForPaste.editorInstance.blocks) {
+                                        let insertIndex = undefined;
+                                        try { if (typeof holderElForPaste.editorInstance.blocks.getCurrentBlockIndex === 'function') insertIndex = holderElForPaste.editorInstance.blocks.getCurrentBlockIndex(); } catch (e) {}
+
+                                        if (typeof insertIndex === 'number') {
+                                            holderElForPaste.editorInstance.blocks.insert('image', { file: { url } }, {}, insertIndex);
+                                        } else {
+                                            holderElForPaste.editorInstance.blocks.insert('image', { file: { url } });
+                                        }
+
+                                        // Persist editor JSON to hidden input
+                                        const inputId = holderElForPaste.getAttribute('data-editor-input');
+                                        if (inputId && typeof holderElForPaste.editorInstance.save === 'function') {
+                                            try {
+                                                const output = await holderElForPaste.editorInstance.save();
+                                                const hiddenInput = document.getElementById(inputId);
+                                                if (hiddenInput) hiddenInput.value = JSON.stringify(output);
+                                            } catch (e) { console.error('Failed to save after paste insert', e); }
+                                        }
+
+                                        status.textContent = 'Upload geslaagd';
+                                        status.classList.remove('hidden');
+                                        return;
+                                    }
+                                } catch (err) {
+                                    console.warn('Image block insert failed, falling back to HTML insert', err);
+                                }
+
+                                // Fallback: insert centered HTML into editable area
+                                const editable = holderElForPaste?.querySelector('[contenteditable="true"]');
+                                const centeredHtml = '<center><img src="' + url + '" alt="Afbeelding" style="max-width:600px;width:100%;height:auto;display:block;margin:0 auto;"/></center>';
+                                if (editable && document.queryCommandSupported && document.queryCommandSupported('insertHTML')) {
+                                    editable.focus();
+                                    document.execCommand('insertHTML', false, centeredHtml);
+                                } else if (holderElForPaste?.editorInstance) {
+                                    try { holderElForPaste.editorInstance.blocks.insert('paragraph', { text: centeredHtml }); } catch (e) {}
+                                }
+
+                                // Persist editor content after fallback
+                                try {
+                                    const inputId = holderElForPaste?.getAttribute('data-editor-input');
+                                    if (inputId && holderElForPaste?.editorInstance && typeof holderElForPaste.editorInstance.save === 'function') {
+                                        const output = await holderElForPaste.editorInstance.save();
+                                        const hiddenInput = document.getElementById(inputId);
+                                        if (hiddenInput) hiddenInput.value = JSON.stringify(output);
+                                    }
+                                } catch (e) { console.error(e); }
+
+                                status.textContent = 'Upload geslaagd';
+                                status.classList.remove('hidden');
+
+                                return;
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Paste image handling failed', e);
+                        status.textContent = 'Plakken mislukt';
+                        status.classList.remove('hidden');
+                    }
+                });
+            }
 
             // When admin clicks the EditorJS "+" control within this editor, open the file picker.
             document.addEventListener('click', function (ev) {
