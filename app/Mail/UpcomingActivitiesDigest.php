@@ -192,9 +192,9 @@ class UpcomingActivitiesDigest extends Mailable
         $sanitized = $html;
 
         // Remove problematic editor classes/attributes for mail clients.
-        $sanitized = strip_tags($sanitized, '<p><br><strong><em><b><i><u><ul><ol><li><img>') ?? $sanitized;
+        $sanitized = strip_tags($sanitized, '<p><br><strong><em><b><i><u><ul><ol><li><img><center>') ?? $sanitized;
 
-        // Normalize <img> tags: keep only src and ensure URLs are escaped.
+        // Normalize <img> tags: keep only src and ensure URLs are escaped. Wrap images in <center> for nicer layout in mails.
         $sanitized = preg_replace_callback('/<img\s+[^>]*src=("|\')(.*?)\1[^>]*>/i', function (array $matches) {
             $src = trim($matches[2]);
 
@@ -205,7 +205,7 @@ class UpcomingActivitiesDigest extends Mailable
 
             // Only allow http(s) or data URIs; otherwise strip the image.
             if (preg_match('/^(https?:\/\/|data:image\/)/i', $src)) {
-                return '<img src="' . e($src) . '">';
+                return '<center><img src="' . e($src) . '"></center>';
             }
 
             return '';

@@ -211,7 +211,7 @@ class ActivityApplied extends Mailable
         $sanitized = str_replace(["\xC2\xA0", '&nbsp;'], ' ', $sanitized);
 
         // Keep the markup simple so Power Automate only receives basic, predictable HTML.
-        $sanitized = strip_tags($sanitized, '<p><br><a><strong><em><b><i><u><ul><ol><li><img>') ?? $sanitized;
+        $sanitized = strip_tags($sanitized, '<p><br><a><strong><em><b><i><u><ul><ol><li><img><center>') ?? $sanitized;
 
         // Remove editor-specific and styling attributes that can make the payload fragile, but keep src on <img>.
         $sanitized = preg_replace_callback('/<img\s+([^>]*)>/i', function (array $matches) {
@@ -219,7 +219,7 @@ class ActivityApplied extends Mailable
             // Keep only src attribute from img, discard others.
             if (preg_match('/src=("|\')(.*?)\1/i', $attrs, $m)) {
                 $src = $m[2];
-                return '<img src="' . e($src) . '">';
+                return '<center><img src="' . e($src) . '"></center>';
             }
             return ''; 
         }, $sanitized) ?? $sanitized;

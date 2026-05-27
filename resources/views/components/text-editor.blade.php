@@ -126,16 +126,32 @@
                     const data = await resp.json();
                     const url = data.url;
 
-                    // Insert image HTML into the editor editable area using insertHTML
+                    // Insert image into the editor. Prefer a proper image block if the Image tool is registered,
+                    // otherwise fall back to inserting centered HTML which the mail sanitizer will allow.
                     const holderEl = document.querySelector('[data-editor-holder="' + holderId + '"]');
                     const editable = holderEl?.querySelector('[contenteditable="true"]');
+
+                    const centeredHtml = '<center><img src="' + url + '" alt="Afbeelding" style="max-width:600px;width:100%;height:auto;display:block;margin:0 auto;"/></center>';
+
+                    // Try EditorJS block insertion (image tool). Different image tools expect different payload shapes,
+                    // attempt a few common ones.
+                    try {
+                        if (holderEl?.editorInstance && holderEl.editorInstance.blocks) {
+                            // Try the most common shapes used by editorjs-image
+                            try { holderEl.editorInstance.blocks.insert('image', { file: { url } }); status.textContent = 'Upload geslaagd'; return; } catch (e) {}
+                            try { holderEl.editorInstance.blocks.insert('image', { data: { url } }); status.textContent = 'Upload geslaagd'; return; } catch (e) {}
+                            // If insertion by block type fails, try inserting raw HTML into the editable area
+                        }
+                    } catch (err) {
+                        // ignore and fall back
+                    }
+
                     if (editable && document.queryCommandSupported && document.queryCommandSupported('insertHTML')) {
                         editable.focus();
-                        document.execCommand('insertHTML', false, '<img src="' + url + '" alt="Afbeelding" style="max-width:100%;height:auto;"/>');
+                        document.execCommand('insertHTML', false, centeredHtml);
                     } else if (holderEl?.editorInstance) {
-                        // Fallback: insert a new paragraph block with the image URL as text
                         try {
-                            holderEl.editorInstance.blocks.insert('paragraph', { text: '<img src="' + url + '" alt="Afbeelding"/>' });
+                            holderEl.editorInstance.blocks.insert('paragraph', { text: centeredHtml });
                         } catch (err) {
                             // ignore
                         }
