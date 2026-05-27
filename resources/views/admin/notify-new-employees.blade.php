@@ -36,17 +36,27 @@
                         </x-input-group>
                         <x-input-group class="items-stretch">
                             <x-input-field id="employee_list" label="Excellijst van nieuwe medewerkers" type="file" required/>
-                            <div id="employee-list-preview" class="mt-2 rounded-lg border border-zinc-200 bg-white/90 px-3 py-2 text-sm text-zinc-700 shadow-sm">
+                            <x-zijpalm-div
+                                id="employee-list-preview"
+                                color="light"
+                                :editable="false"
+                                title="Teller"
+                                titleFontSize="text-base"
+                                textSize="text-sm"
+                                padding="p-3"
+                                width="w-full"
+                                margin="mt-2"
+                            >
                                 <div class="flex flex-wrap items-center justify-between gap-2">
                                     <span class="font-semibold text-zinc-900">Ontvangers</span>
                                     <span id="employee-list-recipient-count" class="font-bold text-zijpalm-700">-</span>
                                 </div>
-                                <div class="mt-1 flex flex-wrap items-center justify-between gap-2">
+                                <div class="mt-2 flex flex-wrap items-center justify-between gap-2">
                                     <span class="font-semibold text-zinc-900">Geschatte duur</span>
                                     <span id="employee-list-estimated-duration" class="font-bold text-zijpalm-700">-</span>
                                 </div>
                                 <p id="employee-list-preview-message" class="mt-2 text-xs text-zinc-500">Selecteer een Excel- of CSV-bestand om de teller te berekenen.</p>
-                            </div>
+                            </x-zijpalm-div>
                         </x-input-group>
                         <x-input-group class="items-stretch">
                             <x-input-field id="description" label="Beschrijving" type="editor" required/>
