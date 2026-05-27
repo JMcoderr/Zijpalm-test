@@ -87,13 +87,16 @@ class Login extends Component
         RateLimiter::clear($this->throttleKey());
         Session::regenerate();
 
+        $resetParam = request()->query('reset');
+
         if ($this->isModal) {
             // If the login is in a modal, refresh the page
             // It says redirect to previous but it just refreshes the page to update the navbar with the users dropdown
             $this->redirect(url()->previous(), navigate: true);
         } else {
             // Redirect after succesful login
-            $this->redirectIntended(default: route('home', absolute: false), navigate: true);
+            $default = $resetParam ? route('home', ['reset' => 1], false) : route('home', absolute: false);
+            $this->redirectIntended(default: $default, navigate: true);
         }
     }
 
