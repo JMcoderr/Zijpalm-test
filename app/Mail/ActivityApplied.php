@@ -20,6 +20,7 @@ use SimpleSoftwareIO\QrCode\Facades\QrCode;
 use DOMDocument;
 use DOMXPath;
 use Throwable;
+use Illuminate\Support\Facades\Storage;
 
 class ActivityApplied extends Mailable
 {
@@ -156,6 +157,9 @@ class ActivityApplied extends Mailable
                 '<p><strong>Start:</strong> ' . e(formatDate($this->activity->start)) . ' om ' . e(formatTime($this->activity->start)) . ' uur</p>' .
                 $applicationSummary;
         }
+
+        // Inline any local storage images into the rendered HTML so they are embedded in outgoing mails.
+        $renderedContent = $this->inlineLocalImages($renderedContent);
 
         // Send the rendered HTML to the automation system as JSON.
         $jsonBody = json_encode([
@@ -384,5 +388,36 @@ class ActivityApplied extends Mailable
     {
         // Attach files here if this mail needs them.
         return [];
+    }
+
+    /**
+     * Replace local storage image URLs with data URI in the given HTML so images are embedded in mails.
+     */
+    private function inlineLocalImages(string $html): string
+    {
+        return preg_replace_callback('/<img\s+[^>]*src=("|\')(.*?)\1[^>]*>/i', function (array $matches) {
+            $src = trim($matches[2]);
+
+            // Only inline images that live under /storage/ (public disk)
+            $storagePrefix = parse_url(Storage::disk('public')->url(''), PHP_URL_PATH) ?: '/storage/';
+
+            if (str_contains($src, '/storage/')) {
+                // Derive relative path under storage/app/public
+                $pos = strpos($src, '/storage/');
+                $relative = substr($src, $pos + strlen('/storage/'));
+                $path = storage_path('app/public/' . $relative);
+
+                if (is_file($path) && is_readable($path)) {
+                    $data = file_get_contents($path);
+                    $finfo = finfo_open(FILEINFO_MIME_TYPE);
+                    $mime = finfo_file($finfo, $path) ?: 'application/octet-stream';
+                    finfo_close($finfo);
+                    $b64 = base64_encode($data);
+                    return '<img src="data:' . $mime . ';base64,' . $b64 . '"/>';
+                }
+            }
+
+            return $matches[0];
+        }, $html) ?: $html;
     }
 }

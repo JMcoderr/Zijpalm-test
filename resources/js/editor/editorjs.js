@@ -6,6 +6,7 @@ import InlineCode from '@editorjs/inline-code';
 import Table from '@editorjs/table'
 import Underline from '@editorjs/underline';
 import Marker from '@editorjs/marker';
+import ImageTool from '@editorjs/image';
 
 function escapeHtml(value) {
   // Basic escaping so pasted text cannot break the HTML we build below.
@@ -125,6 +126,15 @@ window.initializeEditorJsHolders = function () {
           config: {
             rows: 2,
             cols: 2,
+          },
+        },
+        image: {
+          class: ImageTool,
+          config: {
+            endpoints: {
+              byFile: '/admin/editor/image-upload',
+            },
+            field: 'image',
           },
         },
         underline: Underline,
