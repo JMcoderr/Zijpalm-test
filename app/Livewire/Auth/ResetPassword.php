@@ -88,8 +88,9 @@ class ResetPassword extends Component
             return;
         }
 
+        // Ensure the success message is visible even when Livewire navigates client-side.
         Session::flash('status', __("Uw wachtwoord is succesvol gereset. U kunt nu inloggen."));
 
-        $this->redirectRoute('login', navigate: true);
+        $this->redirect(route('login', ['reset' => 1]));
     }
 }
