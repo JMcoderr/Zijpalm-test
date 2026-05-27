@@ -211,6 +211,7 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->controller(AdminC
         Route::get('informeer-leden', 'notifyAllMembers')->name('notifyAllMembers');
         Route::post('informeer-leden', 'notifyAllMembersPOST')->name('notifyAllMembersPOST');
         Route::get('informeer-nieuwe-medewerkers', 'notifyNewEmployees')->name('notifyNewEmployees');
+        Route::post('informeer-nieuwe-medewerkers/preview', 'previewNewEmployeesCount')->name('notifyNewEmployeesPreview');
         Route::post('informeer-nieuwe-medewerkers', 'notifyNewEmployeesPOST')->name('notifyNewEmployeesPOST');
     }
 );
