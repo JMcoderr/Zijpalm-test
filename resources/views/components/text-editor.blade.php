@@ -75,9 +75,9 @@
 {{-- Editor input --}}
 <div id="{{$holderId}}" {{$editorAttributes->except(['value'])}} style="position:relative"></div>
 
-{{-- Visible fallback image button (small) placed in the top-right of the editor holder so admins can open the file picker if the toolbox injection fails. --}}
+{{-- Visible fallback image button (small) placed bottom-left and visually matched to page styles. --}}
 <button id="{{$holderId}}-image-button-fallback" type="button" aria-label="Insert image" title="Image"
-        style="position:absolute; top:8px; right:8px; z-index:50; display:flex; align-items:center; gap:6px; padding:6px 8px; background:rgba(17,24,39,0.95); color:#fff; border-radius:8px; font-size:12px; border:0; box-shadow:0 2px 6px rgba(0,0,0,0.12); cursor:pointer;">
+    style="position:absolute; bottom:8px; left:8px; z-index:50; display:flex; align-items:center; gap:6px; padding:6px 8px; background:#ffffff; color:#111827; border-radius:6px; font-size:12px; border:1px solid #e5e7eb; box-shadow:0 1px 2px rgba(0,0,0,0.04); cursor:pointer;">
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M21 19V5a2 2 0 0 0-2-2H5C3.895 3 3 3.895 3 5v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2z" fill="#111827"></path><path d="M7.5 13.5l2.5 3 3-4 4.5 6H6l1.5-5.5z" fill="#fff"></path></svg>
     <span style="line-height:1">Image</span>
 </button>
@@ -212,31 +212,72 @@
                     // attempt a few common ones.
                     try {
                         if (holderEl?.editorInstance && holderEl.editorInstance.blocks) {
-                            // Try the most common shapes used by editorjs-image
-                            try { holderEl.editorInstance.blocks.insert('image', { file: { url } }); status.textContent = 'Upload geslaagd'; return; } catch (e) {}
-                            try { holderEl.editorInstance.blocks.insert('image', { data: { url } }); status.textContent = 'Upload geslaagd'; return; } catch (e) {}
-                            // If insertion by block type fails, try inserting raw HTML into the editable area
-                        }
-                    } catch (err) {
-                        // ignore and fall back
-                    }
+                            // Determine insert index (prefer current block index so the image appears where the caret is)
+                            let insertIndex = undefined;
+                            try {
+                                if (typeof holderEl.editorInstance.blocks.getCurrentBlockIndex === 'function') {
+                                    insertIndex = holderEl.editorInstance.blocks.getCurrentBlockIndex();
+                                }
+                            } catch (e) { /* ignore */ }
 
-                    if (editable && document.queryCommandSupported && document.queryCommandSupported('insertHTML')) {
-                        editable.focus();
-                        document.execCommand('insertHTML', false, centeredHtml);
-                    } else if (holderEl?.editorInstance) {
+                            // Try common payload shapes and insert at the computed index when possible
+                            try {
+                                if (typeof insertIndex === 'number') {
+                                    holderEl.editorInstance.blocks.insert('image', { file: { url } }, {}, insertIndex);
+                                } else {
+                                    holderEl.editorInstance.blocks.insert('image', { file: { url } });
+                                }
+
+                                // After insertion, persist the editor JSON into the hidden input so saving the form retains the image
+                                const inputId = holderEl.getAttribute('data-editor-input');
+                                if (inputId && holderEl.editorInstance && typeof holderEl.editorInstance.save === 'function') {
+                                    try {
+                                        const output = await holderEl.editorInstance.save();
+                                        const hiddenInput = document.getElementById(inputId);
+                                        if (hiddenInput) hiddenInput.value = JSON.stringify(output);
+                                    } catch (e) {
+                                        console.error('Failed to save editor after image insert', e);
+                                    }
+                                }
+
+                                status.textContent = 'Upload geslaagd';
+                                status.classList.remove('hidden');
+                                return;
+                            } catch (e) {
+                                // if block insertion fails, fall back to HTML insertion below
+                                console.warn('Block insertion failed, falling back to HTML insert', e);
+                            }
+                        }
+
+                        // Fallback: insert as centered HTML into the editable area
+                        if (editable && document.queryCommandSupported && document.queryCommandSupported('insertHTML')) {
+                            editable.focus();
+                            document.execCommand('insertHTML', false, centeredHtml);
+                        } else if (holderEl?.editorInstance) {
+                            try {
+                                holderEl.editorInstance.blocks.insert('paragraph', { text: centeredHtml });
+                            } catch (err) {
+                                // ignore
+                            }
+                        }
+
+                        // Persist the editor content into hidden input after fallback insertion as well
                         try {
-                            holderEl.editorInstance.blocks.insert('paragraph', { text: centeredHtml });
-                        } catch (err) {
-                            // ignore
-                        }
+                            const inputId = holderEl?.getAttribute('data-editor-input');
+                            if (inputId && holderEl?.editorInstance && typeof holderEl.editorInstance.save === 'function') {
+                                const output = await holderEl.editorInstance.save();
+                                const hiddenInput = document.getElementById(inputId);
+                                if (hiddenInput) hiddenInput.value = JSON.stringify(output);
+                            }
+                        } catch (e) { console.error(e); }
+
+                        status.textContent = 'Upload geslaagd';
+                        status.classList.remove('hidden');
+                    } catch (err) {
+                        console.error(err);
+                        status.textContent = 'Upload mislukt';
+                        status.classList.remove('hidden');
                     }
-
-                    // Trigger save to update the hidden input
-                    try { holderEl?.editorInstance?.save().then((output)=>{ /* no-op */ }); } catch (err) {}
-
-                    status.textContent = 'Upload geslaagd';
-                    status.classList.remove('hidden');
                 } catch (err) {
                     console.error(err);
                     status.textContent = 'Upload mislukt';
