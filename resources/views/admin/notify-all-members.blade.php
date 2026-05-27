@@ -5,8 +5,8 @@
             {{-- Creates a dropdown with all the content pieces for each content group --}}
             <div class="flex flex-col">
                 @php
-                    $batchSize = (int) config('mail.power_automate.batch_size.default');
-                    $delay = (int) config('mail.power_automate.delay.default');
+                    $batchSize = (int) old('batch_size', config('mail.power_automate.batch_size.default'));
+                    $delay = (int) old('delay', config('mail.power_automate.delay.default'));
                     $estimatedBatches = $batchSize > 0 ? (int) ceil($recipientCount / $batchSize) : 0;
                     $estimatedSeconds = $estimatedBatches * $delay;
                 @endphp
@@ -41,11 +41,11 @@
                         </x-input-group>
                         <x-input-group grid="grid grid-cols-1">
                             <x-input-field id="batch_size" label="Hoeveelheid ontvangers in de BCC per mail" type="number"
-                                           :value="config('mail.power_automate.batch_size.default')"
+                                           :value="$batchSize"
                                            :min="config('mail.power_automate.batch_size.min')"
                                            :max="config('mail.power_automate.batch_size.max')" required/>
                             <x-input-field id="delay" label="Wachttijd tussen mails in seconden" type="number"
-                                           :value="config('mail.power_automate.delay.default')"
+                                           :value="$delay"
                                            :min="config('mail.power_automate.delay.min')"
                                            :max="config('mail.power_automate.delay.max')" required/>
                             <div class="mt-2 rounded-lg border border-zinc-200 bg-white/90 px-3 py-2 text-sm text-zinc-700 shadow-sm">

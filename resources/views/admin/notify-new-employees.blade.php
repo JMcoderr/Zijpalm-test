@@ -26,6 +26,10 @@
 
                 <form id="notify-new-employees-form" method="POST" action="{{route("admin.notifyNewEmployeesPOST")}}" enctype="multipart/form-data">
                     @CSRF
+                    @php
+                        $batchSize = (int) old('batch_size', config('mail.power_automate.batch_size.default'));
+                        $delay = (int) old('delay', config('mail.power_automate.delay.default'));
+                    @endphp
                     <x-input-group grid grid="grid grid-cols-1 grid-rows-[auto_auto_18rem] auto-rows-auto">
                         <x-input-group class="items-stretch">
                             <x-input-field id="subject" label="Onderwerp" type="text" placeholder="Vul hier het onderwerp van de e-mail in" required/>
@@ -49,11 +53,11 @@
                         </x-input-group>
                         <x-input-group grid="grid grid-cols-1">
                             <x-input-field id="batch_size" label="Hoeveelheid ontvangers in de BCC per mail" type="number"
-                                           :value="config('mail.power_automate.batch_size.default')"
+                                           :value="$batchSize"
                                            :min="config('mail.power_automate.batch_size.min')"
                                            :max="config('mail.power_automate.batch_size.max')" required/>
                             <x-input-field id="delay" label="Wachttijd tussen mails in seconden" type="number"
-                                           :value="config('mail.power_automate.delay.default')"
+                                           :value="$delay"
                                            :min="config('mail.power_automate.delay.min')"
                                            :max="config('mail.power_automate.delay.max')" required/>
                             <x-zijpalm-button form="notify-new-employees-form" type="submit" label="Verstuur bericht"
