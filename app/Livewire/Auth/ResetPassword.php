@@ -27,6 +27,10 @@ class ResetPassword extends Component
 
     public string $password_confirmation = '';
 
+    public bool $resetSuccess = false;
+
+    public string $resetSuccessMessage = '';
+
     /**
      * Mount the component.
      */
@@ -79,20 +83,14 @@ class ResetPassword extends Component
             $user->forceFill(['deleted_at' => $deleted_at])->save();
         }
 
-        // If the password was successfully reset, we will redirect the user back to
-        // the application's home authenticated view. If there is an error we can
-        // redirect them back to where they came from with their error message.
         if ($status != Password::PasswordReset) {
             $this->addError('email', __($status));
 
             return;
         }
 
-        // Ensure the success message is visible even when Livewire navigates client-side.
-            // Ensure the success message is visible even when Livewire navigates client-side.
-            Session::flash('status', __("Uw wachtwoord is succesvol gereset. U kunt nu inloggen."));
-            Session::put('password_reset_success', true);
-        
-            $this->redirect(route('login', ['reset' => 1]));
+        $this->resetSuccess = true;
+        $this->resetSuccessMessage = __("Uw wachtwoord is succesvol gereset. U kunt nu inloggen.");
+        Session::flash('status', $this->resetSuccessMessage);
     }
 }
