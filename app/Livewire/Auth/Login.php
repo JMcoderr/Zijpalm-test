@@ -87,7 +87,10 @@ class Login extends Component
         RateLimiter::clear($this->throttleKey());
         Session::regenerate();
 
-        $resetParam = request()->query('reset');
+        // Check for the reset flag either as a query param or as a server-side
+        // session key. Livewire actions don't always include query parameters
+        // on subsequent calls, so we pull a session flag if present.
+        $resetParam = request()->query('reset') || Session::pull('password_reset_success', false);
 
         if ($this->isModal) {
             // If the login is in a modal, refresh the page
