@@ -110,6 +110,46 @@
                 input.click();
             });
 
+            // Also inject an "Image" item into the EditorJS insert toolbox when it appears so users
+            // can explicitly choose Image from the menu without rebuilding frontend assets.
+            const tryInjectImageItem = () => {
+                // Look for any toolbox/palette that contains the standard tool labels (Text, Heading, Table...)
+                const candidates = Array.from(document.querySelectorAll('div, ul'));
+                for (const el of candidates) {
+                    const text = (el.textContent || '').trim();
+                    if (!text) continue;
+
+                    // crude heuristic: toolbox contains the word 'Heading' and 'Text'
+                    if (text.includes('Heading') && text.includes('Text')) {
+                        // if our image item already exists, stop
+                        if (el.querySelector('.zijpalm-image-tool')) return;
+
+                        // Create a simple item similar to editor items
+                        const item = document.createElement('div');
+                        item.className = 'zijpalm-image-tool cursor-pointer py-1 px-2 text-sm text-left';
+                        item.style.display = 'flex';
+                        item.style.alignItems = 'center';
+                        item.style.gap = '0.5rem';
+                        item.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="2" fill="#E5E7EB"></rect><path d="M6 15l2-2 3 3 4-4 4 4v1H6v-2z" fill="#374151"></path></svg><span>Image</span>';
+
+                        item.addEventListener('click', (ev) => {
+                            ev.stopPropagation();
+                            input.click();
+                        });
+
+                        // Append to toolbox element (if it's a list or div)
+                        el.appendChild(item);
+                        return;
+                    }
+                }
+            };
+
+            // Observe DOM mutations to inject when the toolbox appears
+            const observer = new MutationObserver((mutations) => {
+                tryInjectImageItem();
+            });
+            observer.observe(document.body, { childList: true, subtree: true });
+
             input.addEventListener('change', async (e) => {
                 const file = e.target.files && e.target.files[0];
                 if (!file) return;
