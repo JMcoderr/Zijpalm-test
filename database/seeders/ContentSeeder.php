@@ -403,7 +403,7 @@ class ContentSeeder extends Seeder
             'type' => 'email',
             'name' => 'email-nieuwe-activiteit',
             'title' => 'Er is een nieuwe activiteit aangemaakt!',
-            'text' => '{"time":1750075440441,"blocks":[{"id":"xnNwYZd4RN","type":"paragraph","data":{"text":"De volgende activiteit is aangemaakt!"}}],"version":"2.31.0-rc.7"}',
+            'text' => '',
             'filePath' => null,
             'fileType' => null,
         ]);
