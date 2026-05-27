@@ -36,27 +36,6 @@
                         </x-input-group>
                         <x-input-group class="items-stretch">
                             <x-input-field id="employee_list" label="Excellijst van nieuwe medewerkers" type="file" required/>
-                            <x-zijpalm-div
-                                id="employee-list-preview"
-                                color="light"
-                                :editable="false"
-                                title="Teller"
-                                titleFontSize="text-base"
-                                textSize="text-sm"
-                                padding="p-3"
-                                width="w-full"
-                                margin="mt-2"
-                            >
-                                <div class="flex flex-wrap items-center justify-between gap-2">
-                                    <span class="font-semibold text-zinc-900">Ontvangers</span>
-                                    <span id="employee-list-recipient-count" class="font-bold text-zijpalm-700">-</span>
-                                </div>
-                                <div class="mt-2 flex flex-wrap items-center justify-between gap-2">
-                                    <span class="font-semibold text-zinc-900">Geschatte duur</span>
-                                    <span id="employee-list-estimated-duration" class="font-bold text-zijpalm-700">-</span>
-                                </div>
-                                <p id="employee-list-preview-message" class="mt-2 text-xs text-zinc-500">Selecteer een Excel- of CSV-bestand om de teller te berekenen.</p>
-                            </x-zijpalm-div>
                         </x-input-group>
                         <x-input-group class="items-stretch">
                             <x-input-field id="description" label="Beschrijving" type="editor" required/>
@@ -70,6 +49,13 @@
                                            :value="$delay"
                                            :min="config('mail.power_automate.delay.min')"
                                            :max="config('mail.power_automate.delay.max')" required/>
+                            <p id="employee-list-preview" class="mt-2 text-xs text-zinc-600">
+                                <span class="font-semibold text-zinc-800">Ontvangers:</span>
+                                <span id="employee-list-recipient-count" class="font-bold text-zijpalm-700">-</span>
+                                <span class="mx-2 text-zinc-400">|</span>
+                                <span class="font-semibold text-zinc-800">Geschatte duur:</span>
+                                <span id="employee-list-estimated-duration" class="font-bold text-zijpalm-700">-</span>
+                            </p>
                             <x-zijpalm-button form="notify-new-employees-form" type="submit" label="Verstuur bericht"
                                               center="horizontal" class="mt-2"/>
                         </x-input-group>
@@ -87,7 +73,6 @@
         const delayInput = document.getElementById('delay');
         const recipientCountEl = document.getElementById('employee-list-recipient-count');
         const durationEl = document.getElementById('employee-list-estimated-duration');
-        const messageEl = document.getElementById('employee-list-preview-message');
         const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
 
         let recipientCount = 0;
@@ -114,15 +99,12 @@
             const file = employeeListInput?.files?.[0];
             if (!file) {
                 recipientCount = 0;
-                messageEl.textContent = 'Selecteer een Excel- of CSV-bestand om de teller te berekenen.';
                 updateDuration();
                 return;
             }
 
             const formData = new FormData();
             formData.append('employee_list', file);
-
-            messageEl.textContent = 'Teller berekenen...';
 
             try {
                 const response = await fetch('{{ route('admin.notifyNewEmployeesPreview') }}', {
@@ -141,13 +123,11 @@
                 }
 
                 recipientCount = Number(data.recipient_count || 0);
-                messageEl.textContent = 'Teller berekend op basis van het geselecteerde bestand.';
                 updateDuration();
             } catch (error) {
                 recipientCount = 0;
                 recipientCountEl.textContent = '-';
                 durationEl.textContent = '-';
-                messageEl.textContent = error.message || 'Kon het aantal ontvangers niet berekenen.';
             }
         };
 

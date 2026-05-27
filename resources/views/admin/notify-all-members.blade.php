@@ -48,25 +48,13 @@
                                            :value="$delay"
                                            :min="config('mail.power_automate.delay.min')"
                                            :max="config('mail.power_automate.delay.max')" required/>
-                            <x-zijpalm-div
-                                color="light"
-                                :editable="false"
-                                title="Teller"
-                                titleFontSize="text-base"
-                                textSize="text-sm"
-                                padding="p-3"
-                                width="w-full"
-                                margin="mt-2"
-                            >
-                                <div class="flex flex-wrap items-center justify-between gap-2">
-                                    <span class="font-semibold text-zinc-900">Ontvangers</span>
-                                    <span id="all-members-recipient-count" class="font-bold text-zijpalm-700">{{ number_format($recipientCount, 0, ',', '.') }}</span>
-                                </div>
-                                <div class="mt-2 flex flex-wrap items-center justify-between gap-2">
-                                    <span class="font-semibold text-zinc-900">Geschatte duur</span>
-                                    <span id="all-members-estimated-duration" class="font-bold text-zijpalm-700"></span>
-                                </div>
-                            </x-zijpalm-div>
+                            <p class="mt-2 text-xs text-zinc-600">
+                                <span class="font-semibold text-zinc-800">Ontvangers:</span>
+                                <span id="all-members-recipient-count" class="font-bold text-zijpalm-700">{{ number_format($recipientCount, 0, ',', '.') }}</span>
+                                <span class="mx-2 text-zinc-400">|</span>
+                                <span class="font-semibold text-zinc-800">Geschatte duur:</span>
+                                <span id="all-members-estimated-duration" class="font-bold text-zijpalm-700"></span>
+                            </p>
                             <x-zijpalm-button form="notify-new-employees-form" type="submit" label="Verstuur bericht"
                                               center="horizontal" class="mt-2"/>
                         </x-input-group>
