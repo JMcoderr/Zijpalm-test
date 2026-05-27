@@ -88,6 +88,27 @@
 
             if (!input) return;
 
+            // Helper: compute an insert index based on current caret / selection inside the editor
+            function computeInsertIndexFromSelection(holder) {
+                try {
+                    const sel = window.getSelection();
+                    if (!sel || !sel.anchorNode) return undefined;
+
+                    let node = sel.anchorNode.nodeType === 3 ? sel.anchorNode.parentElement : sel.anchorNode;
+                    const blockEl = node.closest ? node.closest('.ce-block') : null;
+                    const blocks = Array.from(holder.querySelectorAll('.ce-block'));
+                    if (blockEl) {
+                        const idx = blocks.indexOf(blockEl);
+                        if (idx >= 0) return idx + 1; // insert after current block
+                    }
+
+                    // fallback: if no block found, return undefined so editor inserts at end
+                    return undefined;
+                } catch (e) {
+                    return undefined;
+                }
+            }
+
             // Add paste handler to accept images from clipboard (png and jpeg only)
             const holderElForPaste = document.querySelector('[data-editor-holder="' + holderId + '"]');
             if (holderElForPaste) {
@@ -137,9 +158,8 @@
                                 // Insert image into editor (prefer image block insertion at caret)
                                 try {
                                     if (holderElForPaste?.editorInstance && holderElForPaste.editorInstance.blocks) {
-                                        let insertIndex = undefined;
-                                        try { if (typeof holderElForPaste.editorInstance.blocks.getCurrentBlockIndex === 'function') insertIndex = holderElForPaste.editorInstance.blocks.getCurrentBlockIndex(); } catch (e) {}
-
+                                        // Compute insert index from caret/selection (insert after current block)
+                                        let insertIndex = computeInsertIndexFromSelection(holderElForPaste);
                                         if (typeof insertIndex === 'number') {
                                             holderElForPaste.editorInstance.blocks.insert('image', { file: { url } }, {}, insertIndex);
                                         } else {
@@ -311,13 +331,8 @@
                     // attempt a few common ones.
                     try {
                         if (holderEl?.editorInstance && holderEl.editorInstance.blocks) {
-                            // Determine insert index (prefer current block index so the image appears where the caret is)
-                            let insertIndex = undefined;
-                            try {
-                                if (typeof holderEl.editorInstance.blocks.getCurrentBlockIndex === 'function') {
-                                    insertIndex = holderEl.editorInstance.blocks.getCurrentBlockIndex();
-                                }
-                            } catch (e) { /* ignore */ }
+                            // Compute insert index from caret/selection so image appears where cursor is
+                            let insertIndex = computeInsertIndexFromSelection(holderEl);
 
                             // Try common payload shapes and insert at the computed index when possible
                             try {
