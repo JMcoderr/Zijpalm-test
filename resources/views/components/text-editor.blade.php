@@ -73,7 +73,12 @@
 <input type="hidden" id="{{$inputId}}" name="{{$id}}" {{$editorAttributes['required'] ? 'required' : ''}} value="{{$editorDataHTMLSafe}}" />
 
 {{-- Editor input --}}
-<div id="{{$holderId}}" {{$editorAttributes->except(['value'])}}></div>
+<div id="{{$holderId}}" {{$editorAttributes->except(['value'])}} style="position:relative"></div>
+
+{{-- Visible fallback image button (small) placed in the top-right of the editor holder so admins can open the file picker if the toolbox injection fails. --}}
+<button type="button" aria-label="Insert image" title="Image" onclick="document.getElementById('@js($holderId)-image-input').click()" style="position:relative; margin-top:4px; display:inline-block;">
+    <span style="display:inline-block; padding:4px 6px; background:#111827; color:white; border-radius:6px; font-size:12px;">Image</span>
+</button>
 
 {{-- Hidden file input and status used when admin clicks the EditorJS "+" control --}}
 <input id="{{$holderId}}-image-input" type="file" accept="image/*" class="hidden" />
