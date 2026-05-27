@@ -4,11 +4,13 @@
 
 namespace App\Mail;
 
+use App\Models\Activity;
 use App\Models\Content as ContentModel;
 use BumpCore\EditorPhp\EditorPhp;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
+use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -52,8 +54,25 @@ class UpcomingActivitiesDigest extends Mailable
     {
         // Pass the values to the Blade template that builds the message body.
         $mailSubject = 'Zijpalm | Komende activiteiten';
-        $introHtml = $this->renderIntroHtml();
+            $introHtml = '<p>Beste leden,</p><p>Hieronder vinden jullie de komende activiteiten van Zijpalm.</p>';
 
+            if ($this->content?->text) {
+                try {
+                    $raw = html_entity_decode((string) $this->content->text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                    $decoded = json_decode($raw, true);
+
+                    if (is_array($decoded) && array_key_exists('blocks', $decoded)) {
+                        $introHtml = EditorPhp::make($raw)->toHtml();
+                    } else {
+                        $introHtml = '<p>' . e($this->content->text) . '</p>';
+                    }
+                } catch (Throwable $exception) {
+                    Log::warning('[UpcomingActivitiesDigest] introHtml fallback to plain text', [
+                        'error' => $exception->getMessage(),
+                    ]);
+                }
+            }
+            
         $introHtml = $this->sanitizeIntroHtml($this->normalizeIntroLinks($this->plainTextLinks($introHtml)));
         try {
             $renderedContent = view('mail.upcoming-activities-digest', [
@@ -144,32 +163,6 @@ class UpcomingActivitiesDigest extends Mailable
     {
         // Attach files here if this mail needs them.
         return [];
-    }
-
-    private function renderIntroHtml(): string
-    {
-        $defaultIntroHtml = '<p>Beste leden,</p><p>Hieronder vinden jullie de komende activiteiten van Zijpalm.</p>';
-
-        if (! $this->content?->text) {
-            return $defaultIntroHtml;
-        }
-
-        $rawText = html_entity_decode((string) $this->content->text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
-        $decoded = json_decode($rawText, true);
-
-        if (! is_array($decoded) || ! array_key_exists('blocks', $decoded)) {
-            return '<p>' . e($rawText) . '</p>';
-        }
-
-        try {
-            return EditorPhp::make($rawText)->toHtml();
-        } catch (Throwable $exception) {
-            Log::warning('[UpcomingActivitiesDigest] introHtml fallback to plain text', [
-                'error' => $exception->getMessage(),
-            ]);
-
-            return '<p>' . e($rawText) . '</p>';
-        }
     }
 
     private function normalizeIntroLinks(string $html): string
