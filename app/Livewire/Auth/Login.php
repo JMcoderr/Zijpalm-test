@@ -91,13 +91,19 @@ class Login extends Component
 
         if ($this->isModal) {
             // If the login is in a modal, refresh the page
-            // It says redirect to previous but it just refreshes the page to update the navbar with the users dropdown
             $this->redirect(url()->previous(), navigate: true);
-        } else {
-            // Redirect after succesful login
-            $default = $resetParam ? route('home', ['reset' => 1], false) : route('home', absolute: false);
-            $this->redirectIntended(default: $default, navigate: true);
+            return;
         }
+
+        // If the user arrived via a password-reset flow, prefer redirecting to
+        // the homepage with the reset flag so the success message is visible.
+        if ($resetParam) {
+            $this->redirect(route('home', ['reset' => 1]));
+            return;
+        }
+
+        // Default behaviour: redirect to the intended URL or home
+        $this->redirectIntended(default: route('home', absolute: false), navigate: true);
     }
 
     /**
