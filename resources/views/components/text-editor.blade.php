@@ -76,9 +76,22 @@
 <div id="{{$holderId}}" {{$editorAttributes->except(['value'])}} style="position:relative"></div>
 
 {{-- Visible fallback image button (small) placed in the top-right of the editor holder so admins can open the file picker if the toolbox injection fails. --}}
-<button type="button" aria-label="Insert image" title="Image" onclick="document.getElementById('@js($holderId)-image-input').click()" style="position:relative; margin-top:4px; display:inline-block;">
-    <span style="display:inline-block; padding:4px 6px; background:#111827; color:white; border-radius:6px; font-size:12px;">Image</span>
+<button id="{{$holderId}}-image-button-fallback" type="button" aria-label="Insert image" title="Image"
+        style="position:absolute; top:8px; right:8px; z-index:50; display:flex; align-items:center; gap:6px; padding:6px 8px; background:rgba(17,24,39,0.95); color:#fff; border-radius:8px; font-size:12px; border:0; box-shadow:0 2px 6px rgba(0,0,0,0.12); cursor:pointer;">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M21 19V5a2 2 0 0 0-2-2H5C3.895 3 3 3.895 3 5v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2z" fill="#111827"></path><path d="M7.5 13.5l2.5 3 3-4 4.5 6H6l1.5-5.5z" fill="#fff"></path></svg>
+    <span style="line-height:1">Image</span>
 </button>
+
+<script>
+    // bind fallback button to hidden input for this editor instance
+    document.addEventListener('DOMContentLoaded', function () {
+        const btn = document.getElementById(@json($holderId) + '-image-button-fallback');
+        const input = document.getElementById(@json($holderId) + '-image-input');
+        if (btn && input) {
+            btn.addEventListener('click', function () { input.click(); });
+        }
+    });
+</script>
 
 {{-- Hidden file input and status used when admin clicks the EditorJS "+" control --}}
 <input id="{{$holderId}}-image-input" type="file" accept="image/*" class="hidden" />
