@@ -10,6 +10,8 @@ use App\Models\User;
 use App\UserNotifications;
 use App\UserType;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Password;
 
 class UserController extends Controller
 {
@@ -166,5 +168,49 @@ class UserController extends Controller
         }
         // Redirect to the home page with a success message
         return redirect()->route('home')->with('success', 'Het account is succesvol afgemeld');
+    }
+
+    /**
+     * Send a password reset link to the selected user (admin only).
+     */
+    public function sendPasswordResetLink(User $user)
+    {
+        $admin = auth()->user();
+
+        if (!$admin || !$admin->isAdmin()) {
+            abort(403);
+        }
+
+        if (empty($user->email)) {
+            Log::warning('[UserController] Password reset link not sent: user has no email', [
+                'admin_id' => $admin->id,
+                'target_user_id' => $user->id,
+            ]);
+
+            return redirect()->back()->withErrors('Deze gebruiker heeft geen e-mailadres.');
+        }
+
+        $status = Password::sendResetLink([
+            'email' => $user->email,
+        ]);
+
+        if ($status === Password::RESET_LINK_SENT) {
+            Log::info('[UserController] Password reset link sent by admin', [
+                'admin_id' => $admin->id,
+                'target_user_id' => $user->id,
+                'target_user_email' => $user->email,
+            ]);
+
+            return redirect()->back()->with('success', 'Resetmail is verstuurd naar de gebruiker.');
+        }
+
+        Log::warning('[UserController] Password reset link failed', [
+            'admin_id' => $admin->id,
+            'target_user_id' => $user->id,
+            'target_user_email' => $user->email,
+            'status' => $status,
+        ]);
+
+        return redirect()->back()->withErrors(__('Het versturen van de resetmail is mislukt. Probeer het opnieuw.'));
     }
 }

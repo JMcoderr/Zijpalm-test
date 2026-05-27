@@ -2,10 +2,19 @@
 <div class="flex flex-col gap-6">
     <x-auth-header :title="__('Reset wachtwoord')" :description="__('Vul uw nieuwe wachtwoord hieronder in')" />
 
-    <!-- Session Status -->
-    <x-auth-session-status class="text-center" :status="session('status')" />
+    @if ($resetSuccess)
+        <x-auth-session-status class="text-center" :status="$resetSuccessMessage" />
 
-    <form wire:submit="resetPassword" class="flex flex-col gap-6">
+        <div class="flex items-center justify-center">
+            <flux:button :href="route('home')" variant="primary" class="w-full" wire:navigate>
+                {{ __('Ga terug naar de homepagina') }}
+            </flux:button>
+        </div>
+    @else
+        <!-- Session Status -->
+        <x-auth-session-status class="text-center" :status="session('status')" />
+
+        <form wire:submit="resetPassword" class="flex flex-col gap-6">
         <!-- Email Address -->
         <flux:input
             value="{{ $email }}"
@@ -43,5 +52,6 @@
                 {{ __('Reset wachtwoord') }}
             </flux:button>
         </div>
-    </form>
+        </form>
+    @endif
 </div>

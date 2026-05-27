@@ -35,7 +35,10 @@
                         <x-input-field type="checkbox" id="is_admin" :checked="$user->isAdmin()" value="1" label="Beheerder" width="w-max" />
                         {{-- Displays an selection --}}
                         @if (!$user->isType(UserType::System))
-                            <x-input-field type="select" id="type" label="Gebruikerstype" :options="array_filter(UserType::toArray(), fn($type) => $type !== 'system')" optionOnly :selected="$user->type->value" width="w-max" />
+                            <div class="flex items-end gap-2 w-max">
+                                <x-input-field type="select" id="type" label="Gebruikerstype" :options="array_filter(UserType::toArray(), fn($type) => $type !== 'system')" optionOnly :selected="$user->type->value" width="w-max" />
+                                <x-zijpalm-button type="submit" form="user-reset-password" label="Reset wachtwoord" />
+                            </div>
                         @else
                             <x-input-field type="text" label="Gebruikerstype" id="type" value="{{UserType::System->name}}" :disabled="true" width="w-max" />
                         @endif
@@ -53,6 +56,12 @@
                     </div>                
                 @endif
             </form>
+
+            @if (auth()->user()->isAdmin() && !$user->isType(UserType::System))
+                <form id="user-reset-password" method="POST" action="{{ route('user.resetPassword', $user) }}">
+                    @csrf
+                </form>
+            @endif
         </x-settings.layout>
     </x-zijpalm-div>
     <x-zijpalm-button type="submit" form="user-edit" center="horizontal" label="Aanpassen" />
