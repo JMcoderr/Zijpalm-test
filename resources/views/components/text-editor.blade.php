@@ -411,24 +411,35 @@
 
                 form.addEventListener('submit', function (ev) {
                     const inProgress = holderEl.dataset.uploadInProgress === 'true';
-                    if (!inProgress) {
-                        // ensure latest editor content is saved before submit
+                    // helper to ensure editor instance exists and save to hidden input
+                    const ensureSave = async () => {
                         try {
-                            if (holderEl.editorInstance && typeof holderEl.editorInstance.save === 'function') {
-                                ev.preventDefault();
-                                holderEl.editorInstance.save().then((output) => {
-                                    const inputId = holderEl.getAttribute('data-editor-input');
-                                    const hiddenInput = document.getElementById(inputId);
-                                    if (hiddenInput) hiddenInput.value = JSON.stringify(output);
-                                    form.submit();
-                                }).catch(() => { form.submit(); });
-                                return;
+                            if (!holderEl.editorInstance && typeof window.initializeEditorJsHolders === 'function') {
+                                window.initializeEditorJsHolders();
+                                // wait briefly for the editor to initialize
+                                const start = Date.now();
+                                while (!holderEl.editorInstance && (Date.now() - start) < 2000) {
+                                    // eslint-disable-next-line no-await-in-loop
+                                    await new Promise(r => setTimeout(r, 100));
+                                }
                             }
-                        } catch (e) { /* ignore */ }
+
+                            if (holderEl.editorInstance && typeof holderEl.editorInstance.save === 'function') {
+                                const output = await holderEl.editorInstance.save();
+                                const inputId = holderEl.getAttribute('data-editor-input');
+                                const hiddenInput = document.getElementById(inputId);
+                                if (hiddenInput) hiddenInput.value = JSON.stringify(output);
+                            }
+                        } catch (e) { console.error('Failed saving editor before submit', e); }
+                    };
+
+                    if (!inProgress) {
+                        ev.preventDefault();
+                        ensureSave().then(() => form.submit()).catch(() => form.submit());
                         return;
                     }
 
-                    // Wait up to 10s for upload to finish
+                    // Wait up to 10s for upload to finish, then ensure save
                     ev.preventDefault();
                     const maxWait = 10000;
                     const interval = 200;
@@ -436,14 +447,7 @@
                     const waiter = setInterval(async function(){
                         if (holderEl.dataset.uploadInProgress !== 'true') {
                             clearInterval(waiter);
-                            try {
-                                if (holderEl.editorInstance && typeof holderEl.editorInstance.save === 'function') {
-                                    const output = await holderEl.editorInstance.save();
-                                    const inputId = holderEl.getAttribute('data-editor-input');
-                                    const hiddenInput = document.getElementById(inputId);
-                                    if (hiddenInput) hiddenInput.value = JSON.stringify(output);
-                                }
-                            } catch (e) { console.error('Failed saving editor before submit', e); }
+                            await ensureSave();
                             form.submit();
                             return;
                         }
@@ -451,6 +455,7 @@
                         waited += interval;
                         if (waited >= maxWait) {
                             clearInterval(waiter);
+                            await ensureSave();
                             form.submit();
                         }
                     }, interval);
