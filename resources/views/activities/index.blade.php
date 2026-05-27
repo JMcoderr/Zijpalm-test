@@ -15,7 +15,7 @@
                 <div class="flex flex-wrap justify-center gap-x-4 gap-y-2">
                     <x-zijpalm-button label="Eenmalige activiteiten" type="action" x-on:click="nextTab = tabs[0]; tab = null; setTimeout(() => {tab = nextTab; nextTab = null;}, 475)"/>
                     <x-zijpalm-button label="Wekelijkse activiteiten" type="action" x-on:click="nextTab = tabs[1]; tab = null; setTimeout(() => {tab = nextTab; nextTab = null;}, 475)"/>
-                    <x-zijpalm-button label="Oude activiteiten" type="action" x-on:click="nextTab = tabs[2]; tab = null; setTimeout(() => {tab = nextTab; nextTab = null;}, 475)"/>
+                    <x-zijpalm-button label="Te laat" type="action" x-on:click="nextTab = tabs[2]; tab = null; setTimeout(() => {tab = nextTab; nextTab = null;}, 475)"/>
                     @auth
                         @if(auth()->user()->is_admin)
                             <x-zijpalm-modal text="Mail toekomstige activiteiten" livewire include="upcoming-activities-digest-mail" modal="upcomingActivitiesDigestMailModal" :variables="[]" />
