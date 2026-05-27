@@ -112,6 +112,9 @@
                                 status.textContent = 'Uploaden...';
                                 status.classList.remove('hidden');
 
+                                // mark upload in progress so form submission can wait
+                                if (holderElForPaste) holderElForPaste.dataset.uploadInProgress = 'true';
+
                                 const fd = new FormData();
                                 fd.append('image', file);
 
@@ -155,6 +158,7 @@
 
                                         status.textContent = 'Upload geslaagd';
                                         status.classList.remove('hidden');
+                                        if (holderElForPaste) delete holderElForPaste.dataset.uploadInProgress;
                                         return;
                                     }
                                 } catch (err) {
@@ -181,14 +185,17 @@
                                     }
                                 } catch (e) { console.error(e); }
 
+                                if (holderElForPaste) delete holderElForPaste.dataset.uploadInProgress;
+
                                 status.textContent = 'Upload geslaagd';
                                 status.classList.remove('hidden');
 
                                 return;
                             }
                         }
-                    } catch (e) {
+                        } catch (e) {
                         console.error('Paste image handling failed', e);
+                        if (holderElForPaste) delete holderElForPaste.dataset.uploadInProgress;
                         status.textContent = 'Plakken mislukt';
                         status.classList.remove('hidden');
                     }
@@ -270,6 +277,9 @@
                     status.textContent = 'Uploaden...';
                     status.classList.remove('hidden');
 
+                    // mark upload in progress so form submission can wait
+                    if (holderEl) holderEl.dataset.uploadInProgress = 'true';
+
                 const fd = new FormData();
                 fd.append('image', file);
 
@@ -331,6 +341,7 @@
 
                                 status.textContent = 'Upload geslaagd';
                                 status.classList.remove('hidden');
+                                if (holderEl) delete holderEl.dataset.uploadInProgress;
                                 return;
                             } catch (e) {
                                 // if block insertion fails, fall back to HTML insertion below
@@ -359,11 +370,13 @@
                                 if (hiddenInput) hiddenInput.value = JSON.stringify(output);
                             }
                         } catch (e) { console.error(e); }
+                        if (holderEl) delete holderEl.dataset.uploadInProgress;
 
                         status.textContent = 'Upload geslaagd';
                         status.classList.remove('hidden');
                     } catch (err) {
                         console.error(err);
+                        if (holderEl) delete holderEl.dataset.uploadInProgress;
                         status.textContent = 'Upload mislukt';
                         status.classList.remove('hidden');
                     }
@@ -373,6 +386,61 @@
                     status.classList.remove('hidden');
                 }
             });
+
+            // Attach a guard to the form to wait for uploads and ensure editor content is saved
+            (function attachFormGuard(){
+                const holderEl = document.querySelector('[data-editor-holder="' + holderId + '"]');
+                if (!holderEl) return;
+                const form = holderEl.closest('form');
+                if (!form) return;
+
+                form.addEventListener('submit', function (ev) {
+                    const inProgress = holderEl.dataset.uploadInProgress === 'true';
+                    if (!inProgress) {
+                        // ensure latest editor content is saved before submit
+                        try {
+                            if (holderEl.editorInstance && typeof holderEl.editorInstance.save === 'function') {
+                                ev.preventDefault();
+                                holderEl.editorInstance.save().then((output) => {
+                                    const inputId = holderEl.getAttribute('data-editor-input');
+                                    const hiddenInput = document.getElementById(inputId);
+                                    if (hiddenInput) hiddenInput.value = JSON.stringify(output);
+                                    form.submit();
+                                }).catch(() => { form.submit(); });
+                                return;
+                            }
+                        } catch (e) { /* ignore */ }
+                        return;
+                    }
+
+                    // Wait up to 10s for upload to finish
+                    ev.preventDefault();
+                    const maxWait = 10000;
+                    const interval = 200;
+                    let waited = 0;
+                    const waiter = setInterval(async function(){
+                        if (holderEl.dataset.uploadInProgress !== 'true') {
+                            clearInterval(waiter);
+                            try {
+                                if (holderEl.editorInstance && typeof holderEl.editorInstance.save === 'function') {
+                                    const output = await holderEl.editorInstance.save();
+                                    const inputId = holderEl.getAttribute('data-editor-input');
+                                    const hiddenInput = document.getElementById(inputId);
+                                    if (hiddenInput) hiddenInput.value = JSON.stringify(output);
+                                }
+                            } catch (e) { console.error('Failed saving editor before submit', e); }
+                            form.submit();
+                            return;
+                        }
+
+                        waited += interval;
+                        if (waited >= maxWait) {
+                            clearInterval(waiter);
+                            form.submit();
+                        }
+                    }, interval);
+                });
+            })();
         });
     </script>
 @endpush
