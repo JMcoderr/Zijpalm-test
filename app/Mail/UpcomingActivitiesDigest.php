@@ -192,7 +192,25 @@ class UpcomingActivitiesDigest extends Mailable
         $sanitized = $html;
 
         // Remove problematic editor classes/attributes for mail clients.
-        $sanitized = strip_tags($sanitized, '<p><br><strong><em><b><i><u><ul><ol><li>') ?? $sanitized;
+        $sanitized = strip_tags($sanitized, '<p><br><strong><em><b><i><u><ul><ol><li><img>') ?? $sanitized;
+
+        // Normalize <img> tags: keep only src and ensure URLs are escaped.
+        $sanitized = preg_replace_callback('/<img\s+[^>]*src=("|\')(.*?)\1[^>]*>/i', function (array $matches) {
+            $src = trim($matches[2]);
+
+            // If the source is a relative path (starts with /), convert to absolute URL via url().
+            if (str_starts_with($src, '/')) {
+                $src = url($src);
+            }
+
+            // Only allow http(s) or data URIs; otherwise strip the image.
+            if (preg_match('/^(https?:\/\/|data:image\/)/i', $src)) {
+                return '<img src="' . e($src) . '">';
+            }
+
+            return '';
+        }, $sanitized) ?? $sanitized;
+
         $sanitized = preg_replace('/\s(?:class|style|id|data-[a-z0-9_-]+|role)=("[^"]*"|\'[^\']*\')/i', '', $sanitized) ?? $sanitized;
 
         // Normalize pasted non-breaking spaces and reduce excessive blank paragraphs.

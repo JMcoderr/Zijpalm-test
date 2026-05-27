@@ -326,9 +326,10 @@ class ContentSeeder extends Seeder
             'fileType' => null,
         ]);
 
-        Content::create([
-            'type' => 'email',
+        Content::updateOrCreate([
             'name' => 'email-betaling-mislukt',
+        ], [
+            'type' => 'email',
             'title' => 'Betaling mislukt',
             'text' => '{"time":1763000000000,"blocks":[{"type":"paragraph","data":{"text":"Uw betaling is helaas mislukt."}},{"type":"paragraph","data":{"text":"Probeer het alstublieft opnieuw via de betaallink."}}],"version":"2.31.0"}',
             'filePath' => null,
@@ -434,9 +435,10 @@ class ContentSeeder extends Seeder
             'fileType' => null,
         ]);
 
-        Content::create([
-            'type' => 'email',
+        Content::updateOrCreate([
             'name' => 'email-toekomstige-activiteiten',
+        ], [
+            'type' => 'email',
             'title' => 'Email Toekomstige Activiteiten',
             'text' => '{"time":1775600000000,"blocks":[{"type":"paragraph","data":{"text":"Beste leden,"}},{"type":"paragraph","data":{"text":"Hieronder vinden jullie de komende activiteiten van Zijpalm."}}],"version":"2.31.0"}',
             'filePath' => null,

@@ -201,6 +201,7 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->controller(AdminC
         Route::post('gebruikers/facturen-jaarlijks', 'sendAnnualInvoices')->name('users.sendAnnualInvoices');
         Route::post('import-medewerkers', 'importEmployees')->name('importEmployees');
         Route::post('import-leden', 'importMembers')->name('importMembers');
+        Route::post('editor/image-upload', [App\Http\Controllers\EditorImageController::class, 'store'])->name('admin.editor.image-upload');
         Route::delete('lidmaatschap-afmelden/{user}', 'removeUser')->name('removeUser');
         Route::post('lidmaatschap-herstellen/{user}', 'reinstateUser')->name('reinstateUser')->withTrashed();
         Route::get('verslagen', 'reports')->name('reports');
