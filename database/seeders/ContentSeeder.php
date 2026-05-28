@@ -430,7 +430,7 @@ class ContentSeeder extends Seeder
             'type' => 'email',
             'name' => 'email-reset-wachtwoord',
             'title' => 'Hallo',
-            'text' => '{"time":1769171792368,"blocks":[{"id":"xnNwYZd4RN","type":"paragraph","data":{"text":"U ontvangt deze email omdat we een wachtwoord reset aanvraag hebben ontvangen voor uw account."}}],"version":"2.31.0-rc.7"}',
+            'text' => '{"time":1769171792368,"blocks":[{"id":"xnNwYZd4RN","type":"paragraph","data":{"text":"Je ontvangt deze e-mail omdat we een wachtwoordresetaanvraag voor je account hebben ontvangen."}}],"version":"2.31.0-rc.7"}',
             'filePath' => null,
             'fileType' => null,
         ]);

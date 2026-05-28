@@ -1,14 +1,6 @@
 {{-- This view file shows part of the interface and is kept simple so it is easy to follow. --}}
 <x-layouts.mail.header>
-    @php
-        $introHtml = str_replace(
-            'U ontvangt deze email omdat we een wachtwoord reset aanvraag hebben ontvangen voor uw account.',
-            'Je ontvangt deze e-mail omdat we een wachtwoordresetaanvraag voor je account hebben ontvangen.',
-            $content->textHTML
-        );
-    @endphp
-
-    {!! $introHtml !!}
+    {!! $content->textHTML !!}
     {{-- <p style="margin: 10px; text-align: center; padding: 10px 20px;">
         <a href="{{ route('password.reset', ['token' => $resetPasswordToken, 'email' => $user->email]) }}" style="background-color: #054d7c; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Wachtwoord instellen</a>
     </p> --}}
