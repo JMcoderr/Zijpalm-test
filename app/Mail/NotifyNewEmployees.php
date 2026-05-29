@@ -35,7 +35,7 @@ class NotifyNewEmployees extends Mailable
     {
         // Build the subject line for this mail.
         return new Envelope(
-            subject: 'AUTOMATE BATCH notify_new_employees',
+            subject: $this->validatedData['subject'] ?? 'AUTOMATE BATCH notify_new_employees',
         );
     }
 
@@ -44,10 +44,18 @@ class NotifyNewEmployees extends Mailable
      */
     public function content(): Content
     {
-        // Pass the values to the Blade template that builds the message body.
-        $renderedContent = view('mail.notify-new-employees', [
-            'description' => EditorPhp::make($this->validatedData['description'])->toHtml(),
-        ])->render();
+        $content = getFromCache('email-informeer-nieuwe-medewerkers');
+        if ($content?->text) {
+            $renderedContent = $content->mailHtml([
+                'description' => EditorPhp::make($this->validatedData['description'])->toHtml(),
+                'recipient_count' => is_countable($this->emails) ? count($this->emails) : (int) $this->emails->count(),
+            ]);
+        } else {
+            // Pass the values to the Blade template that builds the message body.
+            $renderedContent = view('mail.notify-new-employees', [
+                'description' => EditorPhp::make($this->validatedData['description'])->toHtml(),
+            ])->render();
+        }
 
         $recipientCount = is_countable($this->emails) ? count($this->emails) : (int) $this->emails->count();
         $batchSize = (int) $this->validatedData['batch_size'];

@@ -63,7 +63,7 @@ class ActivityApplied extends Mailable
         // Build the subject line for this mail.
         // The subject is a fixed label because the mail is used for automation.
         return new Envelope(
-            subject: 'AUTOMATE SINGLE activity_applied',
+            subject: $this->content->title ?? 'AUTOMATE SINGLE activity_applied',
         );
     }
 
@@ -121,19 +121,29 @@ class ActivityApplied extends Mailable
             ->first();
 
         try {
-            // Render the normal Blade mail template first.
-            $renderedContent = view('mail.activity-applied', [
-                'activity' => $this->activity,
-                'application' => $this->application,
-                'user' => $this->user,
-                'content' => $this->content,
-                'reserveContent' => $this->reserveContent,
-                'defaultContentHtml' => $defaultContentHtml,
-                'reserveContentHtml' => $reserveContentHtml,
-                'qrcode' => $this->qrcode,
-                'reserve' => $this->reserve,
-                'personalConfirmationHtml' => $personalConfirmationHtml,
-            ])->render();
+            // If admin provided a full custom mail body, use it with token replacements.
+            if ($this->content && trim((string) $this->content->text) !== '') {
+                $renderedContent = $this->content->mailHtml([
+                    'activity_title' => $this->activity->title,
+                    'activity_location' => (string) $this->activity->location,
+                    'activity_start' => formatDate($this->activity->start) . ' om ' . formatTime($this->activity->start),
+                    'participants' => $this->application ? (int) $this->application->participants : 0,
+                ]);
+            } else {
+                // Render the normal Blade mail template first.
+                $renderedContent = view('mail.activity-applied', [
+                    'activity' => $this->activity,
+                    'application' => $this->application,
+                    'user' => $this->user,
+                    'content' => $this->content,
+                    'reserveContent' => $this->reserveContent,
+                    'defaultContentHtml' => $defaultContentHtml,
+                    'reserveContentHtml' => $reserveContentHtml,
+                    'qrcode' => $this->qrcode,
+                    'reserve' => $this->reserve,
+                    'personalConfirmationHtml' => $personalConfirmationHtml,
+                ])->render();
+            }
         } catch (Throwable $exception) {
             // If the template fails, fall back to a very simple HTML body.
             Log::error('[ActivityApplied] Mail view render failed, using fallback body', [

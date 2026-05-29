@@ -48,7 +48,7 @@ class ApplicationCancelled extends Mailable
     {
         // Build the subject line for this mail.
         return new Envelope(
-            subject: 'AUTOMATE SINGLE application_cancelled',
+            subject: ($this->content->title ?? 'AUTOMATE SINGLE application_cancelled') . ' ' . $this->activity->title,
         );
     }
 
@@ -63,13 +63,20 @@ class ApplicationCancelled extends Mailable
             ->where('status', \App\PaymentStatus::paid)
             ->sum('price');
 
-        $renderedContent = view('mail.application-cancelled', [
-            'application' => $this->application,
-            'activity' => $this->activity,
-            'user' => $this->user,
-            'content' => $this->content,
-            'refundedAmount' => $this->refundedAmount,
-        ])->render();
+        if ($this->content && trim((string) $this->content->text) !== '') {
+            $renderedContent = $this->content->mailHtml([
+                'activity_title' => $this->activity->title,
+                'refunded_amount' => number_format($this->refundedAmount, 2, ',', '.'),
+            ]);
+        } else {
+            $renderedContent = view('mail.application-cancelled', [
+                'application' => $this->application,
+                'activity' => $this->activity,
+                'user' => $this->user,
+                'content' => $this->content,
+                'refundedAmount' => $this->refundedAmount,
+            ])->render();
+        }
 
         $jsonBody = json_encode([
             'email' => $this->user->email,

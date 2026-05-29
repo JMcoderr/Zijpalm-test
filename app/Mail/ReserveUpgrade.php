@@ -50,7 +50,7 @@ class ReserveUpgrade extends Mailable
         // Build the subject line for this mail.
         // Use the content title and application activity title to form the subject
         return new Envelope(
-            subject: 'AUTOMATE SINGLE reserve_upgrade',
+            subject: ($this->content->title ?? 'AUTOMATE SINGLE reserve_upgrade') . ' ' . $this->activity->title,
         );
     }
 
@@ -74,12 +74,20 @@ class ReserveUpgrade extends Mailable
         // Get the payment link from Mollie
         $this->paymentLink = Mollie::api()->paymentLinks->get($payment->mollieId)->_links->paymentLink->href;
 
-        $renderedContent = view('mail.reserve-upgrade', [
-            'user' => $this->user,
-            'content' => $this->content,
-            'totalCost' => $this->totalCost,
-            'paymentLink' => $this->paymentLink,
-        ])->render();
+        if ($this->content && trim((string) $this->content->text) !== '') {
+            $renderedContent = $this->content->mailHtml([
+                'user_name' => $this->user->name,
+                'total_cost' => number_format($this->totalCost, 2, ',', '.'),
+                'payment_link' => $this->paymentLink,
+            ]);
+        } else {
+            $renderedContent = view('mail.reserve-upgrade', [
+                'user' => $this->user,
+                'content' => $this->content,
+                'totalCost' => $this->totalCost,
+                'paymentLink' => $this->paymentLink,
+            ])->render();
+        }
 
         $jsonBody = json_encode([
             'email' => $this->user->email,

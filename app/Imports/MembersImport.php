@@ -7,6 +7,7 @@ namespace App\Imports;
 use App\Models\User;
 use App\UserType;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Maatwebsite\Excel\Concerns\ToCollection;
 use Maatwebsite\Excel\Concerns\WithChunkReading;
@@ -15,6 +16,7 @@ use Maatwebsite\Excel\Concerns\WithHeadingRow;
 class MembersImport implements ToCollection, WithHeadingRow, WithChunkReading
 {
     protected array $seenMembers = [];
+    protected int $phoneCount = 0;
 
     /**
      * Process each chunk of rows.
@@ -49,10 +51,16 @@ class MembersImport implements ToCollection, WithHeadingRow, WithChunkReading
 
             $this->seenMembers[] = $email;
 
+            $phone = $this->normalizePhone($row['telefoon'] ?? $row['telefoonnummer'] ?? $row['phone'] ?? null);
+            if ($phone !== null) {
+                $this->phoneCount++;
+            }
+
             $batch[] = [
                 'firstName' => $row['voornaam'],
                 'lastName' => $row['achternaam'],
                 'email' => $email,
+                'phone' => $phone,
                 'notifications' => 61,
                 'deleted_at' => null,
                 'type' => $type?->value,
@@ -62,7 +70,7 @@ class MembersImport implements ToCollection, WithHeadingRow, WithChunkReading
                 User::query()->upsert(
                     $batch,
                     ['email'], // unique key
-                    ['firstName', 'lastName', 'notifications', 'deleted_at', 'type']
+                    ['firstName', 'lastName', 'phone', 'notifications', 'deleted_at', 'type']
                 );
                 $batch = []; // free memory
             }
@@ -73,9 +81,14 @@ class MembersImport implements ToCollection, WithHeadingRow, WithChunkReading
             User::query()->upsert(
                 $batch,
                 ['email'],
-                ['firstName', 'lastName', 'notifications', 'deleted_at', 'type']
+                ['firstName', 'lastName', 'phone', 'notifications', 'deleted_at', 'type']
             );
         }
+
+        Log::info('[MembersImport] completed', [
+            'members_seen' => count(array_unique($this->seenMembers)),
+            'phones_imported' => $this->phoneCount,
+        ]);
 
         $this->softDeleteMissingMembers();
     }
@@ -109,5 +122,16 @@ class MembersImport implements ToCollection, WithHeadingRow, WithChunkReading
             ])
             ->whereNotIn('email', $seenMembers)
             ->delete();
+    }
+
+    protected function normalizePhone(mixed $value): ?string
+    {
+        $digits = preg_replace('/\D+/', '', (string) $value);
+
+        if ($digits === '') {
+            return null;
+        }
+
+        return substr($digits, -8);
     }
 }

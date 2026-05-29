@@ -35,13 +35,16 @@ class AppServiceProvider extends ServiceProvider
                 // This is the time in minutes that the reset link is valid
                 $count = config('auth.passwords.'.config('auth.defaults.passwords').'.expire');
 
-                // Build a custom MailMessage
+                $content = getFromCache('email-reset-wachtwoord');
+
+                // Build a custom MailMessage using the editable content if available
                 return (new MailMessage)
-                    ->subject('Wachtwoord vergeten')
-                    ->line('Je ontvangt deze e-mail omdat we een wachtwoordresetaanvraag voor je account hebben ontvangen.')
-                    ->action('Reset Wachtwoord', $url)
-                    ->line('Deze link verloopt over ' . $count . ' minuten.')
-                    ->line('Als je geen nieuw wachtwoord hebt aangevraagd, hoef je verder niets te doen.');
+                    ->subject($content->title ?? 'Wachtwoord vergeten')
+                    ->view('mail.reset-password', [
+                        'resetUrl' => $url,
+                        'expire' => $count,
+                        'content' => $content,
+                    ]);
             }
         );
     }

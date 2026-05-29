@@ -35,7 +35,7 @@ class NotifyAllMembers extends Mailable
     {
         // Build the subject line for this mail.
         return new Envelope(
-            subject: 'AUTOMATE BATCH notify_all_members',
+            subject: $this->validatedData['subject'] ?? 'AUTOMATE BATCH notify_all_members',
         );
     }
 
@@ -44,10 +44,19 @@ class NotifyAllMembers extends Mailable
      */
     public function content(): Content
     {
-        // Pass the values to the Blade template that builds the message body.
-        $renderedContent = view('mail.notify-all-members', [
-            'description' => EditorPhp::make($this->validatedData['description'])->toHtml(),
-        ])->render();
+        // If admin provided a full custom mail body in the Content record, use it.
+        $content = getFromCache('email-informeer-leden');
+        if ($content?->text) {
+            $renderedContent = $content->mailHtml([
+                'description' => EditorPhp::make($this->validatedData['description'])->toHtml(),
+                'recipient_count' => is_countable($this->emails) ? count($this->emails) : (int) $this->emails->count(),
+            ]);
+        } else {
+            // Pass the values to the Blade template that builds the message body.
+            $renderedContent = view('mail.notify-all-members', [
+                'description' => EditorPhp::make($this->validatedData['description'])->toHtml(),
+            ])->render();
+        }
 
         $recipientCount = is_countable($this->emails) ? count($this->emails) : (int) $this->emails->count();
         $batchSize = (int) $this->validatedData['batch_size'];
