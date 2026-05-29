@@ -1,4 +1,6 @@
 <?php
+// This config file keeps the settings for this part of the app.
+
 
 use Monolog\Handler\NullHandler;
 use Monolog\Handler\StreamHandler;

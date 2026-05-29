@@ -1,4 +1,6 @@
 <?php
+// This config file keeps the settings for this part of the app.
+
 
 return [
 
@@ -132,12 +134,12 @@ return [
         'delay' => [
             'min' => (int) env('MAIL_DELAY_MIN', 10),
             'max' => (int) env('MAIL_DELAY_MAX', 300),
-            'default' => (int) env('MAIL_DELAY', 30),
+            'default' => (int) env('MAIL_DELAY', 60),
         ],
         'batch_size' => [
-            'min' => (int) env('BATCH_SIZE_MIN', 10),
+            'min' => (int) env('BATCH_SIZE_MIN', 1),
             'max' => (int) env('BATCH_SIZE_MAX', 500),
-            'default' => (int) env('BATCH_SIZE', 50),
+            'default' => (int) env('BATCH_SIZE', 5),
         ],
         'send_limit' => (int) env('SEND_LIMIT', 50),
     ]

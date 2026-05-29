@@ -1,4 +1,6 @@
 <?php
+// This file is part of the app logic and has a short comment so it is easier to read.
+
 
 namespace App\Mail;
 
@@ -31,6 +33,7 @@ class OrderPaid extends Mailable
      */
     public function __construct(Order $order)
     {
+        // Store the data for this mail so the view can use it later.
         $this->order = $order;
         $this->user = $order->user;
 
@@ -43,8 +46,9 @@ class OrderPaid extends Mailable
      */
     public function envelope(): Envelope
     {
+        // Build the subject line for this mail.
         return new Envelope(
-            subject: 'AUTOMATE SINGLE order_paid',
+            subject: $this->content->title ?? 'Order betaald',
         );
     }
 
@@ -53,11 +57,20 @@ class OrderPaid extends Mailable
      */
     public function content(): Content
     {
-        $renderedContent = view('mail.order-paid', [
-            'order' => $this->order,
-            'user' => $this->user,
-            'content' => $this->content,
-        ])->render();
+        // Pass the values to the Blade template that builds the message body.
+        if ($this->content && trim((string) $this->content->text) !== '') {
+            $renderedContent = $this->content->mailHtml([
+                'user_name' => $this->user->name,
+                'order_number' => $this->order->id,
+                'order_total' => number_format($this->order->total, 2, ',', '.'),
+            ]);
+        } else {
+            $renderedContent = view('mail.order-paid', [
+                'order' => $this->order,
+                'user' => $this->user,
+                'content' => $this->content,
+            ])->render();
+        }
 
         $jsonBody = json_encode([
             'email' => $this->user->email,
@@ -80,6 +93,7 @@ class OrderPaid extends Mailable
      */
     public function attachments(): array
     {
+        // Attach files here if this mail needs them.
         return [];
     }
 }

@@ -1,3 +1,4 @@
+{{-- This view file shows part of the interface and is kept simple so it is easy to follow. --}}
 {{-- Load used JavaScripts --}}
 {{-- Used for changing required fields based on checkbox --}}
 @vite('resources/js/forms/toggle-required.js')
@@ -88,16 +89,29 @@
 
                 <flux:separator variant="subtle"/>
 
+                @php
+                    $weekdayOptions = [
+                        ['id' => 1, 'option' => 'maandag'],
+                        ['id' => 2, 'option' => 'dinsdag'],
+                        ['id' => 3, 'option' => 'woensdag'],
+                        ['id' => 4, 'option' => 'donderdag'],
+                        ['id' => 5, 'option' => 'vrijdag'],
+                        ['id' => 6, 'option' => 'zaterdag'],
+                        ['id' => 7, 'option' => 'zondag'],
+                    ];
+                @endphp
+
                 <div class="grid lg:grid-cols-2 grid-cols-1 gap-x-2 relative">
                     <x-input-group id="times" title="Wanneer" height="h-max" grid="grid grid-cols-2">
-                        <x-input-field type="date" label="Startdatum" id="start-date" required/>
-                        <x-input-field type="date" label="Einddatum" id="end-date" required/>
+                        <x-input-field type="date" label="Startdatum" id="start-date" name="start-date" required/>
+                        <x-input-field type="date" label="Einddatum" id="end-date" name="end-date" required/>
                         {{-- Standaard tijdwaarden zodat de backend correct blijft werken --}}
                         <input type="hidden" name="start-time" value="00:00"/>
                         <input type="hidden" name="end-time" value="23:59"/>
                         <x-input-field type="date" label="Start Aanmeldperiode" id="registrationStart" required/>
                         <x-input-field type="date" label="Eind Aanmeldperiode" id="registrationEnd" required/>
-                        <x-input-field type="checkbox" label="Herhalend" id="recurring" action="toggleRecurringOnChecked(this, document.getElementById('times').querySelectorAll('input'))"/>
+                        <x-input-field type="checkbox" label="Herhalend" id="recurring" name="recurring" :checked="old('recurring')"/>
+                        <x-input-field type="select" label="Dag van de week" id="recurring_weekday" name="recurring_weekday" :options="$weekdayOptions" optionValuePair :selected="old('recurring_weekday')" :hidden="!old('recurring')"/>
                         <x-input-field type="checkbox" label="Kosteloos annuleren is niet mogelijk" id="noCancellation" action="toggleCancellationField(this)"/>
                         <x-input-field type="date" label="Kosteloos annuleren kan t/m" id="cancellationEnd"/>
                     </x-input-group>
@@ -131,10 +145,54 @@
 
         document.addEventListener('DOMContentLoaded', function () {
             const checkbox = document.getElementById('personalConfirmationEnabled');
+            const recurring = document.getElementById('recurring');
+            const recurringWeekday = document.getElementById('recurring_weekday');
+            const recurringWeekdayWrapper = document.getElementById('recurring_weekday-wrapper');
+            const startDate = document.getElementById('start-date');
+            const endDate = document.getElementById('end-date');
+            const registrationStart = document.getElementById('registrationStart');
+            const registrationEnd = document.getElementById('registrationEnd');
+            const noCancellation = document.getElementById('noCancellation');
 
             if (checkbox) {
                 togglePersonalConfirmationField(checkbox);
             }
+
+            function toggleRecurringFields() {
+                if (!recurring || !recurringWeekday) {
+                    return;
+                }
+
+                const isRecurring = recurring.checked;
+
+                if (startDate) {
+                    startDate.required = !isRecurring;
+                    document.getElementById('start-date-wrapper')?.classList.toggle('hidden', isRecurring);
+                }
+                if (endDate) {
+                    endDate.required = !isRecurring;
+                    document.getElementById('end-date-wrapper')?.classList.toggle('hidden', isRecurring);
+                }
+                if (registrationStart) {
+                    registrationStart.required = !isRecurring;
+                    document.getElementById('registrationStart-wrapper')?.classList.toggle('hidden', isRecurring);
+                }
+                if (registrationEnd) {
+                    registrationEnd.required = !isRecurring;
+                    document.getElementById('registrationEnd-wrapper')?.classList.toggle('hidden', isRecurring);
+                }
+
+                recurringWeekday.required = isRecurring;
+                recurringWeekdayWrapper?.classList.toggle('hidden', !isRecurring);
+
+                if (window.applyRecurringCancellationVisibility) {
+                    window.applyRecurringCancellationVisibility(recurring);
+                }
+            }
+
+            recurring?.addEventListener('change', toggleRecurringFields);
+            noCancellation?.addEventListener('change', toggleRecurringFields);
+            toggleRecurringFields();
         });
     </script>
 

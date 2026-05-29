@@ -1,4 +1,6 @@
 <?php
+// This file is part of the app logic and has a short comment so it is easier to read.
+
 
 namespace App\Mail;
 
@@ -31,6 +33,7 @@ class ReserveUpgrade extends Mailable
      */
     public function __construct(Application $application)
     {
+        // Store the data for this mail so the view can use it later.
         $this->application = $application;
         $this->activity = $application->activity;
         $this->user = $application->user;
@@ -44,9 +47,10 @@ class ReserveUpgrade extends Mailable
      */
     public function envelope(): Envelope
     {
+        // Build the subject line for this mail.
         // Use the content title and application activity title to form the subject
         return new Envelope(
-            subject: 'AUTOMATE SINGLE reserve_upgrade',
+            subject: ($this->content->title ?? 'AUTOMATE SINGLE reserve_upgrade') . ' ' . $this->activity->title,
         );
     }
 
@@ -55,6 +59,7 @@ class ReserveUpgrade extends Mailable
      */
     public function content(): Content
     {
+        // Pass the values to the Blade template that builds the message body.
         // Calculate the total cost for the application
         $this->totalCost = $this->application->calculateTotalCost();
 
@@ -69,12 +74,20 @@ class ReserveUpgrade extends Mailable
         // Get the payment link from Mollie
         $this->paymentLink = Mollie::api()->paymentLinks->get($payment->mollieId)->_links->paymentLink->href;
 
-        $renderedContent = view('mail.reserve-upgrade', [
-            'user' => $this->user,
-            'content' => $this->content,
-            'totalCost' => $this->totalCost,
-            'paymentLink' => $this->paymentLink,
-        ])->render();
+        if ($this->content && trim((string) $this->content->text) !== '') {
+            $renderedContent = $this->content->mailHtml([
+                'user_name' => $this->user->name,
+                'total_cost' => number_format($this->totalCost, 2, ',', '.'),
+                'payment_link' => $this->paymentLink,
+            ]);
+        } else {
+            $renderedContent = view('mail.reserve-upgrade', [
+                'user' => $this->user,
+                'content' => $this->content,
+                'totalCost' => $this->totalCost,
+                'paymentLink' => $this->paymentLink,
+            ])->render();
+        }
 
         $jsonBody = json_encode([
             'email' => $this->user->email,
@@ -97,6 +110,7 @@ class ReserveUpgrade extends Mailable
      */
     public function attachments(): array
     {
+        // Attach files here if this mail needs them.
         return [];
     }
 }

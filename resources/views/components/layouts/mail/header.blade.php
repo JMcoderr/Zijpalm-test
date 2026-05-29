@@ -1,4 +1,5 @@
-@props(['user'])
+{{-- This view file shows part of the interface and is kept simple so it is easy to follow. --}}
+@props(['user' => null, 'hideGreeting' => false])
 
 <!DOCTYPE html>
 <html lang="nl">
@@ -17,12 +18,20 @@
         <div id="header" style="padding: 20px; background-color: #96c8e6; width: 100%; max-width: 100%; box-sizing: border-box;">
             <div id="inner" style="margin: auto; max-width: 400px; width: 100%;">
                 <x-app-logo />
-                <p style="margin-bottom: 15px;">Beste {{$user->name ?? "Collega"}},</p>
+                @if(!$hideGreeting)
+                    @if(!empty($user))
+                        <p style="margin-bottom: 15px;">Beste {{ $user->name }},</p>
+                    @else
+                        <p style="margin-bottom: 15px;">Beste leden,</p>
+                    @endif
+                @endif
                 {{$slot}}
-                <div style="margin-top: 15px;">
-                    <p style="margin: 0px;">Met vriendelijke groet,</p>
-                    <p style="margin: 0px;">Zijpalm</p>
-                </div>
+                @if(!$hideGreeting)
+                    <div style="margin-top: 15px;">
+                        <p style="margin: 0px;">Met vriendelijke groet,</p>
+                        <p style="margin: 0px;">Het Bestuur</p>
+                    </div>
+                @endif
             </div>
         </div>
     </body>

@@ -1,3 +1,4 @@
+{{-- This view file shows part of the interface and is kept simple so it is easy to follow. --}}
 <x-page-wrapper page="{{$activity->title}}"
                 x-data="{
                     signupModal: {{$errors->signupActivity->any() ? 'true' : 'false'}},
@@ -162,13 +163,22 @@
                             <div class="flex justify-evenly items-center flex-wrap bg-[rgba(0,0,0,0.1)] rounded-xl p-1 gap-x-2 flex-1">
                                 {{-- Start and end dates/times --}}
                                 <div class="flex flex-col">
-                                    <span class="text-lg font-bold">Datum</span>
-                                    <span>
-                                        {{$activity->formattedDatesAndTimes->activity->start->date}}
-                                        @if($activity->formattedDatesAndTimes->activity->end->date !== $activity->formattedDatesAndTimes->activity->start->date)
-                                            t/m {{$activity->formattedDatesAndTimes->activity->end->date}}
-                                        @endif
-                                    </span>
+                                    @if($activity->type === App\ActivityType::Weekly)
+                                        <span class="text-lg font-bold">Dag van de week</span>
+                                        @php
+                                            $dayNames = ['maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag', 'zaterdag', 'zondag'];
+                                            $dayIndex = ($activity->start?->dayOfWeekIso ?? 1) - 1;
+                                        @endphp
+                                        <span>{{ ucfirst($dayNames[$dayIndex] ?? '') }}</span>
+                                    @else
+                                        <span class="text-lg font-bold">Datum</span>
+                                        <span>
+                                            {{$activity->formattedDatesAndTimes->activity->start->date}}
+                                            @if($activity->formattedDatesAndTimes->activity->end->date !== $activity->formattedDatesAndTimes->activity->start->date)
+                                                t/m {{$activity->formattedDatesAndTimes->activity->end->date}}
+                                            @endif
+                                        </span>
+                                    @endif
                                 </div>
 
                                 @if($activity->type != App\ActivityType::Weekly)
@@ -315,7 +325,7 @@
                                             <tr class="hover:bg-[rgba(0,0,0,0.05)]">
                                                 <td class="p-2 font-semibold">{{ ($entry['description'] ?? '') !== '' ? $entry['description'] : 'Zonder omschrijving' }}</td>
                                                 <td class="p-2 text-right">{{ $entry['quantity'] ?? 0 }}</td>
-                                                <td class="p-2 text-right">{{ formatPrice((float) ($entry['unit_price'] ?? 0)) }}</td>
+                                                <td class="p-2 text-right">€{{ number_format((float) $entry['unit_price'], 2, ',', '.') }}</td>
                                                 <td class="p-2 text-right font-bold">{{ formatPrice((float) ($entry['total'] ?? 0)) }}</td>
                                             </tr>
                                         @endforeach

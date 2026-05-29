@@ -1,9 +1,13 @@
 <?php
+// This file is part of the app logic and has a short comment so it is easier to read.
+
 
 namespace App\Livewire\Auth;
 
+use App\Models\User;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Str;
@@ -43,43 +47,66 @@ class Login extends Component
      */
     public function login(): void
     {
+        $this->email = mb_strtolower(trim($this->email));
+
         $this->validate();
 
         $this->ensureIsNotRateLimited();
 
-        if (! Auth::attempt(['email' => $this->email, 'password' => $this->password], $this->remember)) {
+        $user = User::withTrashed()
+            ->whereRaw('LOWER(email) = ?', [$this->email])
+            ->first();
+
+        if (! $user) {
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([
-                'email' => __('auth.failed'),
+                'email' => 'E-mailadres klopt niet.',
             ]);
         }
 
-        // Get the user after successful authentication
-        $user = Auth::user();
+        if (! Hash::check($this->password, (string) $user->password)) {
+            RateLimiter::hit($this->throttleKey());
 
-        // Check if the user is deleted
-        if ($user->deleted_at && $user->deleted_at->isPast()) {
-            // Make sure the user is logged out
-            Auth::logout();
-
-            // Send a error message
             throw ValidationException::withMessages([
-                'email' => "U bent geen lid meer",
+                'password' => 'Wachtwoord klopt niet.',
             ]);
         }
+
+        if ($user->deleted_at && $user->deleted_at->isPast()) {
+            RateLimiter::hit($this->throttleKey());
+
+            throw ValidationException::withMessages([
+                'email' => 'U bent geen lid meer',
+            ]);
+        }
+
+        Auth::login($user, $this->remember);
+
 
         RateLimiter::clear($this->throttleKey());
         Session::regenerate();
 
+        // Check for the reset flag either as a query param or as a server-side
+        // session key. Livewire actions don't always include query parameters
+        // on subsequent calls, so we pull a session flag if present.
+        $resetParam = request()->query('reset') || Session::pull('password_reset_success', false);
+
         if ($this->isModal) {
             // If the login is in a modal, refresh the page
-            // It says redirect to previous but it just refreshes the page to update the navbar with the users dropdown
             $this->redirect(url()->previous(), navigate: true);
-        } else {
-            // Redirect after succesful login
-            $this->redirectIntended(default: route('home', absolute: false), navigate: true);
+            return;
         }
+
+        // If the user arrived via a password-reset flow, prefer redirecting to
+        // the homepage with the reset flag so the success message is visible.
+        if ($resetParam) {
+            $this->redirect(route('home', ['reset' => 1]));
+            return;
+        }
+
+        // Default behaviour: redirect to the intended URL or home
+        $this->redirectIntended(default: route('home', absolute: false), navigate: true);
     }
 
     /**

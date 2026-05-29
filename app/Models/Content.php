@@ -1,4 +1,6 @@
 <?php
+// This file is part of the app logic and has a short comment so it is easier to read.
+
 
 namespace App\Models;
 
@@ -53,19 +55,33 @@ class Content extends Model
                 try {
                     $raw = (string) $this->text;
 
-                    // Decode till JSON works
+                    // Try progressively decoding HTML entities until we can decode JSON
                     $attempts = 0;
-                    while ($attempts < 3) {
+                    $maxAttempts = 5;
+                    while ($attempts < $maxAttempts) {
                         $decoded = json_decode($raw, true);
                         if (is_array($decoded) && array_key_exists('blocks', $decoded)) {
                             return EditorPhp::make($raw)->toHtml();
                         }
-                        $raw = html_entity_decode($raw, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                        $new = html_entity_decode($raw, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                        if ($new === $raw) {
+                            break;
+                        }
+                        $raw = $new;
                         $attempts++;
                     }
 
-                    // Plain text fallback
-                    return '<p>' . e((string) $this->text) . '</p>';
+                    // Plain text fallback: decode any lingering HTML entities fully before escaping
+                    $decodedText = (string) $this->text;
+                    $prev = null;
+                    $tries = 0;
+                    while ($tries < $maxAttempts && $decodedText !== $prev) {
+                        $prev = $decodedText;
+                        $decodedText = html_entity_decode($decodedText, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                        $tries++;
+                    }
+
+                    return '<p>' . e($decodedText) . '</p>';
 
                 } catch (\Throwable $e) {
                     \Log::warning('[Content] textHTML fallback to plain text', [
@@ -103,5 +119,65 @@ class Content extends Model
     public static function getByType(string $type)
     {
         return self::where('type', $type)->get();
+    }
+
+    /**
+     * Render the stored text for use in mails, with simple token replacement.
+     * Tokens are simple `{{key}}` placeholders replaced with escaped values.
+     * If the stored text is Editor.js JSON it will be converted to HTML.
+     *
+     * @param array $bindings
+     * @return string HTML
+     */
+    public function mailHtml(array $bindings = []): string
+    {
+        if (blank($this->text)) {
+            return '';
+        }
+
+        $raw = (string) $this->text;
+
+        // Simple token replacement: {{key}} -> escaped value
+        foreach ($bindings as $key => $value) {
+            $replacement = is_string($value) ? e($value) : e((string) $value);
+            $raw = str_replace('{{' . $key . '}}', $replacement, $raw);
+        }
+
+        // Try to detect Editor.js JSON payload (same logic as textHTML)
+        try {
+            $attempts = 0;
+            $maxAttempts = 5;
+            while ($attempts < $maxAttempts) {
+                $decoded = json_decode($raw, true);
+                if (is_array($decoded) && array_key_exists('blocks', $decoded)) {
+                    return EditorPhp::make($raw)->toHtml();
+                }
+                $new = html_entity_decode($raw, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                if ($new === $raw) {
+                    break;
+                }
+                $raw = $new;
+                $attempts++;
+            }
+
+            // Plain text fallback: decode any lingering entities and escape
+            $decodedText = (string) $raw;
+            $prev = null;
+            $tries = 0;
+            while ($tries < $maxAttempts && $decodedText !== $prev) {
+                $prev = $decodedText;
+                $decodedText = html_entity_decode($decodedText, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                $tries++;
+            }
+
+            return '<p>' . e($decodedText) . '</p>';
+        } catch (\Throwable $e) {
+            \Log::warning('[Content] mailHtml fallback to plain text', [
+                'content_id' => $this->id,
+                'name'       => $this->name,
+                'error'      => $e->getMessage(),
+            ]);
+            return '<p>' . e((string) $this->text) . '</p>';
+        }
     }
 }

@@ -1,4 +1,6 @@
 <?php
+// This file is part of the app logic and has a short comment so it is easier to read.
+
 // Function to format names according to Dutch stylings
 function formatName($firstName, $lastName){
     if(empty($firstName) || empty($lastName)){

@@ -1,3 +1,4 @@
+{{-- This view file shows part of the interface and is kept simple so it is easy to follow. --}}
 <div class="flex flex-col gap-y-4 px-2">
     {{-- Button to add a new guest --}}
     <x-zijpalm-button id="new-guest-button" label="Introducee Toevoegen" type="action" wireclick="addGuest" center="horizontal"/>

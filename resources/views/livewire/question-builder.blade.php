@@ -1,3 +1,4 @@
+{{-- This view file shows part of the interface and is kept simple so it is easy to follow. --}}
 {{-- PHP To contain attributes relevant in this view only --}}
 @php
     // Classes that control the layout of the questions added

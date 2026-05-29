@@ -1,3 +1,4 @@
+{{-- This view file shows part of the interface and is kept simple so it is easy to follow. --}}
 @use('App\FileType')
 
 @push('scripts')
@@ -22,6 +23,7 @@
                 </ul>
             </div>
         @endif
+
         <form id="content-update" enctype="multipart/form-data" autocomplete="off" method="post" action="{{route('content.update', $content)}}" class="flex flex-col">
             @csrf
             @method('PUT')

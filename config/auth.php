@@ -1,4 +1,6 @@
 <?php
+// This config file keeps the settings for this part of the app.
+
 
 return [
 
@@ -94,7 +96,7 @@ return [
         'users' => [
             'provider' => 'users',
             'table' => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'password_reset_tokens'),
-            'expire' => 240,
+            'expire' => 60,
             'throttle' => 60,
         ],
     ],

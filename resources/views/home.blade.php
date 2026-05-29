@@ -1,3 +1,4 @@
+{{-- This view file shows part of the interface and is kept simple so it is easy to follow. --}}
 @php
     // Get the homepage banner
     $banner = \App\Models\Content::where('name', 'homepage-banner')->first();
@@ -8,6 +9,10 @@
 @endphp
 
 <x-page-wrapper page="Home">
+    {{-- Show global status or password-reset fallback --}}
+    <div class="max-w-3xl mx-auto mt-4">
+        <x-auth-session-status :status="session('status') ?? (request()->query('reset') ? __('Uw wachtwoord is succesvol gereset. U kunt nu inloggen.') : null)" />
+    </div>
     {{-- If there is a payment status, show the payment status modal --}}
     @includeWhen(session()->has('payment_status'), 'payments.status', ['status' => session('payment_status')])
 

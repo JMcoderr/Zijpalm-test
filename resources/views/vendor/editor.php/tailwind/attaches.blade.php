@@ -1,3 +1,4 @@
+{{-- This view file shows part of the interface and is kept simple so it is easy to follow. --}}
 <div class="rounded-xl flex gap-4 mb-4">
     <div class="bg-gray-100 uppercase font-black p-4 rounded-xl">{!! $data('file.extension') !!}</div>
     <div>

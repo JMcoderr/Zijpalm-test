@@ -1,3 +1,4 @@
+{{-- This view file shows part of the interface and is kept simple so it is easy to follow. --}}
 <blockquote class="bg-gray-100 text-gray-800 p-8 rounded-xl relative mb-4">
     <div class="absolute top-0 left-0 z-0">
         <svg

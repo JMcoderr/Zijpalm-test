@@ -1,3 +1,4 @@
+{{-- This view file shows part of the interface and is kept simple so it is easy to follow. --}}
 <div class="relative overflow-x-auto rounded-xl mb-4 bg-gray-100 pb-6">
     <table class="table w-full text-sm text-left text-gray-500">
         @if ($data('withHeadings') && ($headings = $data('content')[array_key_first($data('content'))]))

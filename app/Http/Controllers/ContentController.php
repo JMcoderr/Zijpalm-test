@@ -1,4 +1,6 @@
 <?php
+// This file is part of the app logic and has a short comment so it is easier to read.
+
 
 namespace App\Http\Controllers;
 
@@ -24,7 +26,8 @@ class ContentController extends Controller
      */
     public function create(string $type)
     {
-        // Check if the type is valid
+        // These are the content types that are allowed here.
+        // Right now the list is small, but this makes it easy to add more later.
         $validTypes = ['bestuurslid', 'test'];
 
         return view('content.create', compact('type'));
@@ -35,7 +38,8 @@ class ContentController extends Controller
      */
     public function store(StoreContentRequest $request)
     {
-        // Get the file type and the file
+        // Check which file was uploaded and remember the matching file type.
+        // Only one upload type is expected here.
         if ($request->hasFile('image')) {
             $fileType = FileType::Image;
             $file = $request->file('image');
@@ -44,14 +48,16 @@ class ContentController extends Controller
             $file = $request->file('pdf');
         }
 
-        // Save the file to the public directory
+        // Save the file in the right place depending on the file type.
+        // Images go through the helper because they need extra handling.
         if ($fileType == FileType::Image) {
-            // Use the uploadImage function to handle the image upload
             $filePath = uploadImage($file, 'images/bestuur/');
         } elseif ($fileType == FileType::Pdf) {
             $filePath = $file->store('content/pdf', 'public');
         }
 
+        // Save the new content record in the database.
+        // The name gets a number so multiple items of the same type stay unique.
         Content::create([
             'type' => $request->type,
             'name' => $request->type . '-' . Content::where('type', $request->type)->count(),
@@ -77,6 +83,7 @@ class ContentController extends Controller
      */
     public function edit(Content $content)
     {
+        // Keep the previous page so the user can go back after editing.
         session(['return_to' => url()->previous()]);
 
         return view('content.update', compact('content'));
@@ -87,10 +94,11 @@ class ContentController extends Controller
      */
     public function update(UpdateContentRequest $request, Content $content)
     {
+        // Keep the old name so we can clear the cache later if needed.
         $name = $request->name ?? $content->name;
         $old_name = $content->name;
         // dd(session('return_to'));
-        // Get the file type and the file
+        // Check if a new file was uploaded and remember the file type.
         if ($request->hasFile('image')) {
             $fileType = FileType::Image;
             $file = $request->file('image');
@@ -99,28 +107,26 @@ class ContentController extends Controller
             $file = $request->file('pdf');
         }
 
-        // Check if the new file type is different from the current file type
+        // Don't allow switching from image to PDF or the other way around.
         if (isset($fileType) && $fileType != $content->fileType) {
-            // Return an error message
             return redirect()->back()->with('error', 'Je kan het bestand niet veranderen van type. Upload een ' . $content->fileType->value . ' bestand.');
         }
 
-        // Check if a new file was uploaded
+        // If there is a new file, replace the old one first.
         if(isset($fileType)) {
-            // Delete the old file if it exists
             if ($content->filePath && Storage::disk('public')->exists($content->filePath)) {
                 Storage::disk('public')->delete($content->filePath);
             }
 
-            // Save the new file to the public directory
+            // Save the new file again in the right format.
             if ($fileType == FileType::Image) {
                 $filePath = uploadImage($file, 'images/bestuur/');
-                // Use the uploadImage function to handle the image upload
             } elseif ($fileType == FileType::Pdf) {
                 $filePath = $file->store('content/pdf', 'public');
             }
         }
 
+        // If this content has a related report image, update that too.
         if ($content->report && $request->hasFile('report-image')) {
             if ($content->report->imagePath && Storage::disk('public')->exists($content->report->imagePath)) {
                 Storage::disk('public')->delete($content->report->imagePath);
@@ -131,7 +137,7 @@ class ContentController extends Controller
             ]);
         }
 
-        // Check the description is not empty if content's text is not empty
+        // Keep the description required when the content already had text.
         if ($content->text && !$request->description) {
             return redirect()->back()->with('error', 'De beschrijving is verplicht.');
         } else if ($request->description) {
@@ -146,8 +152,10 @@ class ContentController extends Controller
         }
 
 
+        // If no new file was uploaded, keep the old file path.
         $filePath = $filePath ?? $content->filePath;
 
+        // Update the content record with the new values.
         $content->update([
             'filePath' => $filePath,
             'title' => $request->title,
@@ -155,8 +163,7 @@ class ContentController extends Controller
             'name' => $name ?? $content->name,
         ]);
 
-        // Sometimes content is cahced, so we clear it on update
-        // This is to ensure that the updated content is displayed correctly
+        // Clear the cache because this content may be reused on other pages.
         Cache::forget($old_name);
 
         // return redirect()->back()->with('success', ucfirst($content->name) . ' is aangepast');
@@ -170,14 +177,16 @@ class ContentController extends Controller
      */
     public function destroy(Content $content)
     {
-        //
+        // Only board member content can be removed here.
         $allowed = false;
         if ($content->type === 'bestuurslid')
             $allowed = true;
 
+        // If the type is not allowed, stop here.
         if (!$allowed)
             return back()->with('error', "$content->type mag niet verwijdert worden.");
 
+        // Delete the record from the database.
         $content->delete();
 
         return back()->with('success', 'Succesvol verwijderd van ' . $content->name);

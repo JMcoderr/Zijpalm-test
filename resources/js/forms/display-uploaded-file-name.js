@@ -3,6 +3,7 @@ window.displayUploadedFileName = displayUploadedFileName;
 
 // Function takes an input (what provides the file) and target (what should change its contents)
 function displayUploadedFileName(input){
+    // Find the text element that should show the chosen file name.
     const target = document.getElementById(input.id + '-file-name');
 
     // Replace old text colour, and make the font a little more obvious

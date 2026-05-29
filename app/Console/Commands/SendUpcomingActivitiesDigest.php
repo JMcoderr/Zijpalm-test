@@ -1,4 +1,6 @@
 <?php
+// This file is part of the app logic and has a short comment so it is easier to read.
+
 
 namespace App\Console\Commands;
 
@@ -12,11 +14,6 @@ use Throwable;
 
 class SendUpcomingActivitiesDigest extends Command
 {
-    private const DIGEST_RECIPIENTS = [
-        'jordy.meijer@windesheim.nl',
-        'jpieters@almere.nl',
-    ];
-
     /**
      * The name and signature of the console command.
      *
@@ -36,13 +33,17 @@ class SendUpcomingActivitiesDigest extends Command
      */
     public function handle(): int
     {
+        // Get upcoming activities that are open for registration
         $activities = Activity::query()
             ->whereNotNull('start')
             ->where('start', '>=', now()->startOfDay())
             ->where('type', '!=', ActivityType::Cancelled)
+            ->where('registrationStart', '<=', now())
+            ->where('registrationEnd', '>=', now())
             ->orderBy('start')
             ->get();
 
+        // Get activities that are currently running
         $runningActivities = Activity::query()
             ->whereNotNull('start')
             ->whereNotNull('end')
@@ -52,22 +53,32 @@ class SendUpcomingActivitiesDigest extends Command
             ->orderBy('start')
             ->get();
 
+        // If no upcoming activities, inform and exit
         if ($activities->isEmpty()) {
             $this->info('Geen toekomstige activiteiten gevonden binnen 8 weken.');
             return self::SUCCESS;
         }
 
+        // Get valid recipient emails
         $emails = $this->recipientEmails()
             ->filter(fn (string $email) => filter_var($email, FILTER_VALIDATE_EMAIL))
             ->values();
 
+        // If no valid emails, warn and exit
         if ($emails->isEmpty()) {
             $this->warn('Geen geldige digest-ontvangers gevonden.');
             return self::SUCCESS;
         }
 
-        $batchSize = $this->option('batch_size') ?? config('mail.power_automate.batch_size.default', 50);
-        $delay = $this->option('delay') ?? config('mail.power_automate.delay.default', 30);
+        // Only use values provided by the user (no fallback)
+        $batchSize = $this->option('batch_size');
+        $delay = $this->option('delay');
+        if ($batchSize === null || $delay === null) {
+            $this->error('You must provide both --batch_size and --delay options.');
+            return self::FAILURE;
+        }
+
+        // Try to send the email
         try {
             Mail::to(config('mail.bestuur.address'), config('mail.bestuur.name'))
                 ->send(new UpcomingActivitiesDigest($emails, $activities, $runningActivities, [
@@ -75,6 +86,7 @@ class SendUpcomingActivitiesDigest extends Command
                     'delay' => $delay,
                 ]));
         } catch (Throwable $exception) {
+            // If sending fails, log error and return failure
             Log::error('[SendUpcomingActivitiesDigest] Mail send failed', [
                 'error' => $exception->getMessage(),
                 'activities' => $activities->count(),
@@ -82,17 +94,19 @@ class SendUpcomingActivitiesDigest extends Command
                 'emails' => $emails->count(),
             ]);
 
-            $this->error('Mail kon niet worden verzonden door een mailtransportfout.');
+            $this->error('Mail could not be sent due to a mail transport error.');
             return self::FAILURE;
         }
 
+        // If successful, inform about the sent mail
         $this->info("Mail verzonden voor {$activities->count()} activiteiten naar {$emails->count()} ontvangers.");
 
         return self::SUCCESS;
     }
 
+    // Get all user emails for the digest
     private function recipientEmails()
     {
-        return collect(self::DIGEST_RECIPIENTS);
+        return \App\Models\User::pluck('email');
     }
 }

@@ -1,3 +1,4 @@
+/* This stylesheet keeps the app styles in one place and is easier to follow with a short comment. */
 @import url('https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,100..900;1,100..900&display=swap');
 @import 'tailwindcss';
 @import '../../vendor/livewire/flux/dist/flux.css';

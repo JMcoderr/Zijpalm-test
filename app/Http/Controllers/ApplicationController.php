@@ -1,4 +1,6 @@
 <?php
+// This file is part of the app logic and has a short comment so it is easier to read.
+
 
 namespace App\Http\Controllers;
 
@@ -50,8 +52,8 @@ class ApplicationController extends Controller
         // Assign valid guests to a variable
         $guests = collect($request->input('guests', []))->filter(fn($guest)=>collect($guest)->filter()->isNotEmpty());
 
-        // Count participants: if user signs up with an intro, count as 2 participants
-        $participants = ($guests->count() > 0) ? 2 : 1;
+        // Count the user plus all valid introducees
+        $participants = max(1, $guests->count() + 1);
 
         // Check if the logged-in user is an organizer (name comparison in PHP)
         $isOrganizer = false;

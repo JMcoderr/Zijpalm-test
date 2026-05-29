@@ -1,4 +1,6 @@
 <?php
+// This file is part of the app logic and has a short comment so it is easier to read.
+
 
 namespace App\Imports;
 
@@ -8,10 +10,12 @@ use Maatwebsite\Excel\Concerns\ToCollection;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
 use Maatwebsite\Excel\Concerns\WithChunkReading;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 
 class UsersImport implements ToCollection, WithHeadingRow, WithChunkReading
 {
     protected array $seenEmployees = [];
+    protected int $phoneCount = 0;
 
     /**
      * Process each chunk of rows.
@@ -33,12 +37,17 @@ class UsersImport implements ToCollection, WithHeadingRow, WithChunkReading
             $this->seenEmployees[] = $email;
 
             $name = $this->splitName($row['naam_medewerkster'] ?? '');
+            $phone = $this->normalizePhone($row['telefoon'] ?? $row['telefoonnummer'] ?? $row['phone'] ?? null);
+            if ($phone !== null) {
+                $this->phoneCount++;
+            }
+
             $batch[] = [
                 'employee_number' => $id,
                 'firstName' => $name['firstName'],
                 'lastName' => trim($name['infix'] . ' ' . $name['lastName']),
                 'email' => $email,
-//                'phone' => $row['telefoon'] ? $this->getLast8Digits($row['telefoon']) : null,
+                'phone' => $phone,
                 'notifications' => 61,
                 'deleted_at' => null,
                 'type' => UserType::Medewerker
@@ -48,7 +57,7 @@ class UsersImport implements ToCollection, WithHeadingRow, WithChunkReading
                 User::query()->upsert(
                     $batch,
                     ['email'], // unique key
-                    ['firstName', 'lastName', 'employee_number', 'notifications', 'deleted_at', 'type']
+                    ['firstName', 'lastName', 'phone', 'employee_number', 'notifications', 'deleted_at', 'type']
                 );
                 $batch = []; // free memory
             }
@@ -59,9 +68,14 @@ class UsersImport implements ToCollection, WithHeadingRow, WithChunkReading
             User::query()->upsert(
                 $batch,
                 ['email'],
-                ['firstName', 'lastName', 'employee_number', 'notifications', 'deleted_at', 'type']
+                ['firstName', 'lastName', 'phone', 'employee_number', 'notifications', 'deleted_at', 'type']
             );
         }
+
+        Log::info('[UsersImport] completed', [
+            'employees_seen' => count(array_unique($this->seenEmployees)),
+            'phones_imported' => $this->phoneCount,
+        ]);
 
         // soft delete missing users
         $this->softDeleteMissingUsers();
@@ -134,6 +148,17 @@ class UsersImport implements ToCollection, WithHeadingRow, WithChunkReading
     {
         // Remove all non-digit characters
         $digits = preg_replace('/\D+/', '', $input);
+        return substr($digits, -8);
+    }
+
+    protected function normalizePhone(mixed $value): ?string
+    {
+        $digits = preg_replace('/\D+/', '', (string) $value);
+
+        if ($digits === '') {
+            return null;
+        }
+
         return substr($digits, -8);
     }
 }

@@ -1,4 +1,6 @@
 <?php
+// This file is part of the app logic and has a short comment so it is easier to read.
+
 
 namespace App\Mail;
 
@@ -25,10 +27,12 @@ class BoardNewOrder extends Mailable
      */
     public function __construct(User $user, Order $order)
     {
+        // Store the data for this mail so the view can use it later.
+        // Store the user and order so the template can use them later.
         $this->user = $user;
         $this->order = $order;
 
-        // Get the dynamic content for the email and cache it for 1 hour
+        // Load the mail text from cache so we do not query the database every time.
         $this->content = getFromCache('email-bestuur-nieuwe-bestelling');
     }
 
@@ -37,6 +41,8 @@ class BoardNewOrder extends Mailable
      */
     public function envelope(): Envelope
     {
+        // Build the subject line for this mail.
+        // Use the title from the content record as the subject line.
         return new Envelope(
             subject: $this->content->title,
         );
@@ -47,6 +53,8 @@ class BoardNewOrder extends Mailable
      */
     public function content(): Content
     {
+        // Pass the values to the Blade template that builds the message body.
+        // Pass all values to the Blade mail view so it can build the message.
         return new Content(
             view: 'mail.board-new-order',
             with: [
@@ -64,6 +72,8 @@ class BoardNewOrder extends Mailable
      */
     public function attachments(): array
     {
+        // Attach files here if this mail needs them.
+        // This mail does not need files attached.
         return [];
     }
 }

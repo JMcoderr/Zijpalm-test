@@ -1,10 +1,11 @@
 <?php
+// This file is part of the app logic and has a short comment so it is easier to read.
+
 
 namespace App\Notifications;
 
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Notifications\Messages\MailMessage;
-use Illuminate\Support\Facades\Log;
 
 class CustomResetPassword extends ResetPassword
 {
@@ -27,28 +28,14 @@ class CustomResetPassword extends ResetPassword
             'email' => $this->recipientEmail,
         ], false));
 
-//        Mail::to(config('mail.bestuur.address'), config('mail.bestuur.name'))
-//            ->send(new ResetPasswordMail(
-//                $notifiable->getEmailForPasswordReset(),
-//                $resetUrl,
-//                config('auth.passwords.users.expire')
-//            ));
-
-        $renderedContent = view('mail.reset-password', [
-            'resetUrl' => $resetUrl,
-            'expire' => config('auth.passwords.users.expire'),
-            'content' => getFromCache('email-reset-wachtwoord'),
-        ])->render();
-
-        $jsonBody = json_encode([
-            'email' => $this->recipientEmail,
-            'subject' => 'Wachtwoord vergeten',
-            'body' => $renderedContent,
-        ], JSON_PRETTY_PRINT);
+        $content = getFromCache('email-reset-wachtwoord');
 
         return (new MailMessage)
-//            ->from(config('mail.bestuur.address'), config('mail.bestuur.name'))
-            ->subject('AUTOMATE SINGLE reset_password')
-            ->text('mail.raw-json', ['jsonBody' => $jsonBody]);
+            ->subject($content->title ?? 'Wachtwoord vergeten')
+            ->view('mail.reset-password', [
+                'resetUrl' => $resetUrl,
+                'expire' => config('auth.passwords.users.expire'),
+                'content' => $content,
+            ]);
     }
 }

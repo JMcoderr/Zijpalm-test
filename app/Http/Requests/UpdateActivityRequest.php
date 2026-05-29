@@ -1,4 +1,6 @@
 <?php
+// This file is part of the app logic and has a short comment so it is easier to read.
+
 
 namespace App\Http\Requests;
 
@@ -23,6 +25,8 @@ class UpdateActivityRequest extends FormRequest
      */
     public function rules(): array
     {
+        $isRecurring = $this->boolean('recurring');
+        
         return [
             // General details
             'title' => ['nullable', 'string', 'max:255'],
@@ -40,18 +44,19 @@ class UpdateActivityRequest extends FormRequest
             'manual_budget' => ['nullable', 'regex:/^\d+([.,]\d{1,2})?$/'],
             'manual_finance_entries' => ['nullable', 'array'],
             'manual_finance_entries.*.description' => ['nullable', 'string', 'max:255'],
-            'manual_finance_entries.*.quantity' => ['nullable', 'numeric', 'min:0'],
-            'manual_finance_entries.*.unit_price' => ['nullable', 'regex:/^\d+([.,]\d{1,2})?$/'],
+            'manual_finance_entries.*.quantity' => ['nullable', 'numeric'],
+            'manual_finance_entries.*.unit_price' => ['nullable', 'numeric'],
 
             // Times
             'start-date' => ['nullable', 'date'],
             'start-time' => ['nullable', 'date_format:H:i'],
-            'end-date' => [Rule::requiredIf(fn () => !$this->boolean('recurring')), 'nullable', 'date', 'after_or_equal:start-date'],
+            'recurring_weekday' => [Rule::requiredIf(fn () => $isRecurring), 'nullable', 'integer', 'between:1,7'],
+            'end-date' => [Rule::requiredIf(fn () => !$isRecurring), 'nullable', 'date', 'after_or_equal:start-date'],
             'end-time' => ['nullable', 'date_format:H:i'],
             'registrationStart' => ['nullable', 'date'],
-            'registrationEnd' => ['nullable', 'date', 'after_or_equal:registrationStart', 'before_or_equal:end-date'],
+            'registrationEnd' => ['nullable', 'date', 'after_or_equal:registrationStart', ...($isRecurring ? [] : ['before_or_equal:end-date'])],
             'noCancellation' => ['nullable'],
-            'cancellationEnd' => ['nullable', 'date', 'after_or_equal:registrationStart', 'before_or_equal:end-date'],
+            'cancellationEnd' => ['nullable', 'date', 'after_or_equal:registrationStart', ...($isRecurring ? [] : ['before_or_equal:end-date'])],
 
             // Questions
             'questions' => ['nullable', 'array'],
@@ -72,6 +77,9 @@ class UpdateActivityRequest extends FormRequest
     {
         return [
             'end-date.required' => 'De einddatum is verplicht.',
+            'recurring_weekday.required' => 'Kies een dag van de week voor een herhalende activiteit.',
+            'recurring_weekday.integer' => 'De gekozen weekdag is ongeldig.',
+            'recurring_weekday.between' => 'Kies een geldige weekdag.',
             'personalConfirmation.required_if' => 'Persoonlijke bevestiging is verplicht wanneer deze optie aan staat.',
             'manual_budget.regex' => 'Begroot bedrag moet een geldig bedrag zijn.',
             'manual_finance_entries.*.unit_price.regex' => 'Bijdrage per deelnemer moet in formaat 0.00 staan.',

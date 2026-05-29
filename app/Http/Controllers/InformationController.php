@@ -1,4 +1,6 @@
 <?php
+// This file is part of the app logic and has a short comment so it is easier to read.
+
 
 namespace App\Http\Controllers;
 
@@ -54,6 +56,7 @@ class InformationController extends Controller
 
     public function charity()
     {
+        // Load all content blocks that belong to the charity page.
         $banner = Content::where('name', 'lief-en-leed-banner')->first();
         $info = Content::where('name', 'lief-en-leed-info')->first();
         $contributions = Content::where('name', 'lief-en-leed-bijdragen')->first();
@@ -76,6 +79,7 @@ class InformationController extends Controller
 
     public function join()
     {
+        // Load the banner and intro text for the join info page.
         $banner = Content::where('name', 'lid-worden-banner')->first();
         $info = Content::where('name', 'lid-worden-info')->first();
 
@@ -88,6 +92,8 @@ class InformationController extends Controller
         $content = Content::where('name', 'lid-worden-aanmelden')->first();
         $privacy = Content::where('name', 'privacy')->first();
         $terms = Content::where('name', 'huishoudelijk-reglement')->first();
+
+        // Get the monthly contribution product and cast the price for the view.
         $monthlyPrice = Product::where('name', 'Contributie')->first()->price;
         $monthlyPrice = floatval($monthlyPrice);
 
@@ -99,7 +105,7 @@ class InformationController extends Controller
         // Get the monthly price from the database
         $contribution = Product::where('name', 'Contributie')->first();
 
-        // Check if the user is a member or a stagiair
+        // Stagiairs can have an end date, so we calculate months differently for them.
         if(isset($request->endDate) && $request->type == UserType::Stagiair->value) {
             // Parse the end date from the request to a Carbon date
             $endDate = Carbon::parse($request->endDate)->startOfDay();
@@ -132,8 +138,7 @@ class InformationController extends Controller
             'deleted_at' => $endDate,
         ]);
 
-
-
+        // If there is a contribution to pay, create an order and redirect to Mollie checkout.
         if ($price > 0) {
             // Create the order
             $order = Order::createWithProducts(
@@ -156,6 +161,7 @@ class InformationController extends Controller
             // Redirect to the payment page
             return redirect($mollie->_links->checkout->href, 303);
         } else {
+            // If there is no payment needed, send mail notifications immediately.
             // Send an email to the board with the new member
             // Mail::to(config('mail.bestuur.address'), config('mail.bestuur.name'))->send(new BoardNewMembers(User::find(1), new Collection([$user])));
             Mail::to(config('mail.bestuur.address'), config('mail.bestuur.name'))->send(new NewMember($user));

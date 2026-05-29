@@ -1,3 +1,4 @@
+{{-- This view file shows part of the interface and is kept simple so it is easy to follow. --}}
 <ul class="flex flex-col items-start pl-8 gap-1 mb-4">
     @foreach ($data('items', []) as $item)
         <li class="inline-flex justify-center items-center gap-2">

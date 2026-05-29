@@ -1,4 +1,6 @@
 <?php
+// This file is part of the app logic and has a short comment so it is easier to read.
+
 
 namespace App\Mail;
 
@@ -25,6 +27,7 @@ class PaymentFailed extends Mailable
      */
     public function __construct(Payment $payment, User $user)
     {
+        // Store the data for this mail so the view can use it later.
         $this->payment = $payment;
         $this->user = $user;
         $this->content = getFromCache('email-betaling-mislukt');
@@ -35,8 +38,9 @@ class PaymentFailed extends Mailable
      */
     public function envelope(): Envelope
     {
+        // Build the subject line for this mail.
         return new Envelope(
-            subject: 'AUTOMATE SINGLE payment_failed',
+            subject: ($this->content->title ?? 'Betaling mislukt') . ': ' . $this->payment->description,
         );
     }
 
@@ -45,11 +49,20 @@ class PaymentFailed extends Mailable
      */
     public function content(): Content
     {
-        $renderedContent = view('mail.payment-failed', [
-            'payment' => $this->payment,
-            'user' => $this->user,
-            'content' => $this->content,
-        ])->render();
+        // Pass the values to the Blade template that builds the message body.
+        if ($this->content && trim((string) $this->content->text) !== '') {
+            $renderedContent = $this->content->mailHtml([
+                'user_name' => $this->user->name,
+                'payment_description' => $this->payment->description,
+                'amount' => number_format($this->payment->amount, 2, ',', '.'),
+            ]);
+        } else {
+            $renderedContent = view('mail.payment-failed', [
+                'payment' => $this->payment,
+                'user' => $this->user,
+                'content' => $this->content,
+            ])->render();
+        }
 
         $jsonBody = json_encode([
             'email' => $this->user->email,
@@ -72,6 +85,7 @@ class PaymentFailed extends Mailable
      */
     public function attachments(): array
     {
+        // Attach files here if this mail needs them.
         return [];
     }
 }

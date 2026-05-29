@@ -1,44 +1,33 @@
 <?php
+// This file is part of the app logic and has a short comment so it is easier to read.
+
 
 namespace App\Livewire;
 
-use Illuminate\Support\Facades\Artisan;
-use Illuminate\Support\Facades\Log;
 use Livewire\Component;
-use Throwable;
 
 class UpcomingActivitiesDigestMail extends Component
 {
-    public array $errors = [];
-    public string $successMessage = '';
+    public ?int $batch_size = null;
+    public ?int $delay = null;
+    public int $recipientCount = 0;
 
-    public function sendDigest()
+    /**
+     * English comment: load persisted digest settings if they exist so the modal shows saved values.
+     */
+    public function mount(): void
     {
-        $this->errors = [];
-        $this->successMessage = '';
-
-        try {
-            $exitCode = Artisan::call('app:send-upcoming-activities-digest');
-
-            if ($exitCode !== 0) {
-                $this->errors = ['Mail toekomstige activiteiten kon niet worden verstuurd. Controleer de logs en SMTP-configuratie.'];
-                return;
-            }
-
-            $this->successMessage = trim(Artisan::output()) ?: 'Mail toekomstige activiteiten is succesvol verstuurd naar de ingestelde ontvangers.';
-            // Clear the modal after success
-            $this->dispatch('close-modal', modal: 'upcomingActivitiesDigestMailModal');
-        } catch (Throwable $exception) {
-            Log::error('[UpcomingActivitiesDigestMail] Mail send failed', [
-                'error' => $exception->getMessage(),
-            ]);
-
-            $this->errors = ['Er is een fout opgetreden. Controleer de logs.'];
+        $settings = \App\Models\MailSetting::where('name', 'digest')->first();
+        if ($settings) {
+            $this->batch_size = $settings->batch_size;
+            $this->delay = $settings->delay;
         }
+        // Count all users
+        $this->recipientCount = \App\Models\User::count();
     }
 
     public function render()
     {
-        return view('livewire.upcoming-activities-digest-mail');
+        return view('livewire.upcoming-activities-digest-mail')->with('recipientCount', $this->recipientCount);
     }
 }

@@ -39,6 +39,7 @@ Route::middleware('auth')->group(
             function(){
                 Route::get('{user}', [UserController::class, 'edit'])->name('edit')->withTrashed();
                 Route::put('{user}', [UserController::class, 'update'])->name('update')->withTrashed();
+                Route::post('{user}/reset-password', [UserController::class, 'sendPasswordResetLink'])->name('resetPassword')->middleware('admin')->withTrashed();
                 Route::get('{user}/password', Password::class)->name('password')->withTrashed();
                 Route::get('{user}/afmelden', [UserController::class, 'cancelSubscription'])->name('cancel')->withTrashed();
                 Route::delete('{user}/afmelden', [UserController::class, 'processCancelSubscription'])->name('processCancel')->withTrashed();
@@ -61,6 +62,8 @@ Route::prefix('activiteiten')->name('activity.')->controller(ActivityController:
 
             // Notify
             Route::post('{activity}/informeer-leden', 'notifyMembers')->name('notifyMembers');
+            // Endpoint to persist mail settings (batch_size/delay) for UI forms/modals
+            Route::post('mail-settings', [App\Http\Controllers\MailSettingController::class, 'store'])->name('mail-settings.store');
             Route::post('{activity}/informeer-deelnemers', 'notifyParticipants')->name('notifyParticipants');
 
             //Update
@@ -198,6 +201,7 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->controller(AdminC
         Route::post('gebruikers/facturen-jaarlijks', 'sendAnnualInvoices')->name('users.sendAnnualInvoices');
         Route::post('import-medewerkers', 'importEmployees')->name('importEmployees');
         Route::post('import-leden', 'importMembers')->name('importMembers');
+        Route::post('editor/image-upload', [App\Http\Controllers\EditorImageController::class, 'store'])->name('admin.editor.image-upload');
         Route::delete('lidmaatschap-afmelden/{user}', 'removeUser')->name('removeUser');
         Route::post('lidmaatschap-herstellen/{user}', 'reinstateUser')->name('reinstateUser')->withTrashed();
         Route::get('verslagen', 'reports')->name('reports');
@@ -207,6 +211,7 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->controller(AdminC
         Route::get('informeer-leden', 'notifyAllMembers')->name('notifyAllMembers');
         Route::post('informeer-leden', 'notifyAllMembersPOST')->name('notifyAllMembersPOST');
         Route::get('informeer-nieuwe-medewerkers', 'notifyNewEmployees')->name('notifyNewEmployees');
+        Route::post('informeer-nieuwe-medewerkers/preview', 'previewNewEmployeesCount')->name('notifyNewEmployeesPreview');
         Route::post('informeer-nieuwe-medewerkers', 'notifyNewEmployeesPOST')->name('notifyNewEmployeesPOST');
     }
 );

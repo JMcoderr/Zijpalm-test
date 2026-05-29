@@ -1,8 +1,12 @@
+{{-- This view file shows part of the interface and is kept simple so it is easy to follow. --}}
 <div class="flex flex-col gap-6">
     <x-auth-header :title="__('Log in op je account')" :description="__('Vul uw email en wachtwoord in om in te loggen')" />
 
     <!-- Session Status -->
-    <x-auth-session-status class="text-center" :status="session('status')" />
+    @php
+        $resetFallback = request()->query('reset') ? __('Uw wachtwoord is succesvol gereset. U kunt nu inloggen.') : null;
+    @endphp
+    <x-auth-session-status class="text-center" :status="session('status') ?? $resetFallback" />
     <form wire:submit="login" class="flex flex-col gap-6">
         <!-- Email Address -->
         <flux:input

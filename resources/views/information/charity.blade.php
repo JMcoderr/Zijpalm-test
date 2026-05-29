@@ -1,3 +1,4 @@
+{{-- This view file shows part of the interface and is kept simple so it is easy to follow. --}}
 <x-page-wrapper page="Lief & Leed">
     <x-zijpalm-div color="transparent" :id="$banner->id" :name="$banner->name" :title="$banner->title" :editable=true :editables="['Titel']" />
 

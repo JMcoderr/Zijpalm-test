@@ -1,4 +1,6 @@
 <?php
+// This file is part of the app logic and has a short comment so it is easier to read.
+
 
 namespace App\Mail;
 
@@ -16,8 +18,6 @@ use Illuminate\Support\Collection;
 
 class ActivityReminder extends Mailable
 {
-    use SerializesModels;
-
     public Activity $activity;
     public ContentModel $content;
     public Collection $emails;
@@ -28,6 +28,7 @@ class ActivityReminder extends Mailable
      */
     public function __construct(Activity $activity, Collection $emails, array $validatedData)
     {
+        // Store the data for this mail so the view can use it later.
         $this->activity = $activity;
         $this->emails = $emails;
         $this->validatedData = $validatedData;
@@ -40,8 +41,9 @@ class ActivityReminder extends Mailable
      */
     public function envelope(): Envelope
     {
+        // Build the subject line for this mail.
         return new Envelope(
-            subject: 'AUTOMATE BATCH activity_reminder',
+            subject: ($this->content->title ?? 'AUTOMATE BATCH activity_reminder') . ' ' . $this->activity->title,
         );
     }
 
@@ -50,6 +52,7 @@ class ActivityReminder extends Mailable
      */
     public function content(): Content
     {
+        // Pass the values to the Blade template that builds the message body.
         $renderedContent = view('mail.activity-reminder', [
             'activity' => $this->activity,
             'user' => null,
@@ -58,7 +61,7 @@ class ActivityReminder extends Mailable
         ])->render();
 
         $jsonBody = json_encode([
-            'emails' => $this->emails,
+            'emails' => $this->emails->values()->all(),
             'subject' => $this->content->title . ' ' . $this->activity->title,
             'body' => $renderedContent,
             'batch_size' => $this->validatedData['batch_size'],
@@ -80,6 +83,7 @@ class ActivityReminder extends Mailable
      */
     public function attachments(): array
     {
+        // Attach files here if this mail needs them.
         return [];
     }
 }

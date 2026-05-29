@@ -1,3 +1,4 @@
+{{-- This view file shows part of the interface and is kept simple so it is easy to follow. --}}
 <div class="bg-gray-100 text-gray-800 flex mb-4 rounded-xl overflow-hidden flex-col sm:flex-row">
     <img
         alt="{!! $data('meta.title') !!}"

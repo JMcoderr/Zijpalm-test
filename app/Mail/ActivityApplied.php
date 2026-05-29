@@ -1,4 +1,6 @@
 <?php
+// This file is part of the app logic and has a short comment so it is easier to read.
+
 
 namespace App\Mail;
 
@@ -18,6 +20,7 @@ use SimpleSoftwareIO\QrCode\Facades\QrCode;
 use DOMDocument;
 use DOMXPath;
 use Throwable;
+use Illuminate\Support\Facades\Storage;
 
 class ActivityApplied extends Mailable
 {
@@ -40,12 +43,14 @@ class ActivityApplied extends Mailable
      */
     public function __construct(Activity $activity, User $user, bool $reserve = false, bool $forceDefaultTemplate = false)
     {
+        // Store the data for this mail so the view can use it later.
+        // Save the activity and user so the mail can be built with the right data.
         $this->activity = $activity;
         $this->user = $user;
         $this->reserve = $reserve;
         $this->forceDefaultTemplate = $forceDefaultTemplate;
 
-        // Get the dynamic content for the email and cache it for 1 hour
+        // Load the normal and reserve mail content from the database cache.
         $this->content = ContentModel::where('name', 'email-activiteit-aangemeld')->first();
         $this->reserveContent = ContentModel::where('name', 'email-activiteit-aangemeld-reserve')->first();
     }
@@ -55,8 +60,10 @@ class ActivityApplied extends Mailable
      */
     public function envelope(): Envelope
     {
+        // Build the subject line for this mail.
+        // The subject is a fixed label because the mail is used for automation.
         return new Envelope(
-            subject: 'AUTOMATE SINGLE activity_applied',
+            subject: $this->content->title ?? 'AUTOMATE SINGLE activity_applied',
         );
     }
 
@@ -65,31 +72,37 @@ class ActivityApplied extends Mailable
      */
     public function content(): Content
     {
-        // Generate the QR code for the WhatsApp URL
+        // Pass the values to the Blade template that builds the message body.
+        // Generate the QR code for the WhatsApp URL when the activity has one.
         if (isset($this->activity->whatsappUrl)) {
             $this->qrcode = (string) QrCode::size(192)->format('png')->generate($this->activity->whatsappUrl);
         }
 
-        // Sanitize and validate Editor.js output for all content blocks
+        // Clean up the mail content first so the HTML stays safe and predictable.
+
         $defaultContentHtml = $this->sanitizeMailHtml((string) ($this->content->textHTML ?? ''));
+        $defaultContentHtml = $this->stripGenericGreeting($defaultContentHtml);
         if (empty($defaultContentHtml) || !$this->isValidHtml($defaultContentHtml)) {
             Log::error('[ActivityApplied] Invalid defaultContentHtml from Editor.js, using fallback.');
-            $defaultContentHtml = '<p>Inschrijving ontvangen voor ' . e($this->activity->title) . '.</p>';
+            $defaultContentHtml = '';
         }
 
+
         $reserveContentHtml = $this->sanitizeMailHtml((string) ($this->reserveContent->textHTML ?? ''));
+        $reserveContentHtml = $this->stripGenericGreeting($reserveContentHtml);
         if (empty($reserveContentHtml) || !$this->isValidHtml($reserveContentHtml)) {
             Log::error('[ActivityApplied] Invalid reserveContentHtml from Editor.js, using fallback.');
-            $reserveContentHtml = '<p>Inschrijving ontvangen voor ' . e($this->activity->title) . '.</p>';
+            $reserveContentHtml = '';
         }
 
         $personalConfirmationHtml = null;
         if ($this->activity->personal_confirmation_enabled) {
             try {
                 $personalConfirmationHtml = $this->sanitizeMailHtml((string) $this->activity->personalConfirmationHTML);
+                $personalConfirmationHtml = $this->stripGenericGreeting($personalConfirmationHtml);
                 if (empty($personalConfirmationHtml) || !$this->isValidHtml($personalConfirmationHtml)) {
                     Log::error('[ActivityApplied] Invalid personalConfirmationHtml from Editor.js, using fallback.');
-                    $personalConfirmationHtml = '<p>Inschrijving ontvangen voor ' . e($this->activity->title) . '.</p>';
+                    $personalConfirmationHtml = '';
                 }
             } catch (Throwable $exception) {
                 Log::error('[ActivityApplied] Personal confirmation render failed, falling back to default content', [
@@ -97,30 +110,42 @@ class ActivityApplied extends Mailable
                     'user_id' => $this->user->id,
                     'error' => $exception->getMessage(),
                 ]);
-                $personalConfirmationHtml = '<p>Inschrijving ontvangen voor ' . e($this->activity->title) . '.</p>';
+                $personalConfirmationHtml = '';
             }
         }
 
-        // Get the application for the user and activity
+        // Get the application record for this user and activity.
         $this->application = $this->activity->applications()
             ->where('user_id', $this->user->id)
             ->whereNot('status', ApplicationStatus::Cancelled)
             ->first();
 
         try {
-            $renderedContent = view('mail.activity-applied', [
-                'activity' => $this->activity,
-                'application' => $this->application,
-                'user' => $this->user,
-                'content' => $this->content,
-                'reserveContent' => $this->reserveContent,
-                'defaultContentHtml' => $defaultContentHtml,
-                'reserveContentHtml' => $reserveContentHtml,
-                'qrcode' => $this->qrcode,
-                'reserve' => $this->reserve,
-                'personalConfirmationHtml' => $personalConfirmationHtml,
-            ])->render();
+            // If admin provided a full custom mail body, use it with token replacements.
+            if ($this->content && trim((string) $this->content->text) !== '') {
+                $renderedContent = $this->content->mailHtml([
+                    'activity_title' => $this->activity->title,
+                    'activity_location' => (string) $this->activity->location,
+                    'activity_start' => formatDate($this->activity->start) . ' om ' . formatTime($this->activity->start),
+                    'participants' => $this->application ? (int) $this->application->participants : 0,
+                ]);
+            } else {
+                // Render the normal Blade mail template first.
+                $renderedContent = view('mail.activity-applied', [
+                    'activity' => $this->activity,
+                    'application' => $this->application,
+                    'user' => $this->user,
+                    'content' => $this->content,
+                    'reserveContent' => $this->reserveContent,
+                    'defaultContentHtml' => $defaultContentHtml,
+                    'reserveContentHtml' => $reserveContentHtml,
+                    'qrcode' => $this->qrcode,
+                    'reserve' => $this->reserve,
+                    'personalConfirmationHtml' => $personalConfirmationHtml,
+                ])->render();
+            }
         } catch (Throwable $exception) {
+            // If the template fails, fall back to a very simple HTML body.
             Log::error('[ActivityApplied] Mail view render failed, using fallback body', [
                 'activity_id' => $this->activity->id,
                 'user_id' => $this->user->id,
@@ -143,6 +168,10 @@ class ActivityApplied extends Mailable
                 $applicationSummary;
         }
 
+        // Inline any local storage images into the rendered HTML so they are embedded in outgoing mails.
+        $renderedContent = $this->inlineLocalImages($renderedContent);
+
+        // Send the rendered HTML to the automation system as JSON.
         $jsonBody = json_encode([
             'email' => $this->user->email,
             'subject' => $this->content->title . ' ' . $this->activity->title,
@@ -150,6 +179,7 @@ class ActivityApplied extends Mailable
         ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE);
 
         if ($jsonBody === false) {
+            // If JSON encoding fails, fall back to an empty body instead of breaking the mail.
             Log::error('[ActivityApplied] JSON encode failed', [
                 'activity_id' => $this->activity->id,
                 'user_id' => $this->user->id,
@@ -159,7 +189,7 @@ class ActivityApplied extends Mailable
             $jsonBody = json_encode([
                 'email' => $this->user->email,
                 'subject' => $this->content->title . ' ' . $this->activity->title,
-                'body' => '<p>Inschrijving ontvangen voor ' . e($this->activity->title) . '.</p>',
+                'body' => '',
             ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE) ?: '{}';
         }
 
@@ -195,9 +225,20 @@ class ActivityApplied extends Mailable
         $sanitized = str_replace(["\xC2\xA0", '&nbsp;'], ' ', $sanitized);
 
         // Keep the markup simple so Power Automate only receives basic, predictable HTML.
-        $sanitized = strip_tags($sanitized, '<p><br><a><strong><em><b><i><u><ul><ol><li>') ?? $sanitized;
+        $sanitized = strip_tags($sanitized, '<p><br><a><strong><em><b><i><u><ul><ol><li><img><center>') ?? $sanitized;
 
-        // Remove editor-specific and styling attributes that can make the payload fragile.
+        // Remove editor-specific and styling attributes that can make the payload fragile, but keep src on <img>.
+        $sanitized = preg_replace_callback('/<img\s+([^>]*)>/i', function (array $matches) {
+            $attrs = $matches[1];
+            // Keep only src attribute from img, discard others.
+            if (preg_match('/src=("|\')(.*?)\1/i', $attrs, $m)) {
+                $src = $m[2];
+                return '<center><img src="' . e($src) . '"></center>';
+            }
+            return ''; 
+        }, $sanitized) ?? $sanitized;
+
+        // Remove other styling attributes globally.
         $sanitized = preg_replace('/\s(?:class|style|id|data-[a-z0-9_-]+|role)=("[^"]*"|\'[^\']*\')/i', '', $sanitized) ?? $sanitized;
 
         // Keep anchors clickable, but strip any non-essential attributes.
@@ -338,12 +379,55 @@ class ActivityApplied extends Mailable
     }
 
     /**
+     * Remove generic greetings like 'Beste Collega' from content to avoid duplicate salutations.
+     */
+    private function stripGenericGreeting(string $html): string
+    {
+        // Remove 'Beste Collega' or similar generic greetings at the start
+        $html = preg_replace('/<p[^>]*>\s*Beste\s+(?:Collega|Leden)[^<]*<\/p>/i', '', $html) ?? $html;
+        
+        return trim($html);
+    }
+
+    /**
      * Get the attachments for the message.
      *
      * @return array<int, \Illuminate\Mail\Mailables\Attachment>
      */
     public function attachments(): array
     {
+        // Attach files here if this mail needs them.
         return [];
+    }
+
+    /**
+     * Replace local storage image URLs with data URI in the given HTML so images are embedded in mails.
+     */
+    private function inlineLocalImages(string $html): string
+    {
+        return preg_replace_callback('/<img\s+[^>]*src=("|\')(.*?)\1[^>]*>/i', function (array $matches) {
+            $src = trim($matches[2]);
+
+            // Only inline images that live under /storage/ (public disk)
+            $storagePrefix = parse_url(Storage::disk('public')->url(''), PHP_URL_PATH) ?: '/storage/';
+
+            if (str_contains($src, '/storage/')) {
+                // Derive relative path under storage/app/public
+                $pos = strpos($src, '/storage/');
+                $relative = substr($src, $pos + strlen('/storage/'));
+                $path = storage_path('app/public/' . $relative);
+
+                if (is_file($path) && is_readable($path)) {
+                    $data = file_get_contents($path);
+                    $finfo = finfo_open(FILEINFO_MIME_TYPE);
+                    $mime = finfo_file($finfo, $path) ?: 'application/octet-stream';
+                    finfo_close($finfo);
+                    $b64 = base64_encode($data);
+                    return '<img src="data:' . $mime . ';base64,' . $b64 . '"/>';
+                }
+            }
+
+            return $matches[0];
+        }, $html) ?: $html;
     }
 }

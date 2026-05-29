@@ -1,3 +1,4 @@
+{{-- This view file shows part of the interface and is kept simple so it is easy to follow. --}}
 
 @vite('resources/js/forms/toggle-required.js')
 @vite('resources/js/forms/display-uploaded-file-name.js')
@@ -6,6 +7,25 @@
     <x-zijpalm-div title="Bewerk Activiteit" color="transparent" :editable="false"/>
     <div class="flex flex-col">
         <x-zijpalm-div color="light" :editable=false width="w-full" form>
+            {{-- Show errors, if any --}}
+            @if($errors->any())
+                <x-zijpalm-div color="light" title="Foutmelding(en)" :editable="false" width="min-w-min" error id="error-messages" onclick="this.remove()">
+                    <ul class="text-center">
+                        @foreach($errors->all() as $error)
+                            <li class="">{{$error}}</li>
+                        @endforeach
+                    </ul>
+                </x-zijpalm-div>
+                <script>
+                    setTimeout(function(){
+                        const errorDiv = document.getElementById('error-messages');
+                        if(errorDiv){
+                            errorDiv.remove();
+                        }
+                    }, 5000);
+                </script>
+            @endif
+
             <div class="mb-3 px-3 py-2 rounded-lg border border-red-200 bg-white/90 text-sm font-medium text-zinc-800 shadow-sm w-max max-w-full mx-auto">
                 <span class="text-red-500 font-black text-base align-middle">*</span>
                 <span class="align-middle">Verplichte velden</span>
@@ -104,17 +124,31 @@
                 ])
                 </div>
 
+                @php
+                    $weekdayOptions = [
+                        ['id' => 1, 'option' => 'maandag'],
+                        ['id' => 2, 'option' => 'dinsdag'],
+                        ['id' => 3, 'option' => 'woensdag'],
+                        ['id' => 4, 'option' => 'donderdag'],
+                        ['id' => 5, 'option' => 'vrijdag'],
+                        ['id' => 6, 'option' => 'zaterdag'],
+                        ['id' => 7, 'option' => 'zondag'],
+                    ];
+                    $selectedRecurringWeekday = old('recurring_weekday', $activity->start ? $activity->start->dayOfWeekIso : null);
+                @endphp
+
                 <flux:separator variant="subtle"/>
 
                 <div class="grid lg:grid-cols-2 grid-cols-1 gap-x-2 relative">
                     <x-input-group id="times" title="Wanneer" height="h-max" grid="grid grid-cols-2">
                         <x-input-field type="date" label="Startdatum" id="start-date" name="start-date" value="{{ old('start-date', $activity->start ? $activity->start->format('Y-m-d') : '') }}" required/>
-                        <x-input-field type="date" label="Einddatum" id="end-date" name="end-date" value="{{ old('end-date', $activity->end ? $activity->end->format('Y-m-d') : '') }}"/>
+                        <x-input-field type="date" label="Einddatum" id="end-date" name="end-date" value="{{ old('end-date', $activity->end ? $activity->end->format('Y-m-d') : '') }}" required/>
                         <input type="hidden" name="start-time" value="00:00"/>
                         <input type="hidden" name="end-time" value="23:59"/>
                         <x-input-field type="date" label="Start Aanmeldperiode" id="registrationStart" name="registrationStart" value="{{ old('registrationStart', $activity->registrationStart ? $activity->registrationStart->format('Y-m-d') : '') }}" required/>
                         <x-input-field type="date" label="Eind Aanmeldperiode" id="registrationEnd" name="registrationEnd" value="{{ old('registrationEnd', $activity->registrationEnd ? $activity->registrationEnd->format('Y-m-d') : '') }}" required/>
                         <x-input-field type="checkbox" label="Herhalend" id="recurring" name="recurring" :checked="old('recurring', $activity->type === \App\ActivityType::Weekly)"/>
+                        <x-input-field type="select" label="Dag van de week" id="recurring_weekday" name="recurring_weekday" :options="$weekdayOptions" optionValuePair :selected="old('recurring_weekday', $selectedRecurringWeekday)" :hidden="!old('recurring', $activity->type === \App\ActivityType::Weekly)"/>
                         <x-input-field type="checkbox" label="Kosteloos annuleren is niet mogelijk" id="noCancellation" name="noCancellation" :checked="old('noCancellation', is_null($activity->cancellationEnd))" action="toggleCancellationField(this)"/>
                         <x-input-field type="date" label="Kosteloos annuleren kan t/m" id="cancellationEnd" name="cancellationEnd" value="{{ old('cancellationEnd', $activity->cancellationEnd ? $activity->cancellationEnd->format('Y-m-d') : '') }}"/>
                     </x-input-group>
@@ -136,6 +170,11 @@
                     var endDate = document.getElementById('end-date');
                     var registrationStart = document.getElementById('registrationStart');
                     var registrationEnd = document.getElementById('registrationEnd');
+                    var recurringWeekday = document.getElementById('recurring_weekday');
+                    var recurringWeekdayWrapper = document.getElementById('recurring_weekday-wrapper');
+                    var noCancellationWrapper = document.getElementById('noCancellation-wrapper');
+                    var cancellationWrapper = document.getElementById('cancellationEnd-wrapper');
+                    var cancellationEnd = document.getElementById('cancellationEnd');
 
                     if(!timesGroup || !recurring) {
                         return;
@@ -154,6 +193,13 @@
                         if(recurring.checked) {
                             toToggle.forEach(function(el){ el.classList.add('hidden'); });
                             if(recurringField) recurringField.classList.remove('hidden');
+                            recurringWeekdayWrapper?.classList.remove('hidden');
+                            if (recurringWeekday) {
+                                recurringWeekday.required = true;
+                            }
+                            if (window.applyRecurringCancellationVisibility) {
+                                window.applyRecurringCancellationVisibility(recurring);
+                            }
                             if(startDate) {
                                 startDate.required = false;
                             }
@@ -169,6 +215,13 @@
                         } else {
                             toToggle.forEach(function(el){ el.classList.remove('hidden'); });
                             if(recurringField) recurringField.classList.remove('hidden');
+                            recurringWeekdayWrapper?.classList.add('hidden');
+                            if (recurringWeekday) {
+                                recurringWeekday.required = false;
+                            }
+                            if (window.applyRecurringCancellationVisibility) {
+                                window.applyRecurringCancellationVisibility(recurring);
+                            }
                             if(startDate) {
                                 startDate.required = true;
                             }
@@ -183,8 +236,8 @@
                             }
                         }
 
-                        if(noCancel && window.toggleCancellationField) {
-                            window.toggleCancellationField(noCancel);
+                        if (window.applyRecurringCancellationVisibility) {
+                            window.applyRecurringCancellationVisibility(recurring);
                         }
                     }
 

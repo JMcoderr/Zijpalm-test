@@ -1,4 +1,6 @@
 <?php
+// This file is part of the app logic and has a short comment so it is easier to read.
+
 
 namespace App\Mail;
 
@@ -25,6 +27,7 @@ class NewMember extends Mailable
      */
     public function __construct(User $user)
     {
+        // Store the data for this mail so the view can use it later.
         $this->user = $user;
 
         // Get the dynamic content for the email and cache it for 1 hour
@@ -36,8 +39,9 @@ class NewMember extends Mailable
      */
     public function envelope(): Envelope
     {
+        // Build the subject line for this mail.
         return new Envelope(
-            subject: 'AUTOMATE SINGLE new_member',
+            subject: $this->content->title ?? 'Welkom bij Zijpalm',
         );
     }
 
@@ -46,14 +50,23 @@ class NewMember extends Mailable
      */
     public function content(): Content
     {
+        // Pass the values to the Blade template that builds the message body.
         // Get a password reset token for the user
         $this->resetPasswordToken = Password::createToken($this->user);
 
-        $renderedContent = view('mail.new-member', [
-            'user' => $this->user,
-            'resetPasswordToken' => $this->resetPasswordToken,
-            'content' => $this->content,
-        ])->render();
+        if ($this->content && trim((string) $this->content->text) !== '') {
+            $renderedContent = $this->content->mailHtml([
+                'user_name' => $this->user->name,
+                'user_email' => $this->user->email,
+                'reset_password_token' => $this->resetPasswordToken,
+            ]);
+        } else {
+            $renderedContent = view('mail.new-member', [
+                'user' => $this->user,
+                'resetPasswordToken' => $this->resetPasswordToken,
+                'content' => $this->content,
+            ])->render();
+        }
 
         $jsonBody = json_encode([
             'email' => $this->user->email,
@@ -76,6 +89,7 @@ class NewMember extends Mailable
      */
     public function attachments(): array
     {
+        // Attach files here if this mail needs them.
         return [];
     }
 }

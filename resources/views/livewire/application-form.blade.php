@@ -1,3 +1,4 @@
+{{-- This view file shows part of the interface and is kept simple so it is easy to follow. --}}
 <div class="size-full">
     <div class="flex flex-col py-2">
     {{-- Show errors, if any --}}
@@ -83,6 +84,19 @@
 </div>
 <x-zijpalm-button form="signup-form" type="submit" label="Aanmelden" variant="obvious" center="horizontal"/>
 </div>
+
+<script>
+    // Acknowledge close requests immediately so the top-right close button and click-away both work.
+    window.addEventListener('zijpalm-modal-request-close', function (ev) {
+        if (ev?.detail?.modal !== 'signupModal') {
+            return;
+        }
+
+        window.dispatchEvent(new CustomEvent('zijpalm-modal-close-ack', {
+            detail: { modal: 'signupModal' }
+        }));
+    });
+</script>
 
 <script>
 // function setupTooltip(inputSelector, message) {

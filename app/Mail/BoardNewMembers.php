@@ -1,4 +1,6 @@
 <?php
+// This file is part of the app logic and has a short comment so it is easier to read.
+
 
 namespace App\Mail;
 
@@ -29,6 +31,7 @@ class BoardNewMembers extends Mailable
      */
     public function __construct(User $user, Collection $members)
     {
+        // Store the data for this mail so the view can use it later.
         $this->user = $user;
         $this->members = $members;
 
@@ -44,6 +47,7 @@ class BoardNewMembers extends Mailable
      */
     public function envelope(): Envelope
     {
+        // Build the subject line for this mail.
         return new Envelope(
             subject: $this->content->title,
         );
@@ -54,6 +58,7 @@ class BoardNewMembers extends Mailable
      */
     public function content(): Content
     {
+        // Pass the values to the Blade template that builds the message body.
         return new Content(
             view: 'mail.board-new-members',
             with: [
@@ -72,6 +77,7 @@ class BoardNewMembers extends Mailable
      */
     public function attachments(): array
     {
+        // Attach files here if this mail needs them.
         return [];
     }
 }
