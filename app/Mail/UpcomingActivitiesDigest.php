@@ -44,7 +44,7 @@ class UpcomingActivitiesDigest extends Mailable
     {
         // Build the subject line for this mail.
         return new Envelope(
-            subject: 'AUTOMATE BATCH upcoming_activities_digest',
+            subject: $this->content->title ?? 'Zijpalm | Komende activiteiten',
         );
     }
 
@@ -76,14 +76,22 @@ class UpcomingActivitiesDigest extends Mailable
             
         $introHtml = $this->sanitizeIntroHtml($this->normalizeIntroLinks($this->plainTextLinks($introHtml)));
         try {
-            $renderedContent = view('mail.upcoming-activities-digest', [
-                'user' => null,
-                'introHtml' => $introHtml,
-                'activities' => $this->activities,
-                'runningActivities' => $this->runningActivities,
-                'batch_size' => $this->validatedData['batch_size'],
-                'delay' => $this->validatedData['delay'],
-            ])->render();
+            $contentTitle = $this->content?->title ?? null;
+            if ($this->content?->text) {
+                $renderedContent = $this->content->mailHtml([
+                    'intro_html' => $introHtml,
+                    'activities_list' => $this->activities->map(fn($a) => $a->title)->join(', '),
+                ]);
+            } else {
+                $renderedContent = view('mail.upcoming-activities-digest', [
+                    'user' => null,
+                    'introHtml' => $introHtml,
+                    'activities' => $this->activities,
+                    'runningActivities' => $this->runningActivities,
+                    'batch_size' => $this->validatedData['batch_size'],
+                    'delay' => $this->validatedData['delay'],
+                ])->render();
+            }
         } catch (Throwable $exception) {
             Log::error('[UpcomingActivitiesDigest] Mail view render failed, using fallback body', [
                 'error' => $exception->getMessage(),

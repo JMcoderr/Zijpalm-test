@@ -41,7 +41,7 @@ class NewMember extends Mailable
     {
         // Build the subject line for this mail.
         return new Envelope(
-            subject: 'AUTOMATE SINGLE new_member',
+            subject: $this->content->title ?? 'Welkom bij Zijpalm',
         );
     }
 
@@ -54,11 +54,19 @@ class NewMember extends Mailable
         // Get a password reset token for the user
         $this->resetPasswordToken = Password::createToken($this->user);
 
-        $renderedContent = view('mail.new-member', [
-            'user' => $this->user,
-            'resetPasswordToken' => $this->resetPasswordToken,
-            'content' => $this->content,
-        ])->render();
+        if ($this->content && trim((string) $this->content->text) !== '') {
+            $renderedContent = $this->content->mailHtml([
+                'user_name' => $this->user->name,
+                'user_email' => $this->user->email,
+                'reset_password_token' => $this->resetPasswordToken,
+            ]);
+        } else {
+            $renderedContent = view('mail.new-member', [
+                'user' => $this->user,
+                'resetPasswordToken' => $this->resetPasswordToken,
+                'content' => $this->content,
+            ])->render();
+        }
 
         $jsonBody = json_encode([
             'email' => $this->user->email,

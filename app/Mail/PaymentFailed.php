@@ -40,7 +40,7 @@ class PaymentFailed extends Mailable
     {
         // Build the subject line for this mail.
         return new Envelope(
-            subject: 'AUTOMATE SINGLE payment_failed',
+            subject: ($this->content->title ?? 'Betaling mislukt') . ': ' . $this->payment->description,
         );
     }
 
@@ -50,11 +50,19 @@ class PaymentFailed extends Mailable
     public function content(): Content
     {
         // Pass the values to the Blade template that builds the message body.
-        $renderedContent = view('mail.payment-failed', [
-            'payment' => $this->payment,
-            'user' => $this->user,
-            'content' => $this->content,
-        ])->render();
+        if ($this->content && trim((string) $this->content->text) !== '') {
+            $renderedContent = $this->content->mailHtml([
+                'user_name' => $this->user->name,
+                'payment_description' => $this->payment->description,
+                'amount' => number_format($this->payment->amount, 2, ',', '.'),
+            ]);
+        } else {
+            $renderedContent = view('mail.payment-failed', [
+                'payment' => $this->payment,
+                'user' => $this->user,
+                'content' => $this->content,
+            ])->render();
+        }
 
         $jsonBody = json_encode([
             'email' => $this->user->email,
