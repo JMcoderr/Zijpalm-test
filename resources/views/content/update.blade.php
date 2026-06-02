@@ -74,3 +74,26 @@
     </x-zijpalm-div>
     <x-zijpalm-button type="submit" label="Bewerken" form="content-update" center="horizontal" variant="obvious" />
 </x-page-wrapper>
+
+<script>
+    // Safety: remove any leftover UI nodes that contain the old 'Extra tekst' label.
+    document.addEventListener('DOMContentLoaded', function () {
+        const texts = [
+            'Extra tekst voor Nieuwe Activiteit',
+            'Extra tekst voor Nieuwe Activiteit (optioneel)'
+        ];
+
+        texts.forEach(t => {
+            // Find elements containing the label text and remove their parent input group if present
+            Array.from(document.querySelectorAll('label, *')).forEach(el => {
+                if (!el.textContent) return;
+                if (el.textContent.trim().includes(t)) {
+                    // remove nearest input wrapper or the element itself
+                    const wrapper = el.closest('.input-group') || el.closest('x-input-field') || el.parentElement;
+                    if (wrapper) wrapper.remove();
+                    else el.remove();
+                }
+            });
+        });
+    });
+</script>
