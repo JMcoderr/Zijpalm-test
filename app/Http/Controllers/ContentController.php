@@ -151,40 +151,7 @@ class ContentController extends Controller
             $text = null;
         }
 
-        // If this is the Nieuwe Activiteit email and an extra field was provided,
-        // merge the extra text into the EditorJS JSON payload as an additional paragraph block.
-        if (($content->name === 'email-nieuwe-activiteit' || ($name ?? '') === 'email-nieuwe-activiteit') && $request->filled('extra')) {
-            $extra = $request->input('extra');
-
-            // Try to decode existing EditorJS payload
-            $payload = null;
-            if ($text) {
-                $decoded = json_decode($text, true);
-                if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
-                    $payload = $decoded;
-                }
-            }
-
-            $block = ['type' => 'paragraph', 'data' => ['text' => $extra]];
-
-            if ($payload && isset($payload['blocks']) && is_array($payload['blocks'])) {
-                $payload['blocks'][] = $block;
-            } else {
-                // Create a new payload. If $text contained plain HTML/plaintext, preserve it as first paragraph.
-                $first = null;
-                if ($text) {
-                    $first = ['type' => 'paragraph', 'data' => ['text' => $text]];
-                }
-
-                $payload = [
-                    'time' => now()->timestamp * 1000,
-                    'blocks' => array_filter([$first, $block]),
-                    'version' => '2.31.0',
-                ];
-            }
-
-            $text = json_encode($payload, JSON_UNESCAPED_UNICODE);
-        }
+        // No special merging required for extra fields anymore.
 
 
         // If no new file was uploaded, keep the old file path.

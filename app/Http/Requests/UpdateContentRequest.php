@@ -33,7 +33,6 @@ class UpdateContentRequest extends FormRequest
             'report-image' => 'nullable|image|max:65536',
             'title' => 'nullable|string|max:255',
             'description' => 'nullable',
-            'extra' => 'nullable',
         ];
     }
 
