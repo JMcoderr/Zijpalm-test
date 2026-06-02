@@ -151,6 +151,53 @@ class ContentController extends Controller
             $text = null;
         }
 
+        // If editing the new-activity email and an extra short text was provided,
+        // append it as a paragraph block to the stored EditorJS JSON so it is
+        // rendered at the end of the email body.
+        if ($content->name === 'email-nieuwe-activiteit' && $request->filled('extra_text')) {
+            $extra = (string) $request->input('extra_text');
+
+            try {
+                $decoded = null;
+                if (!blank($text)) {
+                    $decoded = json_decode($text, true);
+                }
+
+                if (is_array($decoded) && array_key_exists('blocks', $decoded)) {
+                    $decoded['blocks'][] = [
+                        'id' => uniqid('b_'),
+                        'type' => 'paragraph',
+                        'data' => ['text' => $extra],
+                    ];
+                    $text = json_encode($decoded, JSON_UNESCAPED_UNICODE);
+                } else {
+                    // Existing text was plain or empty: create a new EditorJS payload
+                    $blocks = [];
+                    if (!blank($text)) {
+                        $blocks[] = [
+                            'id' => uniqid('b_'),
+                            'type' => 'paragraph',
+                            'data' => ['text' => $text],
+                        ];
+                    }
+                    $blocks[] = [
+                        'id' => uniqid('b_'),
+                        'type' => 'paragraph',
+                        'data' => ['text' => $extra],
+                    ];
+
+                    $text = json_encode([
+                        'time' => round(microtime(true) * 1000),
+                        'blocks' => $blocks,
+                        'version' => '2.31.0',
+                    ], JSON_UNESCAPED_UNICODE);
+                }
+            } catch (\Throwable $e) {
+                // If anything fails, fall back to appending the extra as plain text
+                $text = ($text ?? '') . "\n\n" . $extra;
+            }
+        }
+
 
         // If no new file was uploaded, keep the old file path.
         $filePath = $filePath ?? $content->filePath;
