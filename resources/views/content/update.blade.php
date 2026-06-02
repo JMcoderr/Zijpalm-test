@@ -34,7 +34,8 @@
 
                 <x-input-field id="title" type="text" label="Titel" value="{{$content->title}}" />
 
-                @if (isset($content->text))
+                {{-- Show editor when the content has text OR when this is an email template (even if empty) --}}
+                @if (isset($content->text) || (isset($content->name) && Str::startsWith($content->name, 'email-')))
                     {{-- If the content is a member or file show a simple text input, otherwise prefer the editor.
                          Also allow editor for email templates such as 'email-nieuwe-activiteit'. --}}
                     @if ($content->type == 'bestuurslid' || $content->type == 'file')
