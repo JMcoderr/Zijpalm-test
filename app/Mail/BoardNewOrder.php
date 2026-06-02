@@ -44,7 +44,7 @@ class BoardNewOrder extends Mailable
         // Build the subject line for this mail.
         // Use the title from the content record as the subject line.
         return new Envelope(
-            subject: $this->content->title,
+            subject: $this->content->title . ' #Z',
         );
     }
 

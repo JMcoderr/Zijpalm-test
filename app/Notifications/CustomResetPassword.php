@@ -28,14 +28,12 @@ class CustomResetPassword extends ResetPassword
             'email' => $this->recipientEmail,
         ], false));
 
-        $content = getFromCache('email-reset-wachtwoord');
-
         return (new MailMessage)
-            ->subject($content->title ?? 'Wachtwoord vergeten')
+            ->subject('Wachtwoord vergeten #Z')
             ->view('mail.reset-password', [
                 'resetUrl' => $resetUrl,
                 'expire' => config('auth.passwords.users.expire'),
-                'content' => $content,
+                'content' => getFromCache('email-reset-wachtwoord'),
             ]);
     }
 }

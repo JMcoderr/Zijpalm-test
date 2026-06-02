@@ -49,7 +49,7 @@ class BoardNewMembers extends Mailable
     {
         // Build the subject line for this mail.
         return new Envelope(
-            subject: $this->content->title,
+            subject: $this->content->title . ' #Z',
         );
     }
 

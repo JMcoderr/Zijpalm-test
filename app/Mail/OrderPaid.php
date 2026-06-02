@@ -48,7 +48,7 @@ class OrderPaid extends Mailable
     {
         // Build the subject line for this mail.
         return new Envelope(
-            subject: $this->content->title ?? 'Order betaald',
+            subject: 'AUTOMATE SINGLE order_paid #Z',
         );
     }
 
@@ -58,23 +58,15 @@ class OrderPaid extends Mailable
     public function content(): Content
     {
         // Pass the values to the Blade template that builds the message body.
-        if ($this->content && trim((string) $this->content->text) !== '') {
-            $renderedContent = $this->content->mailHtml([
-                'user_name' => $this->user->name,
-                'order_number' => $this->order->id,
-                'order_total' => number_format($this->order->total, 2, ',', '.'),
-            ]);
-        } else {
-            $renderedContent = view('mail.order-paid', [
-                'order' => $this->order,
-                'user' => $this->user,
-                'content' => $this->content,
-            ])->render();
-        }
+        $renderedContent = view('mail.order-paid', [
+            'order' => $this->order,
+            'user' => $this->user,
+            'content' => $this->content,
+        ])->render();
 
         $jsonBody = json_encode([
             'email' => $this->user->email,
-            'subject' => $this->content->title,
+            'subject' => $this->content->title . ' #Z',
             'body' => $renderedContent,
         ], JSON_PRETTY_PRINT);
 

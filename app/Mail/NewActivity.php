@@ -46,7 +46,7 @@ class NewActivity extends Mailable
     {
         // Build the subject line for this mail.
         return new Envelope(
-            subject: $this->content->title ?? 'AUTOMATE BATCH new_activity',
+            subject: 'AUTOMATE BATCH new_activity #Z',
         );
     }
 
@@ -55,26 +55,17 @@ class NewActivity extends Mailable
      */
     public function content(): Content
     {
-        // If admin provided a full custom mail body in the Content record, use it.
-        if ($this->content && trim((string) $this->content->text) !== '') {
-            $renderedContent = $this->content->mailHtml([
-                'activity_title' => $this->activity->title,
-                'activity_description' => $this->activity->descriptionHTML,
-                'activity_link' => url(route('activity.show', $this->activity, false)),
-            ]);
-        } else {
-            // Pass the values to the Blade template that builds the message body.
-            $renderedContent = view('mail.new-activity', [
-                'activity' => $this->activity,
-                'user' => null,
-                'content' => $this->content,
-                'description' => $this->activity->descriptionHTML,
-            ])->render();
-        }
+        // Pass the values to the Blade template that builds the message body.
+        $renderedContent = view('mail.new-activity', [
+            'activity' => $this->activity,
+            'user' => null,
+            'content' => $this->content,
+            'description' => $this->activity->descriptionHTML,
+        ])->render();
 
         $jsonBody = json_encode([
             'emails' => $this->emails->values()->all(),
-            'subject' => $this->content->title,
+            'subject' => $this->content->title . ' #Z',
             'body' => $renderedContent,
             'batch_size' => $this->batchSize,
             'delay' => $this->delay,

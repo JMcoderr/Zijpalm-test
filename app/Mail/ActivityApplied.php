@@ -20,7 +20,6 @@ use SimpleSoftwareIO\QrCode\Facades\QrCode;
 use DOMDocument;
 use DOMXPath;
 use Throwable;
-use Illuminate\Support\Facades\Storage;
 
 class ActivityApplied extends Mailable
 {
@@ -63,7 +62,7 @@ class ActivityApplied extends Mailable
         // Build the subject line for this mail.
         // The subject is a fixed label because the mail is used for automation.
         return new Envelope(
-            subject: $this->content->title ?? 'AUTOMATE SINGLE activity_applied',
+            subject: 'AUTOMATE SINGLE activity_applied #Z',
         );
     }
 
@@ -121,29 +120,19 @@ class ActivityApplied extends Mailable
             ->first();
 
         try {
-            // If admin provided a full custom mail body, use it with token replacements.
-            if ($this->content && trim((string) $this->content->text) !== '') {
-                $renderedContent = $this->content->mailHtml([
-                    'activity_title' => $this->activity->title,
-                    'activity_location' => (string) $this->activity->location,
-                    'activity_start' => formatDate($this->activity->start) . ' om ' . formatTime($this->activity->start),
-                    'participants' => $this->application ? (int) $this->application->participants : 0,
-                ]);
-            } else {
-                // Render the normal Blade mail template first.
-                $renderedContent = view('mail.activity-applied', [
-                    'activity' => $this->activity,
-                    'application' => $this->application,
-                    'user' => $this->user,
-                    'content' => $this->content,
-                    'reserveContent' => $this->reserveContent,
-                    'defaultContentHtml' => $defaultContentHtml,
-                    'reserveContentHtml' => $reserveContentHtml,
-                    'qrcode' => $this->qrcode,
-                    'reserve' => $this->reserve,
-                    'personalConfirmationHtml' => $personalConfirmationHtml,
-                ])->render();
-            }
+            // Render the normal Blade mail template first.
+            $renderedContent = view('mail.activity-applied', [
+                'activity' => $this->activity,
+                'application' => $this->application,
+                'user' => $this->user,
+                'content' => $this->content,
+                'reserveContent' => $this->reserveContent,
+                'defaultContentHtml' => $defaultContentHtml,
+                'reserveContentHtml' => $reserveContentHtml,
+                'qrcode' => $this->qrcode,
+                'reserve' => $this->reserve,
+                'personalConfirmationHtml' => $personalConfirmationHtml,
+            ])->render();
         } catch (Throwable $exception) {
             // If the template fails, fall back to a very simple HTML body.
             Log::error('[ActivityApplied] Mail view render failed, using fallback body', [
@@ -168,13 +157,10 @@ class ActivityApplied extends Mailable
                 $applicationSummary;
         }
 
-        // Inline any local storage images into the rendered HTML so they are embedded in outgoing mails.
-        $renderedContent = $this->inlineLocalImages($renderedContent);
-
         // Send the rendered HTML to the automation system as JSON.
         $jsonBody = json_encode([
             'email' => $this->user->email,
-            'subject' => $this->content->title . ' ' . $this->activity->title,
+            'subject' => $this->content->title . ' ' . $this->activity->title . ' #Z',
             'body' => $renderedContent,
         ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE);
 
@@ -188,7 +174,7 @@ class ActivityApplied extends Mailable
 
             $jsonBody = json_encode([
                 'email' => $this->user->email,
-                'subject' => $this->content->title . ' ' . $this->activity->title,
+                'subject' => $this->content->title . ' ' . $this->activity->title . ' #Z',
                 'body' => '',
             ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE) ?: '{}';
         }
@@ -225,20 +211,9 @@ class ActivityApplied extends Mailable
         $sanitized = str_replace(["\xC2\xA0", '&nbsp;'], ' ', $sanitized);
 
         // Keep the markup simple so Power Automate only receives basic, predictable HTML.
-        $sanitized = strip_tags($sanitized, '<p><br><a><strong><em><b><i><u><ul><ol><li><img><center>') ?? $sanitized;
+        $sanitized = strip_tags($sanitized, '<p><br><a><strong><em><b><i><u><ul><ol><li>') ?? $sanitized;
 
-        // Remove editor-specific and styling attributes that can make the payload fragile, but keep src on <img>.
-        $sanitized = preg_replace_callback('/<img\s+([^>]*)>/i', function (array $matches) {
-            $attrs = $matches[1];
-            // Keep only src attribute from img, discard others.
-            if (preg_match('/src=("|\')(.*?)\1/i', $attrs, $m)) {
-                $src = $m[2];
-                return '<center><img src="' . e($src) . '"></center>';
-            }
-            return ''; 
-        }, $sanitized) ?? $sanitized;
-
-        // Remove other styling attributes globally.
+        // Remove editor-specific and styling attributes that can make the payload fragile.
         $sanitized = preg_replace('/\s(?:class|style|id|data-[a-z0-9_-]+|role)=("[^"]*"|\'[^\']*\')/i', '', $sanitized) ?? $sanitized;
 
         // Keep anchors clickable, but strip any non-essential attributes.
@@ -398,36 +373,5 @@ class ActivityApplied extends Mailable
     {
         // Attach files here if this mail needs them.
         return [];
-    }
-
-    /**
-     * Replace local storage image URLs with data URI in the given HTML so images are embedded in mails.
-     */
-    private function inlineLocalImages(string $html): string
-    {
-        return preg_replace_callback('/<img\s+[^>]*src=("|\')(.*?)\1[^>]*>/i', function (array $matches) {
-            $src = trim($matches[2]);
-
-            // Only inline images that live under /storage/ (public disk)
-            $storagePrefix = parse_url(Storage::disk('public')->url(''), PHP_URL_PATH) ?: '/storage/';
-
-            if (str_contains($src, '/storage/')) {
-                // Derive relative path under storage/app/public
-                $pos = strpos($src, '/storage/');
-                $relative = substr($src, $pos + strlen('/storage/'));
-                $path = storage_path('app/public/' . $relative);
-
-                if (is_file($path) && is_readable($path)) {
-                    $data = file_get_contents($path);
-                    $finfo = finfo_open(FILEINFO_MIME_TYPE);
-                    $mime = finfo_file($finfo, $path) ?: 'application/octet-stream';
-                    finfo_close($finfo);
-                    $b64 = base64_encode($data);
-                    return '<img src="data:' . $mime . ';base64,' . $b64 . '"/>';
-                }
-            }
-
-            return $matches[0];
-        }, $html) ?: $html;
     }
 }

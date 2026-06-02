@@ -23,7 +23,6 @@
                 </ul>
             </div>
         @endif
-
         <form id="content-update" enctype="multipart/form-data" autocomplete="off" method="post" action="{{route('content.update', $content)}}" class="flex flex-col">
             @csrf
             @method('PUT')

@@ -52,7 +52,7 @@ class ActivityApplications extends Mailable
         // Build the subject line for this mail.
         // Build the subject from the cached title and the activity title.
         return new Envelope(
-            subject: $this->content->title . ' ' . $this->activity->title,
+            subject: $this->content->title . ' ' . $this->activity->title . ' #Z',
         );
     }
 
