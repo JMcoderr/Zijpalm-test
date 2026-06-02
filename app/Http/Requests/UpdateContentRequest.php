@@ -32,8 +32,8 @@ class UpdateContentRequest extends FormRequest
             'pdf' => 'nullable|mimes:pdf|max:65536',
             'report-image' => 'nullable|image|max:65536',
             'title' => 'nullable|string|max:255',
-            'extra_text' => 'nullable|string|max:1000',
             'description' => 'nullable',
+            'extra' => 'nullable',
         ];
     }
 

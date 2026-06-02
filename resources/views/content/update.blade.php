@@ -42,8 +42,9 @@
                     @elseif(isset($content->name) && Str::startsWith($content->name, 'email-'))
                         {{-- Force rich editor for email templates so admins can add body text. --}}
                         <x-input-field id="description" type="editor" label="Beschrijving" height="h-72" required :value="$content->text" />
-                        @if ($content->name === 'email-nieuwe-activiteit')
-                            <x-input-field id="extra_text" type="text" label="Korte extra tekst voor e-mail (toegevoegd onderaan)" :value="old('extra_text')" />
+                        @if($content->name === 'email-nieuwe-activiteit')
+                            {{-- Extra editable field specific to the "Nieuwe Activiteit" email --}}
+                            <x-input-field id="extra" type="editor" label="Extra tekst voor Nieuwe Activiteit (optioneel)" height="h-40" :value="old('extra')" />
                         @endif
                     @else
                         <x-input-field id="description" type="editor" label="Beschrijving" height="h-72" required :value="$content->text" />
