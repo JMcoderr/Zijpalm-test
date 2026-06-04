@@ -151,9 +151,6 @@ class ContentController extends Controller
             $text = null;
         }
 
-        // No special merging required for extra fields anymore.
-
-
         // If no new file was uploaded, keep the old file path.
         $filePath = $filePath ?? $content->filePath;
 

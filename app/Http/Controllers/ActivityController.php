@@ -14,6 +14,7 @@ use App\Models\Activity;
 use App\ActivityType;
 use App\Models\User;
 use App\ApplicationStatus;
+use App\UserNotifications;
 use BumpCore\EditorPhp\EditorPhp;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -216,9 +217,23 @@ class ActivityController extends Controller
         $validatedData = $request->validated();
         $validatedData = castValidatedInts($validatedData, ['delay', 'batch_size']);
 
-        // Retrieve all emails of the members that are not signed up for the activity.
-        $participantEmails = $this->retrieveParticipantEmails($activity, [ApplicationStatus::Active, ApplicationStatus::Pending, ApplicationStatus::Reserve]);
-        $nonParticipantEmails = User::notSoftDeleted()->whereNotIn('email', $participantEmails)->pluck('email');
+        // Build the recipient list: all users who opted in for new-activity notifications,
+        // excluding those already registered for this activity.
+        $participantEmails = $this->retrieveParticipantEmails($activity, [
+            ApplicationStatus::Active,
+            ApplicationStatus::Pending,
+            ApplicationStatus::Reserve,
+        ])->filter(fn ($email) => filter_var($email, FILTER_VALIDATE_EMAIL))->unique()->values();
+
+        $allOptedIn = User::query()
+            ->notSoftDeleted()
+            ->get()
+            ->filter(fn ($u) => $u->wantsNotification(UserNotifications::NEW_ACTIVITY) && filter_var($u->email, FILTER_VALIDATE_EMAIL))
+            ->pluck('email')
+            ->unique()
+            ->values();
+
+        $nonParticipantEmails = $allOptedIn->diff($participantEmails)->values();
 
         // Check if provided Power Automate variables could cause issues.
         $errorArray = $this->validationPowerAutomate($nonParticipantEmails, $validatedData['batch_size'], $validatedData['delay']);
@@ -270,8 +285,8 @@ class ActivityController extends Controller
         }
 
         $exitCode = Artisan::call('app:send-upcoming-activities-digest', [
-            '--batch_size' => $validated['batch_size'],
-            '--delay' => $validated['delay'],
+            '--batch_size' => (int) $validated['batch_size'],
+            '--delay' => (int) $validated['delay'],
         ]);
 
         if ($exitCode !== 0) {

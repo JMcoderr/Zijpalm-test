@@ -14,6 +14,7 @@ use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 use App\Models\Content as ContentModel;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 
 class NewActivity extends Mailable
 {
@@ -46,7 +47,7 @@ class NewActivity extends Mailable
     {
         // Build the subject line for this mail.
         return new Envelope(
-            subject: 'AUTOMATE BATCH new_activity #Z',
+            subject: 'AUTOMATE BATCH new_activity',
         );
     }
 
@@ -56,16 +57,19 @@ class NewActivity extends Mailable
     public function content(): Content
     {
         // Pass the values to the Blade template that builds the message body.
+        $introHtml = $this->stripGreeting((string) ($this->content->textHTML ?? ''));
+
         $renderedContent = view('mail.new-activity', [
             'activity' => $this->activity,
             'user' => null,
             'content' => $this->content,
+            'introHtml' => $introHtml,
             'description' => $this->activity->descriptionHTML,
         ])->render();
 
         $jsonBody = json_encode([
             'emails' => $this->emails->values()->all(),
-            'subject' => $this->content->title . ' #Z',
+            'subject' => $this->withZSuffix((string) $this->content->title),
             'body' => $renderedContent,
             'batch_size' => $this->batchSize,
             'delay' => $this->delay,

@@ -2,13 +2,20 @@
 <div>
     <div class="flex flex-col">
         {{-- Show errors, if any --}}
-        @if($errors->any())
+        @if((isset($componentErrors) && !empty($componentErrors)) || (isset($errors) && method_exists($errors,'any') && $errors->any()))
             <x-zijpalm-div color="light" title="Foutmelding(en)" :editable="false" error id="error-messages"
                            onclick="this.remove()">
                 <ul class="text-center">
-                    @foreach($errors->all() as $error)
-                        <li class="">{{$error}}</li>
-                    @endforeach
+                    @if(isset($componentErrors) && !empty($componentErrors))
+                        @foreach($componentErrors as $error)
+                            <li class="">{{ $error }}</li>
+                        @endforeach
+                    @endif
+                    @if(isset($errors) && method_exists($errors,'all'))
+                        @foreach($errors->all() as $error)
+                            <li class="">{{ $error }}</li>
+                        @endforeach
+                    @endif
                 </ul>
             </x-zijpalm-div>
             <script>
@@ -29,14 +36,14 @@
             @csrf
             <x-input-group grid grid="grid grid-cols-1 grid-rows-[auto] auto-rows-auto">
                 <x-input-group grid="grid grid-cols-1">
-                    <x-input-field id="digest_batch_size" name="batch_size" label="Hoeveelheid ontvangers in de BCC per mail" type="number"
-                                   value="{{ old('batch_size', $batch_size ?? config('mail.power_automate.batch_size.default')) }}"
-                                   :min="config('mail.power_automate.batch_size.min')"
-                                   :max="config('mail.power_automate.batch_size.max')" required/>
-                    <x-input-field id="digest_delay" name="delay" label="Wachttijd tussen mails in seconden" type="number"
-                                   value="{{ old('delay', $delay ?? config('mail.power_automate.delay.default')) }}"
-                                   :min="config('mail.power_automate.delay.min')"
-                                   :max="config('mail.power_automate.delay.max')" required/>
+                        <x-input-field id="batch_size" name="batch_size" label="Hoeveelheid ontvangers in de BCC per mail" type="number"
+                                       value="{{ old('batch_size', $batch_size ?? config('mail.power_automate.batch_size.default')) }}"
+                                       :min="config('mail.power_automate.batch_size.min')"
+                                       :max="config('mail.power_automate.batch_size.max')" required/>
+                        <x-input-field id="delay" name="delay" label="Wachttijd tussen mails in seconden" type="number"
+                                       value="{{ old('delay', $delay ?? config('mail.power_automate.delay.default')) }}"
+                                       :min="config('mail.power_automate.delay.min')"
+                                       :max="config('mail.power_automate.delay.max')" required/>
                     <div class="mt-2 text-sm text-gray-700">
                         <p>Ontvangers: <span id="upcoming-digest-recipient-count">{{ $recipientCount ?? 0 }}</span></p>
                         <p>Geschatte duur: <span id="upcoming-digest-estimate">-</span></p>
@@ -50,8 +57,8 @@
             (function(){
                 // English comment: update display estimate and persist settings when modal closes
                 const form = document.getElementById('upcoming-activities-digest-form');
-                const batchInput = form?.querySelector('#digest_batch_size');
-                const delayInput = form?.querySelector('#digest_delay');
+                const batchInput = form?.querySelector('#batch_size');
+                const delayInput = form?.querySelector('#delay');
                 const recipients = parseInt(document.getElementById('upcoming-digest-recipient-count')?.innerText, 10) || 0;
                 const estimateEl = document.getElementById('upcoming-digest-estimate');
 
