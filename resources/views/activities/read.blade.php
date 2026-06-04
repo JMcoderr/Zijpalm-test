@@ -234,6 +234,7 @@
 
                             {{-- List header --}}
                             <div class="flex font-bold">
+                                <span class="flex-1">Datum</span>
                                 <span class="flex-1">Naam</span>
                                 <span class="flex-1">Telefoon</span>
                                 <span class="flex-1 hidden md:flex">Mail</span>
@@ -255,6 +256,7 @@
 
                                     {{-- User data --}}
                                     <div class="flex px-2 gap-x-2 rounded-full overflow-clip bg-linear-to-t from-zijpalm-500 to-zijpalm-300 inset-shadow-zijpalm-200 text-zinc-100">
+                                        <span class="flex-1 truncate">{{ $application->created_at?->format('d/m/Y') }}</span>
                                         <span class="flex-1 truncate">{{$application->user->name}}</span>
                                         <span class="flex-1 truncate">{{formatPhoneNumber($application->phone)}}</span>
                                         <span class="flex-1 hidden md:flex truncate">{{$application->email}}</span>
@@ -263,6 +265,7 @@
                                     {{-- Guest data --}}
                                     @foreach($application->guests as $guest)
                                         <div class="flex px-2 gap-x-2 rounded-full overflow-clip bg-linear-to-t from-zinc-300 to-zinc-200 inset-shadow-zinc-50 border-b border-[rgba(0,0,0,0.15)]">
+                                        <span class="flex-1 truncate">{{ $application->created_at?->format('d/m/Y') }}</span>
                                             <span class="flex-1 truncate">{{$guest->name}}</span>
                                             <span class="flex-1 truncate">{{formatPhoneNumber($guest->phone)}}</span>
                                             <span class="flex-1 hidden md:flex truncate">{{$guest->email}}</span>
