@@ -18,12 +18,8 @@
         <div id="header" style="padding: 20px; background-color: #96c8e6; width: 100%; max-width: 100%; box-sizing: border-box;">
             <div id="inner" style="margin: auto; max-width: 400px; width: 100%;">
                 <x-app-logo />
-                @if(!$hideGreeting)
-                    @if(!empty($user))
-                        <p style="margin-bottom: 15px;">Beste {{ $user->name }},</p>
-                    @else
-                        <p style="margin-bottom: 15px;">Beste leden,</p>
-                    @endif
+                @if(!$hideGreeting && !empty($user))
+                    <p style="margin-bottom: 15px;">Beste {{ $user->name }},</p>
                 @endif
                 {{$slot}}
                 @if(!$hideGreeting)

@@ -151,7 +151,6 @@ class ContentController extends Controller
             $text = null;
         }
 
-
         // If no new file was uploaded, keep the old file path.
         $filePath = $filePath ?? $content->filePath;
 

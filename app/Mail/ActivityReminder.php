@@ -43,7 +43,7 @@ class ActivityReminder extends Mailable
     {
         // Build the subject line for this mail.
         return new Envelope(
-            subject: ($this->content->title ?? 'AUTOMATE BATCH activity_reminder') . ' ' . $this->activity->title,
+            subject: 'AUTOMATE BATCH activity_reminder #Z',
         );
     }
 
@@ -62,7 +62,7 @@ class ActivityReminder extends Mailable
 
         $jsonBody = json_encode([
             'emails' => $this->emails->values()->all(),
-            'subject' => $this->content->title . ' ' . $this->activity->title,
+            'subject' => $this->content->title . ' ' . $this->activity->title . ' #Z',
             'body' => $renderedContent,
             'batch_size' => $this->validatedData['batch_size'],
             'delay' => $this->validatedData['delay'],

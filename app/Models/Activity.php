@@ -470,17 +470,18 @@ class Activity extends Model
                 $sheet->setCellValue('C1', 'Reserves: ' . $reserveApplicationCount);
             }
 
-            $sheet->setCellValue('A2', 'Type');
-            $sheet->setCellValue('B2', 'Naam');
-            $sheet->setCellValue('C2', 'Email');
-            $sheet->setCellValue('D2', 'Telefoonnummer');
-            $sheet->setCellValue('E2', 'Opmerking');
-            $sheet->setCellValue('F2', 'Betaalde bedrag');
+            $sheet->setCellValue('A2', 'Datum');
+            $sheet->setCellValue('B2', 'Type');
+            $sheet->setCellValue('C2', 'Naam');
+            $sheet->setCellValue('D2', 'Email');
+            $sheet->setCellValue('E2', 'Telefoonnummer');
+            $sheet->setCellValue('F2', 'Opmerking');
+            $sheet->setCellValue('G2', 'Betaalde bedrag');
 
             // Make headers for each activity question
             // Sort the questions by id to ensure the order is correct
             // This is done to make sure the answers are in the same order as the questions
-            $col = 7;
+            $col = 8;
             foreach ($this->questions->sortBy('id') as $question) {
                 $sheet->setCellValue([$col, 2], $question->query);
                 $col++;
@@ -507,15 +508,16 @@ class Activity extends Model
                     ->getStartColor()->setARGB('FF96c8e6');
 //                    ->getStartColor()->setARGB('FF328cbe');
 
-                $sheet->setCellValue([1, $row], 'Lid');
-                $sheet->setCellValue([2, $row], $application->user->name);
-                $sheet->setCellValue([3, $row], $application->email ?: $application->user?->email);
-                $sheet->setCellValue([4, $row], formatPhoneNumber($application->phone ?: $application->user?->phone));
-                $sheet->setCellValue([5, $row], $application->comment);
+                $sheet->setCellValue([1, $row], optional($application->created_at)->format('d/m/Y'));
+                $sheet->setCellValue([2, $row], 'Lid');
+                $sheet->setCellValue([3, $row], $application->user->name);
+                $sheet->setCellValue([4, $row], $application->email ?: $application->user?->email);
+                $sheet->setCellValue([5, $row], formatPhoneNumber($application->phone ?: $application->user?->phone));
+                $sheet->setCellValue([6, $row], $application->comment);
                 
                 // Calculate paid amount from payments and keep numeric cell type for Excel formulas
                 $paidAmount = (float) $application->payments->where('status', \App\PaymentStatus::paid)->sum('price');
-                $paidAmountCoordinate = Coordinate::stringFromColumnIndex(6) . $row;
+                $paidAmountCoordinate = Coordinate::stringFromColumnIndex(7) . $row;
 
                 if ($paidAmount > 0) {
                     $sheet->setCellValueExplicit($paidAmountCoordinate, $paidAmount, DataType::TYPE_NUMERIC);
@@ -534,7 +536,7 @@ class Activity extends Model
                         $answer = $answersByPosition[$index]?->answer;
                     }
 
-                    $sheet->setCellValue([7 + $index, $row], $answer ?? '');
+                    $sheet->setCellValue([8 + $index, $row], $answer ?? '');
                 }
 
                 // Sets all to horizontal center
@@ -549,12 +551,13 @@ class Activity extends Model
                         ->getStartColor()->setARGB('FFC2E8FF');
 //                        ->getStartColor()->setARGB('FF96c8e6');
 
-                    $sheet->setCellValue([1, $row], 'Gast');
-                    $sheet->setCellValue([2, $row], $guest->name);
-                    $sheet->setCellValue([3, $row], $guest->email);
-                    $sheet->setCellValue([4, $row], formatPhoneNumber($guest->phone));
-                    // Column 5 (Comment) empty for guests
-                    // Column 6 (Paid amount) empty for guests
+                    $sheet->setCellValue([1, $row], optional($application->created_at)->format('d/m/Y'));
+                    $sheet->setCellValue([2, $row], 'Gast');
+                    $sheet->setCellValue([3, $row], $guest->name);
+                    $sheet->setCellValue([4, $row], $guest->email);
+                    $sheet->setCellValue([5, $row], formatPhoneNumber($guest->phone));
+                    // Column 6 (Comment) empty for guests
+                    // Column 7 (Paid amount) empty for guests
 
                     // Sets all to horizontal center
                     $sheet->getStyle([1, $row, $col, 2])->getAlignment()->setHorizontal('left');

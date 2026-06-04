@@ -56,7 +56,7 @@ class SendAnnualInvoice implements ShouldQueue
             function ($message) use ($user) {
                 $message->to($user->email, $user->name)
                     ->cc('Zijpalm@almere.nl', 'Het Bestuur')
-                    ->subject("Jaarlijkse factuur {$this->year} - Zijpalm");
+                        ->subject("Jaarlijkse factuur {$this->year} - Zijpalm #Z");
             }
         );
     }

@@ -1,12 +1,12 @@
 <?php
-// This file is part of the app logic and has a short comment so it is easier to read.
-
 
 namespace App\Console\Commands;
 
 use App\ActivityType;
 use App\Mail\UpcomingActivitiesDigest;
 use App\Models\Activity;
+use App\Models\User;
+use App\UserNotifications;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -14,6 +14,8 @@ use Throwable;
 
 class SendUpcomingActivitiesDigest extends Command
 {
+    // No forced recipients here — collect opted-in users at runtime.
+
     /**
      * The name and signature of the console command.
      *
@@ -33,7 +35,6 @@ class SendUpcomingActivitiesDigest extends Command
      */
     public function handle(): int
     {
-        // Get upcoming activities that are open for registration
         $activities = Activity::query()
             ->whereNotNull('start')
             ->where('start', '>=', now()->startOfDay())
@@ -43,7 +44,6 @@ class SendUpcomingActivitiesDigest extends Command
             ->orderBy('start')
             ->get();
 
-        // Get activities that are currently running
         $runningActivities = Activity::query()
             ->whereNotNull('start')
             ->whereNotNull('end')
@@ -53,32 +53,37 @@ class SendUpcomingActivitiesDigest extends Command
             ->orderBy('start')
             ->get();
 
-        // If no upcoming activities, inform and exit
         if ($activities->isEmpty()) {
             $this->info('Geen toekomstige activiteiten gevonden binnen 8 weken.');
             return self::SUCCESS;
         }
 
-        // Get valid recipient emails
-        $emails = $this->recipientEmails()
-            ->filter(fn (string $email) => filter_var($email, FILTER_VALIDATE_EMAIL))
+        // Collect all users who opted in for the newsletter and have a valid email.
+        $emails = User::query()
+            ->notSoftDeleted()
+            ->get()
+            ->filter(fn ($u) => $u->wantsNotification(UserNotifications::NEWSLETTER) && filter_var($u->email, FILTER_VALIDATE_EMAIL))
+            ->pluck('email')
+            ->unique()
             ->values();
 
-        // If no valid emails, warn and exit
+        Log::info('[SendUpcomingActivitiesDigest] Using newsletter recipients', ['count' => $emails->count()]);
+
         if ($emails->isEmpty()) {
-            $this->warn('Geen geldige digest-ontvangers gevonden.');
+            $this->warn('Geen geldige digest-ontvangers gevonden (geen ingeschreven nieuwsbriefontvangers).');
             return self::SUCCESS;
         }
 
         // Only use values provided by the user (no fallback)
         $batchSize = $this->option('batch_size');
         $delay = $this->option('delay');
+        // Ensure integer types for downstream consumers
+        $batchSize = is_null($batchSize) ? null : (int) $batchSize;
+        $delay = is_null($delay) ? null : (int) $delay;
         if ($batchSize === null || $delay === null) {
             $this->error('You must provide both --batch_size and --delay options.');
             return self::FAILURE;
         }
-
-        // Try to send the email
         try {
             Mail::to(config('mail.bestuur.address'), config('mail.bestuur.name'))
                 ->send(new UpcomingActivitiesDigest($emails, $activities, $runningActivities, [
@@ -86,7 +91,6 @@ class SendUpcomingActivitiesDigest extends Command
                     'delay' => $delay,
                 ]));
         } catch (Throwable $exception) {
-            // If sending fails, log error and return failure
             Log::error('[SendUpcomingActivitiesDigest] Mail send failed', [
                 'error' => $exception->getMessage(),
                 'activities' => $activities->count(),
@@ -98,15 +102,19 @@ class SendUpcomingActivitiesDigest extends Command
             return self::FAILURE;
         }
 
-        // If successful, inform about the sent mail
         $this->info("Mail verzonden voor {$activities->count()} activiteiten naar {$emails->count()} ontvangers.");
 
         return self::SUCCESS;
     }
 
-    // Get all user emails for the digest
     private function recipientEmails()
     {
-        return \App\Models\User::pluck('email');
+        return User::query()
+            ->notSoftDeleted()
+            ->get()
+            ->filter(fn ($u) => $u->wantsNotification(UserNotifications::NEWSLETTER) && filter_var($u->email, FILTER_VALIDATE_EMAIL))
+            ->pluck('email')
+            ->unique()
+            ->values();
     }
 }

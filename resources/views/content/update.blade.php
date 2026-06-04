@@ -23,7 +23,6 @@
                 </ul>
             </div>
         @endif
-
         <form id="content-update" enctype="multipart/form-data" autocomplete="off" method="post" action="{{route('content.update', $content)}}" class="flex flex-col">
             @csrf
             @method('PUT')
@@ -35,12 +34,17 @@
 
                 <x-input-field id="title" type="text" label="Titel" value="{{$content->title}}" />
 
-                @if (isset($content->text))
-                    {{-- If the type is "bestuurslid" or file make an text description, else default to the editor --}}
+                {{-- Show editor when the content has text OR when this is an email template (even if empty) --}}
+                @if (isset($content->text) || (isset($content->name) && Str::startsWith($content->name, 'email-')))
+                    {{-- If the content is a member or file show a simple text input, otherwise prefer the editor.
+                         Also allow editor for email templates such as 'email-nieuwe-activiteit'. --}}
                     @if ($content->type == 'bestuurslid' || $content->type == 'file')
                         <x-input-field id="description" type="text" label="Beschrijving" required :value="$content->text" />
+                    @elseif(isset($content->name) && Str::startsWith($content->name, 'email-'))
+                        {{-- Force rich editor for email templates so admins can add body text. --}}
+                        <x-input-field id="description" type="editor" label="Beschrijving" height="h-72" required :value="$content->text" />
+                        {{-- No extra field required here anymore --}}
                     @else
-                        {{-- <p class="text-red-500">Let op: Lijsten werken nog niet</p> --}}
                         <x-input-field id="description" type="editor" label="Beschrijving" height="h-72" required :value="$content->text" />
                     @endif
                 @endif

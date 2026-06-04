@@ -10,7 +10,7 @@
 
     <p>
         <strong>Wanneer:</strong> {{ formatDate($activity->start)}}<br>
-        <strong>Locatie:</strong> {{ $activity->location }}<br>
+y->location }}<br>
         <strong>Organisator(en):</strong> {{$activity->organizer}}
     </p>
 

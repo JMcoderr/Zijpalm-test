@@ -7,7 +7,7 @@
     <x-mail.button :href="$resetUrl" label="Wachtwoord vernieuwen" />
 
     <p>Deze link verloopt over {{$expire}} minuten.</p>
-    <p>Als je geen wachtwoord hebt aangevraagd, hoef je verder niets te doen.</p>
+    <p>Als u geen wachtwoord heeft aangevraagd hoedt u verder niks te doen.</p>
 {{--    <x-mail.button :href="route('password.reset', ['token' => $resetPasswordToken, 'email' => $user->email])" label="Wachtwoord instellen"/>--}}
-    <p class="text-sm">Als de 'Wachtwoord vernieuwen' knop niet werkt, kopieer en plak de URL hieronder in je webbrowser: <span style="text-wrap: wrap">{{$resetUrl}}</span></p>
+    <p class="text-sm">Als de 'Wachtwoord vernieuwen' knop niet werkt, kopieer en plak de URL hieronder in uw web browser: <span style="text-wrap: wrap">{{$resetUrl}}</span></p>
 </x-layouts.mail.header>
