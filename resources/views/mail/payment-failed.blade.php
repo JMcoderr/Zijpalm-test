@@ -3,12 +3,5 @@
     {!! $content->textHTML !!}
     <p>Je betaling is helaas niet gelukt. Wil je het nogmaals proberen via de betaallink in de bevestigingsmail?</p>
     <p>Mocht het na een nieuwe poging nog steeds niet lukken, neem dan contact met ons op.</p>
-    @if(!empty($content->textHTML))
-        {!! $content->textHTML !!}
-    @else
-        <p>Je betaling is helaas niet gelukt. Wil je het nogmaals proberen via de betaallink in de bevestigingsmail?</p>
-        <p>Mocht het na een nieuwe poging nog steeds niet lukken, neem dan contact met ons op.</p>
-        <p>Met vriendelijke groet,<br>
-        Het Bestuur</p>
-    @endif
+
 </x-layouts.mail.header>    

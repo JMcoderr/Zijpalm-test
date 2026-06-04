@@ -1,6 +1,4 @@
 <?php
-// This file is part of the app logic and has a short comment so it is easier to read.
-
 
 namespace App\Mail;
 
@@ -28,11 +26,18 @@ class UpcomingActivitiesDigest extends Mailable
      */
     public function __construct(Collection $emails, Collection $activities, Collection $runningActivities, array $validatedData = [])
     {
-        // Store the data for this mail so the view can use it later.
         $this->emails = $emails;
         $this->activities = $activities;
         $this->runningActivities = $runningActivities;
+        // Cast batch_size and delay to integers when provided so downstream code
+        // and JSON consumers receive integers instead of strings.
         $this->validatedData = $validatedData;
+        if (isset($this->validatedData['batch_size'])) {
+            $this->validatedData['batch_size'] = (int) $this->validatedData['batch_size'];
+        }
+        if (isset($this->validatedData['delay'])) {
+            $this->validatedData['delay'] = (int) $this->validatedData['delay'];
+        }
         $this->content = ContentModel::where('name', 'email-toekomstige-activiteiten')->first();
     }
 
@@ -41,9 +46,8 @@ class UpcomingActivitiesDigest extends Mailable
      */
     public function envelope(): Envelope
     {
-        // Build the subject line for this mail.
         return new Envelope(
-            subject: 'AUTOMATE BATCH upcoming_activities_digest #Z',
+            subject: 'AUTOMATE BATCH upcoming_activities_digest',
         );
     }
 
@@ -52,7 +56,6 @@ class UpcomingActivitiesDigest extends Mailable
      */
     public function content(): Content
     {
-        // Pass the values to the Blade template that builds the message body.
         $mailSubject = 'Zijpalm | Komende activiteiten';
             $introHtml = '<p>Beste leden,</p><p>Hieronder vinden jullie de komende activiteiten van Zijpalm.</p>';
 
@@ -123,7 +126,7 @@ class UpcomingActivitiesDigest extends Mailable
 
         $jsonBody = json_encode([
             'emails' => $this->emails->values()->all(),
-            'subject' => $mailSubject . ' #Z',
+            'subject' => $mailSubject,
             'body' => $renderedContent,
             'batch_size' => $this->validatedData['batch_size'],
             'delay' => $this->validatedData['delay'],
@@ -139,7 +142,7 @@ class UpcomingActivitiesDigest extends Mailable
 
             $jsonBody = json_encode([
                 'emails' => $this->emails->values()->all(),
-                'subject' => $mailSubject . ' #Z',
+                'subject' => $mailSubject,
                 'body' => '<p>Komende activiteiten van Zijpalm.</p>',
                 'batch_size' => $this->validatedData['batch_size'],
                 'delay' => $this->validatedData['delay'],
@@ -161,7 +164,6 @@ class UpcomingActivitiesDigest extends Mailable
      */
     public function attachments(): array
     {
-        // Attach files here if this mail needs them.
         return [];
     }
 
