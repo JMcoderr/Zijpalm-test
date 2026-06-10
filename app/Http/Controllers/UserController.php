@@ -47,9 +47,8 @@ class UserController extends Controller
         //
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
+
+     //Show the form for editing the specified resource.
     public function edit(User $user = null)
     {
         // If no user is provided, use the authenticated user
@@ -60,48 +59,48 @@ class UserController extends Controller
         return view('users.edit', compact('user'));
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
+
+     // Update the specified resource in storage.
     public function update(UpdateUserRequest $request, User $user)
     {
+        $currentUser = auth()->user();
+
         // Users can update their own notifications, admins can do this for other users too.
-        if (auth()->user()->is($user) || auth()->user()->isAdmin()) {
+        if ($currentUser->is($user) || $currentUser->isAdmin()) {
             // Reset the notifications
             $user->notifications = 0;
 
-            // Get the checked notifications
             $submittedNotifications = $request->input('notifications', []);
 
-            // Loop through all notification flags and set only the submitted ones.
             foreach (UserNotifications::cases() as $case) {
                 if (array_key_exists($case->name, $submittedNotifications)) {
                     $user->setNotification($case);
                 }
             }
 
-            // New activity announcements are mandatory for all users.
             $user->setNotification(UserNotifications::NEW_ACTIVITY);
         }
 
-        $user->firstName = $request->input('firstName', $user->firstName);
-        $user->lastName = $request->input('lastName', $user->lastName);
+        // Users may update their own name and email. Admins may update these fields for everyone.
+        if ($currentUser->is($user) || $currentUser->isAdmin()) {
+            $user->firstName = $request->input('firstName', $user->firstName);
+            $user->lastName = $request->input('lastName', $user->lastName);
+            $user->email = $request->input('email', $user->email);
+        }
+
         $phone = $request->input('phone', $user->phone);
         $user->phone = $phone === '' ? null : $phone;
-        $user->email = $request->input('email', $user->email);
 
         // Only admins can change role/admin state, except for protected system users.
-        if (auth()->user()->isAdmin() && !$user->isType(UserType::System)) {
-            // If the is_admin checkbox is checked, set the user as admin
+        if ($currentUser->isAdmin() && !$user->isType(UserType::System)) {
+
             $user->is_admin = $request->has('is_admin');
 
-            // If the type is set in the request and is a valid type, set the user type
             if ($request->has('type') && in_array($request->input('type'), UserType::toArray())) {
                 $user->type = UserType::from($request->input('type'));
             }
         }
 
-        // Save the changed fields
         $user->save();
 
         return redirect()->back()->with(['success' => 'Gebruikersprofiel is succesvol geüpdatet']);

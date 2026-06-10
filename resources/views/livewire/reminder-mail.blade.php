@@ -47,7 +47,7 @@
         </form>
         <script>
             (function(){
-                // English comment: update display estimate when inputs change and persist settings when modal closes
+                // Display estimate when inputs change and persist settings when modal closes
                 const batchInput = document.getElementById('batch_size');
                 const delayInput = document.getElementById('delay');
                 const recipients = parseInt(document.getElementById('reminder-recipient-count').innerText, 10) || 0;
@@ -67,7 +67,7 @@
                     estimateEl.innerText = mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
                 }
 
-                // English comment: listen for a request to close; ask the user to confirm saving, persist settings, then ack to close the modal.
+                // Listen for a request to close; ask the user to confirm saving, persist settings, then ack to close the modal.
                 window.addEventListener('zijpalm-modal-request-close', async function (ev) {
                     if (ev?.detail?.modal !== 'reminderMailModal') return;
 

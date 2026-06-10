@@ -191,7 +191,7 @@ class ActivityController extends Controller
             throw ValidationException::withMessages($errorArray)->errorBag('reminderMail');
         }
 
-            // English comment: Persist reminder mail settings so they are shown next time the modal opens.
+            // Persist reminder mail settings so they are shown next time the modal opens.
             try {
                 \App\Models\MailSetting::updateOrCreate(
                     ['name' => 'reminder'],
@@ -242,7 +242,7 @@ class ActivityController extends Controller
             throw ValidationException::withMessages($errorArray)->errorBag('announcementMail');
         }
 
-        // English comment: Persist the chosen announcement mail settings so they are shown next time the modal opens.
+        // Persist the chosen announcement mail settings so they are shown next time the modal opens.
         try {
             \App\Models\MailSetting::updateOrCreate(
                 ['name' => 'announcement'],
@@ -274,7 +274,7 @@ class ActivityController extends Controller
             'delay' => 'required|integer|between:' . config('mail.power_automate.delay.min') . ',' . config('mail.power_automate.delay.max'),
         ]);
 
-        // English comment: persist digest settings so user input is remembered across modal opens
+        // Persist digest settings so user input is remembered across modal opens
         try {
             \App\Models\MailSetting::updateOrCreate(
                 ['name' => 'digest'],

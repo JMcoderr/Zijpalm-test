@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class MailSetting extends Model
 {
-    // English comments: Model used to persist mail batch/delay settings per form/modal.
+     // Model used to persist mail batch/delay settings per form/modal.
     protected $table = 'mail_settings';
 
     protected $fillable = [
