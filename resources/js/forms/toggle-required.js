@@ -23,8 +23,9 @@ function toggleCancellationField(checkbox) {
     const cancellationInput = document.getElementById('cancellationEnd');
     if (!cancellationInput) return;
 
-    // The input is nested inside the component wrapper: input > div > div (x-input-field component)
-    const fieldWrapper = cancellationInput.parentElement.parentElement;
+    // Find the closest wrapper created by x-input-field so the correct block is hidden.
+    const fieldWrapper = cancellationInput.closest('[id$="wrapper"]');
+    if (!fieldWrapper) return;
 
     if (checkbox.checked) {
         // Hide the date field and clear its value so the form stays clean.
@@ -48,22 +49,22 @@ function toggleCancellationOnRecurring(recurringCheckbox) {
     
     if (!noCancellationCheckbox || !cancellationInput) return;
 
-    // Get wrapper elements
-    const noCancellationWrapper = noCancellationCheckbox.parentElement.parentElement;
-    const cancellationWrapper = cancellationInput.parentElement.parentElement;
+    // Get wrapper elements.
+    const noCancellationWrapper = noCancellationCheckbox.closest('[id$="wrapper"]');
+    const cancellationWrapper = cancellationInput.closest('[id$="wrapper"]');
 
     // Listen for changes so the fields stay in sync when the checkbox is clicked.
     recurringCheckbox.addEventListener('change', () => {
         if (recurringCheckbox.checked) {
             // Hide both cancellation fields when recurring is checked.
-            noCancellationWrapper.classList.add('hidden');
-            cancellationWrapper.classList.add('hidden');
+            noCancellationWrapper?.classList.add('hidden');
+            cancellationWrapper?.classList.add('hidden');
             noCancellationCheckbox.checked = false;
             cancellationInput.value = '';
         } else {
             // Show both cancellation fields again when recurring is unchecked.
-            noCancellationWrapper.classList.remove('hidden');
-            cancellationWrapper.classList.remove('hidden');
+            noCancellationWrapper?.classList.remove('hidden');
+            cancellationWrapper?.classList.remove('hidden');
         }
     });
 }

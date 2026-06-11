@@ -176,6 +176,33 @@
                     var cancellationWrapper = document.getElementById('cancellationEnd-wrapper');
                     var cancellationEnd = document.getElementById('cancellationEnd');
 
+                    function syncCancellationVisibility() {
+                        if (!noCancellationWrapper || !cancellationWrapper || !noCancel || !cancellationEnd) {
+                            return;
+                        }
+
+                        if (recurring.checked) {
+                            noCancellationWrapper.classList.add('hidden');
+                            cancellationWrapper.classList.add('hidden');
+                            noCancel.checked = false;
+                            cancellationEnd.value = '';
+                            return;
+                        }
+
+                        noCancellationWrapper.classList.remove('hidden');
+
+                        if (noCancel.checked) {
+                            cancellationWrapper.classList.add('hidden');
+                            cancellationEnd.value = '';
+                        } else {
+                            cancellationWrapper.classList.remove('hidden');
+                        }
+                    }
+
+                    window.toggleCancellationField = function(checkbox) {
+                        syncCancellationVisibility();
+                    };
+
                     if(!timesGroup || !recurring) {
                         return;
                     }
@@ -236,9 +263,7 @@
                             }
                         }
 
-                        if (window.applyRecurringCancellationVisibility) {
-                            window.applyRecurringCancellationVisibility(recurring);
-                        }
+                        syncCancellationVisibility();
                     }
 
                     recurring.addEventListener('change', applyVisibility);

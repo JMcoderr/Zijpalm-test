@@ -445,6 +445,8 @@ class ActivityController extends Controller
      */
     public function edit(Activity $activity){
         // Show the edit form with the current activity data
+        $activity->load('questions.selectOptions');
+
         return view('activities.edit', compact('activity'));
     }
 
@@ -457,15 +459,28 @@ class ActivityController extends Controller
 
         $copy = $activity->replicate();
         $copy->title = $activity->title . ' (kopie)';
+        $copy->cancellationEnd = $activity->cancellationEnd;
         $copy->save();
 
         foreach ($activity->questions as $question) {
-            $questionCopy = $copy->questions()->create([
-                'type' => $question->type,
+            $questionData = [
+                'type' => $question->type instanceof \BackedEnum ? $question->type->value : $question->type,
                 'query' => $question->query,
                 'price' => $question->price,
                 'max_amount' => $question->max_amount,
+            ];
+
+            $questionCopy = $copy->questions()->create([
+                'type' => $questionData['type'],
+                'query' => $questionData['query'],
+                'price' => $questionData['price'],
+                'max_amount' => $questionData['max_amount'],
             ]);
+
+            if ($questionData['type'] === 'number' && empty($questionData['max_amount'])) {
+                $questionCopy->max_amount = null;
+                $questionCopy->save();
+            }
 
             foreach ($question->selectOptions as $option) {
                 $questionCopy->selectOptions()->create([
@@ -474,6 +489,8 @@ class ActivityController extends Controller
                 ]);
             }
         }
+
+        $copy->load('questions.selectOptions');
 
         return redirect()->route('activity.edit', $copy)
             ->with('success', "Activiteit '{$activity->title}' is gekopieerd. Je kunt nu de kopie bewerken.");
