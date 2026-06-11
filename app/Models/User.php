@@ -224,7 +224,7 @@ class User extends Authenticatable
     public function isAdmin(): bool
     {
         // Simple helper to check admin access.
-        return $this->is_admin;
+        return (bool) $this->is_admin;
     }
 
     // Check if user is of a specific type

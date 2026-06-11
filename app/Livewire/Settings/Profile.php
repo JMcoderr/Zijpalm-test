@@ -32,6 +32,8 @@ class Profile extends Component
     {
         $user = Auth::user();
 
+        abort_unless($user->isAdmin(), 403);
+
         $validated = $this->validate([
             'name' => ['required', 'string', 'max:255'],
 

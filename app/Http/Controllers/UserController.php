@@ -81,8 +81,8 @@ class UserController extends Controller
             $user->setNotification(UserNotifications::NEW_ACTIVITY);
         }
 
-        // Users may update their own name and email. Admins may update these fields for everyone.
-        if ($currentUser->is($user) || $currentUser->isAdmin()) {
+        // Only admins may update identity fields.
+        if ($currentUser->isAdmin()) {
             $user->firstName = $request->input('firstName', $user->firstName);
             $user->lastName = $request->input('lastName', $user->lastName);
             $user->email = $request->input('email', $user->email);

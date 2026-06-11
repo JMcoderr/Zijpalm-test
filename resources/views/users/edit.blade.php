@@ -2,7 +2,7 @@
 @use('\App\UserNotifications')
 @use('\App\UserType')
 @php
-    $canUpdateIdentity = auth()->user()->is($user) || auth()->user()->isAdmin();
+    $canUpdateIdentity = auth()->user()->isAdmin();
 @endphp
 <x-page-wrapper :page="$user->name">
 

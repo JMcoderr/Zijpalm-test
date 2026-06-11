@@ -34,6 +34,7 @@ class UserFactory extends Factory
             'password' => static::$password ??= Hash::make('password'),
             'type' => $type,
             'employee_number' => $type == 'medewerker' ? fake()->numerify('########') : null,
+            'is_admin' => false,
             'remember_token' => Str::random(10),
         ];
     }
