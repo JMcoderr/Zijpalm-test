@@ -30,6 +30,8 @@ class User extends Authenticatable
         'firstName',
         'lastName',
         'email',
+        'emailSecondary',
+        'emailTertiary',
         'phone',
         'type',
         'employee_number',
@@ -93,6 +95,25 @@ class User extends Authenticatable
         return Attribute::make(
             get: fn () => ucfirst($this->firstName) . ' ' . $this->lastName,
         );
+    }
+
+    /**
+     * Return all registered email addresses for this user.
+     *
+     * @return array<int, string>
+     */
+    public function registeredEmails(): array
+    {
+        return collect([
+            $this->email,
+            $this->emailSecondary,
+            $this->emailTertiary,
+        ])
+            ->filter(fn ($email) => filled($email))
+            ->map(fn ($email) => mb_strtolower(trim((string) $email)))
+            ->unique()
+            ->values()
+            ->all();
     }
 
     // Relationship: a user can have many applications

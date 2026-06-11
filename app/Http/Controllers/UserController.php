@@ -86,7 +86,15 @@ class UserController extends Controller
             $user->firstName = $request->input('firstName', $user->firstName);
             $user->lastName = $request->input('lastName', $user->lastName);
             $user->email = $request->input('email', $user->email);
+            $user->emailSecondary = $request->input('emailSecondary', $user->emailSecondary);
+            $user->emailTertiary = $request->input('emailTertiary', $user->emailTertiary);
         }
+
+        $emailSecondary = $request->input('emailSecondary', $user->emailSecondary);
+        $user->emailSecondary = $emailSecondary === '' ? null : $emailSecondary;
+
+        $emailTertiary = $request->input('emailTertiary', $user->emailTertiary);
+        $user->emailTertiary = $emailTertiary === '' ? null : $emailTertiary;
 
         $phone = $request->input('phone', $user->phone);
         $user->phone = $phone === '' ? null : $phone;

@@ -2,12 +2,14 @@
 <section class="w-full bg-white">
     @include('partials.settings-heading')
 
-    <x-settings.layout :heading="__('Profile')" :subheading="__('Only administrators can update your name and email address')">
+    <x-settings.layout :heading="__('Profile')" :subheading="__('Only administrators can update your name and email addresses')">
         <form wire:submit="updateProfileInformation" class="my-6 w-full space-y-6">
             <flux:input wire:model="name" :label="__('Name')" type="text" required autofocus autocomplete="name" :disabled="!auth()->user()->isAdmin()" />
 
             <div>
                 <flux:input wire:model="email" :label="__('Email')" type="email" required autocomplete="email" :disabled="!auth()->user()->isAdmin()" />
+                <flux:input wire:model="emailSecondary" label="Extra e-mailadres 1" type="email" autocomplete="email" :disabled="!auth()->user()->isAdmin()" class="mt-4" />
+                <flux:input wire:model="emailTertiary" label="Extra e-mailadres 2" type="email" autocomplete="email" :disabled="!auth()->user()->isAdmin()" class="mt-4" />
 
                 @if (auth()->user() instanceof \Illuminate\Contracts\Auth\MustVerifyEmail &&! auth()->user()->hasVerifiedEmail())
                     <div>

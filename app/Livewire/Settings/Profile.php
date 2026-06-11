@@ -16,6 +16,10 @@ class Profile extends Component
 
     public string $email = '';
 
+    public string $emailSecondary = '';
+
+    public string $emailTertiary = '';
+
     /**
      * Mount the component.
      */
@@ -23,6 +27,8 @@ class Profile extends Component
     {
         $this->name = Auth::user()->name;
         $this->email = Auth::user()->email;
+        $this->emailSecondary = Auth::user()->emailSecondary ?? '';
+        $this->emailTertiary = Auth::user()->emailTertiary ?? '';
     }
 
     /**
@@ -45,7 +51,26 @@ class Profile extends Component
                 'max:255',
                 Rule::unique(User::class)->ignore($user->id),
             ],
+            'emailSecondary' => [
+                'nullable',
+                'string',
+                'lowercase',
+                'email',
+                'max:255',
+                Rule::unique(User::class, 'emailSecondary')->ignore($user->id),
+            ],
+            'emailTertiary' => [
+                'nullable',
+                'string',
+                'lowercase',
+                'email',
+                'max:255',
+                Rule::unique(User::class, 'emailTertiary')->ignore($user->id),
+            ],
         ]);
+
+        $validated['emailSecondary'] = $validated['emailSecondary'] !== '' ? $validated['emailSecondary'] : null;
+        $validated['emailTertiary'] = $validated['emailTertiary'] !== '' ? $validated['emailTertiary'] : null;
 
         $user->fill($validated);
 

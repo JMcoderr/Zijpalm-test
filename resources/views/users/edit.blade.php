@@ -18,6 +18,8 @@
                     <x-input-field type="text" label="Voornaam" id="firstName" value="{{$user->firstName}}" required :disabled="!$canUpdateIdentity" />
                     <x-input-field type="text" label="Achternaam" id="lastName" value="{{$user->lastName}}" required :disabled="!$canUpdateIdentity" />
                     <x-input-field type="email" label="E-mail" id="email" value="{{$user->email}}" inputmode="email" required :disabled="!$canUpdateIdentity" />
+                    <x-input-field type="email" label="Extra e-mailadres 1" id="emailSecondary" value="{{$user->emailSecondary}}" inputmode="email" :disabled="!$canUpdateIdentity" />
+                    <x-input-field type="email" label="Extra e-mailadres 2" id="emailTertiary" value="{{$user->emailTertiary}}" inputmode="email" :disabled="!$canUpdateIdentity" />
                     <x-input-field type="phone" label="Telefoonnummer" id="phone" value="{{$user->phone}}" inputmode="numeric" />
                     @isset($user->employee_number)
                         <x-input-field type="text" label="Medewerkernummer" id="employee_number" value="{{$user->employee_number}}" :disabled="!$user->canUpdatePersonalia()" />
