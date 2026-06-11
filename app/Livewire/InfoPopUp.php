@@ -18,14 +18,14 @@ class InfoPopUp extends Component{
     public function addTabs($info){
         if($info === 'whatsapp-info'){
             $addedTab = $this->tab;
-            $addedTab['title'] = "WhatsApp Groep Link Verkrijgen";
+            $addedTab['title'] = "WhatsApp-groepslink maken";
             $addedTab['content'] = [
-                "Open de WhatsApp website",
-                "Maak een WhatsApp groep aan",
-                "Open de groep en klik op het groepsonderwerp",
-                "Klik op 'Uitnodigen voor groep via link'",
-                "Kies voor 'Link kopiëren'",
-                "Plak de gekopieërde link hieronder",
+                "Open WhatsApp op je telefoon of computer",
+                "Open de groep waarvoor je een link wilt maken",
+                "Tik of klik op de groepsnaam bovenaan",
+                "Kies 'Uitnodigen via link'",
+                "Kies daarna 'Link kopiëren'",
+                "Plak die link hieronder",
             ];
             $this->tabs[] = $addedTab;
         }
