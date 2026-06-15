@@ -184,6 +184,11 @@
 
                 recurringWeekday.required = isRecurring;
                 recurringWeekdayWrapper?.classList.toggle('hidden', !isRecurring);
+                recurringWeekday.disabled = !isRecurring;
+
+                if (!isRecurring) {
+                    recurringWeekday.value = '';
+                }
 
                 if (window.applyRecurringCancellationVisibility) {
                     window.applyRecurringCancellationVisibility(recurring);

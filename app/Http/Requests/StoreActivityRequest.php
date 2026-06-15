@@ -24,6 +24,8 @@ class StoreActivityRequest extends FormRequest
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
     public function rules(): array{
+        $isRecurring = $this->boolean('recurring');
+
         return [
             // General details
             'title' => ['required', 'string', 'max:255'],
@@ -47,7 +49,7 @@ class StoreActivityRequest extends FormRequest
             // Times
             'start-date' => ['nullable', 'date'],
             'start-time' => ['nullable', 'date_format:H:i'],
-            'recurring_weekday' => [Rule::requiredIf(fn () => $this->boolean('recurring')), 'nullable', 'integer', 'between:1,7'],
+            'recurring_weekday' => [Rule::excludeIf(fn () => !$isRecurring), Rule::requiredIf(fn () => $isRecurring), 'nullable', 'integer', 'between:1,7'],
             'end-date' => [Rule::requiredIf(fn () => !$this->boolean('recurring')), 'nullable', 'date', 'after_or_equal:start-date'],
             'end-time' => ['nullable', 'date_format:H:i'],
             'registrationStart' => ['nullable', 'date'],

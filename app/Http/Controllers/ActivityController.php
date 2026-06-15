@@ -228,7 +228,7 @@ class ActivityController extends Controller
         $allOptedIn = User::query()
             ->notSoftDeleted()
             ->get()
-            ->filter(fn ($u) => $u->wantsNotification(UserNotifications::NEW_ACTIVITY) && filter_var($u->email, FILTER_VALIDATE_EMAIL))
+            ->filter(fn ($u) => filter_var($u->email, FILTER_VALIDATE_EMAIL))
             ->pluck('email')
             ->unique()
             ->values();

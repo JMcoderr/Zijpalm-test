@@ -50,7 +50,7 @@ class UpdateActivityRequest extends FormRequest
             // Times
             'start-date' => ['nullable', 'date'],
             'start-time' => ['nullable', 'date_format:H:i'],
-            'recurring_weekday' => [Rule::requiredIf(fn () => $isRecurring), 'nullable', 'integer', 'between:1,7'],
+            'recurring_weekday' => [Rule::excludeIf(fn () => !$isRecurring), Rule::requiredIf(fn () => $isRecurring), 'nullable', 'integer', 'between:1,7'],
             'end-date' => [Rule::requiredIf(fn () => !$isRecurring), 'nullable', 'date', 'after_or_equal:start-date'],
             'end-time' => ['nullable', 'date_format:H:i'],
             'registrationStart' => ['nullable', 'date'],
