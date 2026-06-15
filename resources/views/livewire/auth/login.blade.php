@@ -7,22 +7,26 @@
         $resetFallback = request()->query('reset') ? __('Uw wachtwoord is succesvol gereset. U kunt nu inloggen.') : null;
     @endphp
     <x-auth-session-status class="text-center" :status="session('status') ?? $resetFallback" />
-    <form wire:submit="login" class="flex flex-col gap-6">
+    
+    <form method="POST" action="{{ route('login') }}" class="flex flex-col gap-6">
+        @csrf
+        
         <!-- Email Address -->
         <flux:input
-            wire:model="email"
+            name="email"
             :label="__('Email adres')"
             type="email"
             required
             autofocus
             autocomplete="email"
             placeholder="email@almere.nl"
+            value="{{ old('email') }}"
         />
 
         <!-- Password -->
         <div class="relative">
             <flux:input
-                wire:model="password"
+                name="password"
                 :label="__('Wachtwoord')"
                 type="password"
                 viewable
@@ -30,17 +34,14 @@
                 autocomplete="current-password"
                 :placeholder="__('Wachtwoord')"
             />
-
-            {{-- @if (Route::has('password.request'))
-                <flux:link class="absolute right-0 top-0 text-sm" :href="route('password.request')" wire:navigate>
-                    {{ __('Wachtwoord vergeten?') }}
-                </flux:link>
-            @endif --}}
         </div>
 
-        <div class="flex justify-between">
+        <div class="flex justify-between items-center">
             <!-- Remember Me -->
-            <flux:checkbox wire:model="remember" :label="__('Onthoud mij')" />
+            <label class="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" name="remember" value="on" class="w-4 h-4">
+                <span>{{ __('Onthoud mij') }}</span>
+            </label>
             <flux:link class="text-sm" :href="route('password.request')" wire:navigate>
                 {{ __('Wachtwoord vergeten?') }}
             </flux:link>

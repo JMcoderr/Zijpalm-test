@@ -81,11 +81,17 @@ class Login extends Component
             ]);
         }
 
-        Auth::login($user, $this->remember);
+        $remember = (bool) $this->remember;
 
+        // Ensure a remember token exists before logging in with "remember me".
+        if ($remember && empty($user->getRememberToken())) {
+            $user->setRememberToken(Str::random(60));
+            $user->saveQuietly();
+        }
 
-        RateLimiter::clear($this->throttleKey());
         Session::regenerate();
+        Auth::login($user, $remember);
+        RateLimiter::clear($this->throttleKey());
 
         // Check for the reset flag either as a query param or as a server-side
         // session key. Livewire actions don't always include query parameters
