@@ -61,8 +61,30 @@
                             @endforeach
                         @elseif($name == 'Oud leden (Meest recent verwijderde eerst)')
                             @foreach ($members as $member)
+                                @php
+                                    $formerRole = match($member->type?->value ?? $member->type) {
+                                        'medewerker' => 'Medewerker',
+                                        'stagiair' => 'Stagiair',
+                                        'inhuur' => 'Inhuur',
+                                        'gepensioneerde' => 'Gepensioneerde',
+                                        'erelid' => 'Erelid',
+                                        default => 'Onbekend',
+                                    };
+
+                                    $movedToOldDate = $member->deleted_at?->format('d-m-Y') ?? '-';
+                                @endphp
                                 {{-- If the member is an admin, show a star next to their name --}}
-                                <x-admin.card :title="$member->name" :email="$member->email" :href="route('user.edit', $member)" :buttons="['edit' => route('user.edit', $member), 'reinstate' => route('admin.reinstateUser', $member)]" :icons="$member->is_admin ? ['star'] : []" />
+                                <x-admin.card
+                                    :title="$member->name"
+                                    :email="$member->email"
+                                    :href="route('user.edit', $member)"
+                                    :buttons="['edit' => route('user.edit', $member), 'reinstate' => route('admin.reinstateUser', $member)]"
+                                    :icons="$member->is_admin ? ['star'] : []"
+                                    :variables="[
+                                        ['text' => 'Oud sinds: ' . $movedToOldDate, 'class' => 'text-sm text-zinc-700 whitespace-nowrap'],
+                                        ['text' => 'Vorige rol: ' . $formerRole, 'class' => 'text-sm text-zinc-700 whitespace-nowrap'],
+                                    ]"
+                                />
                             @endforeach
                         @else
                             @foreach ($members as $member)
