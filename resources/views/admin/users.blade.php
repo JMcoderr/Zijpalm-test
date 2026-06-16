@@ -39,6 +39,7 @@
                 <x-zijpalm-modal text="Importeer overig" livewire include="import-members" modal="importMembers" :variables="['id' => 'import-members-form', 'endpoint' => route('admin.importMembers'), 'errors' => $errors->importMembers->all()]" />
                 <x-zijpalm-button class="ml-2" type="action" variant="default" label="Importeer overig" x-on:click="importMembers = true" />
                 <x-zijpalm-button class="ml-2" :href="route('admin.users.export')" type="redirect" variant="default" label="Exporteer ledenlijst" />
+                <x-zijpalm-button class="ml-2" :href="route('admin.users.exportDeleted')" type="redirect" variant="default" label="Exporteer oud leden" />
 
                 <x-zijpalm-modal text="Jaarlijkse facturen" modal="annualInvoice">
                     <form id="annual-invoice-form" method="POST" action="{{ route('admin.users.sendAnnualInvoices') }}" class="flex flex-col gap-3">
@@ -81,8 +82,8 @@
                                     :buttons="['edit' => route('user.edit', $member), 'reinstate' => route('admin.reinstateUser', $member)]"
                                     :icons="$member->is_admin ? ['star'] : []"
                                     :variables="[
-                                        ['text' => 'Oud sinds: ' . $movedToOldDate, 'class' => 'text-sm text-zinc-700 whitespace-nowrap'],
-                                        ['text' => 'Vorige rol: ' . $formerRole, 'class' => 'text-sm text-zinc-700 whitespace-nowrap'],
+                                        ['text' => 'Oud sinds: ' . $movedToOldDate, 'tag' => 'h3', 'class' => 'font-semibold text-gray-800 whitespace-nowrap'],
+                                        ['text' => 'Vorige rol: ' . $formerRole, 'tag' => 'h3', 'class' => 'font-semibold text-gray-800 whitespace-nowrap'],
                                     ]"
                                 />
                             @endforeach

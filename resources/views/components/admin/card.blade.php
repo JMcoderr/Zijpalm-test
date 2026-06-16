@@ -35,7 +35,8 @@
         @if(!empty($variables))
             <div class="flex justify-end grow items-center gap-4">
                 @foreach($variables as $var)
-                    <span class="{{ $var['class'] }}">{{ $var['text'] }}</span>
+                    @php $variableTag = $var['tag'] ?? 'span'; @endphp
+                    <{{ $variableTag }} class="{{ $var['class'] }}">{{ $var['text'] }}</{{ $variableTag }}>
                 @endforeach
             </div>
         @endisset

@@ -53,15 +53,59 @@ class ActivityController extends Controller
      */
     public function suggestion()
     {
-        //
+        return view('activities.suggestion');
     }
 
     /**
      * Process the suggestion form.
      */
-    public function processSuggestion()
+    public function processSuggestion(Request $request)
     {
-        //
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email'],
+            'activity_name' => ['required', 'string', 'max:255'],
+            'description' => ['required', 'string', 'max:5000'],
+            'attachments' => ['nullable', 'array'],
+            'attachments.*' => ['file', 'max:10240'], // 10MB per file
+        ]);
+
+        // Prepare attachment file paths if any
+        $attachments = [];
+        if ($request->hasFile('attachments')) {
+            foreach ($request->file('attachments') as $file) {
+                $path = Storage::disk('local')->put('suggestion_attachments', $file);
+                $attachments[] = [
+                    'name' => $file->getClientOriginalName(),
+                    'path' => $path,
+                ];
+            }
+        }
+
+        // Send suggestion email to Zijpalm inbox
+        try {
+            Mail::to('zijpalm@almere.nl', 'Zijpalm')->send(
+                new \App\Mail\ActivitySuggestion(
+                    $validated['name'],
+                    $validated['email'],
+                    $validated['activity_name'],
+                    $validated['description'],
+                    $attachments
+                )
+            );
+        } catch (\Throwable $e) {
+            // Log any error (including type errors) but don't break the user flow.
+            \Illuminate\Support\Facades\Log::error('Failed to send activity suggestion', [
+                'error' => $e->getMessage(),
+                'email' => $validated['email'],
+            ]);
+
+            return redirect()->route('activity.suggestion')
+                ->with('error', 'Er ging iets mis bij het versturen. Probeer het opnieuw of neem contact op met het bestuur.');
+        }
+
+        return redirect()->route('activity.suggestion')
+            ->with('success', 'Bedankt voor je idee! We hebben het ontvangen en zullen dit binnenkort bekijken.');
     }
 
     /***

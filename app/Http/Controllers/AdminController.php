@@ -195,6 +195,65 @@ class AdminController extends Controller
         return response()->download($tempFile, $fileName)->deleteFileAfterSend(true);
     }
 
+    public function exportDeletedUsers()
+    {
+        // Export deleted users in the same readable format, including when they were moved to old members.
+        $users = User::softDeletedPast()
+            ->orderBy('deleted_at', 'desc')
+            ->orderBy('firstName')
+            ->get();
+
+        $fileName = 'oud_leden_' . now()->format('Ymd_His') . '.xlsx';
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Oud leden');
+
+        $headers = [
+            'First name',
+            'Last name',
+            'Email',
+            'Phone',
+            'Former type',
+            'Deleted at',
+            'Is admin',
+        ];
+
+        $sheet->fromArray($headers, null, 'A1');
+
+        $row = 2;
+        foreach ($users as $user) {
+            $phone = formatPhoneNumber($user->phone);
+            $formerType = $user->type?->value ?? (string) $user->type;
+            $deletedAt = optional($user->deleted_at)->format('d-m-Y H:i');
+
+            $sheet->fromArray([
+                $user->firstName,
+                $user->lastName,
+                $user->email,
+                $phone,
+                $formerType,
+                $deletedAt,
+                $user->is_admin ? 'yes' : 'no',
+            ], null, 'A' . $row);
+
+            // Force text to preserve the leading 0 in Excel.
+            $sheet->setCellValueExplicit('D' . $row, $phone, DataType::TYPE_STRING);
+
+            $row++;
+        }
+
+        foreach (range('A', 'G') as $column) {
+            $sheet->getColumnDimension($column)->setAutoSize(true);
+        }
+
+        $writer = new XlsxWriter($spreadsheet);
+        $tempFile = tempnam(sys_get_temp_dir(), 'deleted_members_');
+        $writer->save($tempFile);
+
+        return response()->download($tempFile, $fileName)->deleteFileAfterSend(true);
+    }
+
     public function reports()
     {
         // Get all non-cancelled & non-weekly activities

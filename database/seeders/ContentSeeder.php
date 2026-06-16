@@ -47,7 +47,7 @@ class ContentSeeder extends Seeder
         ]);
 
         // In order to grab the email provided in the env, it has to be concatenated here first.
-        $activityIdeaText = '{"time":1746621785856,"blocks":[{"id":"EZ9CHsp0HM","type":"paragraph","data":{"text":"<a href=\"mailto:'. $email . '?subject=Niew Idee voor Zijpalm\">Dien je idee in!</a>"}}],"version":"2.31.0-rc.7"}';
+        $activityIdeaText = '{"time":1746621785856,"blocks":[{"id":"EZ9CHsp0HM","type":"paragraph","data":{"text":"Dien je idee in!"}}],"version":"2.31.0-rc.7"}';
 
         Content::create([
             'type' => 'text',

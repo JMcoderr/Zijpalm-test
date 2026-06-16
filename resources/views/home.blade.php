@@ -47,6 +47,6 @@
 
     {{-- Bottom div / Activity idea box --}}
     @if($idea)
-        <x-zijpalm-div :id="$idea->id" :name="$idea->name" color="light" :textIsLink=false textColor="text-zijpalm-400" :editables="['Titel', 'Tekst']" titleFontSize="text-2xl" :title="$idea->title" :text="$idea->textHTML" />
+        <x-zijpalm-div :id="$idea->id" :name="$idea->name" color="light" :textIsLink=true :href="route('activity.suggestion')" textColor="text-zijpalm-400" :editables="['Titel', 'Tekst']" titleFontSize="text-2xl" :title="$idea->title" :text="$idea->textHTML" />
     @endif
 </x-page-wrapper>
