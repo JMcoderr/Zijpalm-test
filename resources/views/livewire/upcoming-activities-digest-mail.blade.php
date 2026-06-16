@@ -55,7 +55,7 @@
         </form>
         <script>
             (function(){
-                // English comment: update display estimate and persist settings when modal closes
+                // Update display estimate and persist settings when modal closes
                 const form = document.getElementById('upcoming-activities-digest-form');
                 const batchInput = form?.querySelector('#batch_size');
                 const delayInput = form?.querySelector('#delay');
@@ -76,7 +76,7 @@
                     estimateEl.innerText = mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
                 }
 
-                // English comment: listen for a request to close; ask to save and persist settings, then ack to close the modal.
+                // Listen for a request to close; ask to save and persist settings, then ack to close the modal.
                 window.addEventListener('zijpalm-modal-request-close', async function (ev) {
                     if (ev?.detail?.modal !== 'upcomingActivitiesDigestMailModal') return;
 

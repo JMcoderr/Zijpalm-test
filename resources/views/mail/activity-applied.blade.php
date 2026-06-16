@@ -29,9 +29,11 @@
 @endpush
 
 <x-layouts.mail.header :user="$user" :hideGreeting="$activity->personal_confirmation_enabled && !$reserve && !empty($personalConfirmationHtml)">
-    {{-- Short intro text for the person who signed up. --}}
-    <p>Leuk dat jij je hebt aangemeld. Hierbij bevestigen wij dat jouw aanmelding is binnengekomen.</p>
-    <p>De details vind je hieronder.</p>
+    @if(!$activity->personal_confirmation_enabled || $reserve || empty($personalConfirmationHtml))
+        {{-- Short intro text for the person who signed up. --}}
+        <p>Leuk dat jij je hebt aangemeld. Hierbij bevestigen wij dat jouw aanmelding is binnengekomen.</p>
+        <p>De details vind je hieronder.</p>
+    @endif
     @if($reserve)
         {{-- For reserve signups we show reserve content first. --}}
         {!! $reserveContentHtml ?? $reserveContent->textHTML !!}

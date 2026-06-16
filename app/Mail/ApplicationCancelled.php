@@ -73,6 +73,7 @@ class ApplicationCancelled extends Mailable
 
         $jsonBody = json_encode([
             'email' => $this->user->email,
+            'emails' => $this->user->registeredEmails(),
             'subject' => $this->content->title . ' ' . $this->activity->title . ' #Z',
             'body' => $renderedContent,
         ], JSON_PRETTY_PRINT);

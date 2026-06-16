@@ -39,6 +39,7 @@
                 <x-zijpalm-modal text="Importeer overig" livewire include="import-members" modal="importMembers" :variables="['id' => 'import-members-form', 'endpoint' => route('admin.importMembers'), 'errors' => $errors->importMembers->all()]" />
                 <x-zijpalm-button class="ml-2" type="action" variant="default" label="Importeer overig" x-on:click="importMembers = true" />
                 <x-zijpalm-button class="ml-2" :href="route('admin.users.export')" type="redirect" variant="default" label="Exporteer ledenlijst" />
+                <x-zijpalm-button class="ml-2" :href="route('admin.users.exportDeleted')" type="redirect" variant="default" label="Exporteer oud leden" />
 
                 <x-zijpalm-modal text="Jaarlijkse facturen" modal="annualInvoice">
                     <form id="annual-invoice-form" method="POST" action="{{ route('admin.users.sendAnnualInvoices') }}" class="flex flex-col gap-3">
@@ -61,8 +62,30 @@
                             @endforeach
                         @elseif($name == 'Oud leden (Meest recent verwijderde eerst)')
                             @foreach ($members as $member)
+                                @php
+                                    $formerRole = match($member->type?->value ?? $member->type) {
+                                        'medewerker' => 'Medewerker',
+                                        'stagiair' => 'Stagiair',
+                                        'inhuur' => 'Inhuur',
+                                        'gepensioneerde' => 'Gepensioneerde',
+                                        'erelid' => 'Erelid',
+                                        default => 'Onbekend',
+                                    };
+
+                                    $movedToOldDate = $member->deleted_at?->format('d-m-Y') ?? '-';
+                                @endphp
                                 {{-- If the member is an admin, show a star next to their name --}}
-                                <x-admin.card :title="$member->name" :email="$member->email" :href="route('user.edit', $member)" :buttons="['edit' => route('user.edit', $member), 'reinstate' => route('admin.reinstateUser', $member)]" :icons="$member->is_admin ? ['star'] : []" />
+                                <x-admin.card
+                                    :title="$member->name"
+                                    :email="$member->email"
+                                    :href="route('user.edit', $member)"
+                                    :buttons="['edit' => route('user.edit', $member), 'reinstate' => route('admin.reinstateUser', $member)]"
+                                    :icons="$member->is_admin ? ['star'] : []"
+                                    :variables="[
+                                        ['text' => 'Oud sinds: ' . $movedToOldDate, 'tag' => 'h3', 'class' => 'font-semibold text-gray-800 whitespace-nowrap'],
+                                        ['text' => 'Vorige rol: ' . $formerRole, 'tag' => 'h3', 'class' => 'font-semibold text-gray-800 whitespace-nowrap'],
+                                    ]"
+                                />
                             @endforeach
                         @else
                             @foreach ($members as $member)

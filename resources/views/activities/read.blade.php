@@ -354,6 +354,7 @@
                                     <th class="text-right font-semibold p-2">Extra's</th>
                                     <th class="text-right font-semibold p-2">Totaal</th>
                                     <th class="text-right font-semibold p-2">Betaald</th>
+                                    <th class="text-right font-semibold p-2">Actie</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-[rgba(0,0,0,0.15)]">
@@ -403,6 +404,18 @@
                                         </td>
                                         <td class="p-2 text-right font-semibold">{{ formatPrice($totalCost) }}</td>
                                         <td class="p-2 text-right font-semibold">{{ formatPrice($paidAmount) }}</td>
+                                        <td class="p-2 text-right">
+                                            @if($application->status === App\ApplicationStatus::Pending)
+                                                <form id="mark-paid-{{ $application->id }}" method="POST" action="{{ route('application.update', $application) }}" class="inline">
+                                                    @csrf
+                                                    @method('PUT')
+                                                    <input type="hidden" name="status" value="active">
+                                                </form>
+                                                <x-zijpalm-button form="mark-paid-{{ $application->id }}" type="submit" label="Zet op betaald" variant="default" />
+                                            @else
+                                                <span class="opacity-50">-</span>
+                                            @endif
+                                        </td>
                                     </tr>
                                 @endforeach
                             </tbody>

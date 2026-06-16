@@ -160,6 +160,7 @@ class ActivityApplied extends Mailable
         // Send the rendered HTML to the automation system as JSON.
         $jsonBody = json_encode([
             'email' => $this->user->email,
+            'emails' => $this->user->registeredEmails(),
             'subject' => $this->content->title . ' ' . $this->activity->title . ' #Z',
             'body' => $renderedContent,
         ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE);
@@ -174,6 +175,7 @@ class ActivityApplied extends Mailable
 
             $jsonBody = json_encode([
                 'email' => $this->user->email,
+                'emails' => $this->user->registeredEmails(),
                 'subject' => $this->content->title . ' ' . $this->activity->title . ' #Z',
                 'body' => '',
             ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE) ?: '{}';

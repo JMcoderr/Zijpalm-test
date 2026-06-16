@@ -217,7 +217,34 @@ class ApplicationController extends Controller
      */
     public function update(Request $request, Application $application)
     {
-        //
+        if (!auth()->user()?->isAdmin()) {
+            return redirect()->back()->with('error', 'Je hebt hier geen rechten voor.');
+        }
+
+        if ($application->status !== ApplicationStatus::Pending) {
+            return redirect()->back()->with('error', 'Alleen aanmeldingen in afwachting van betaling kunnen op betaald worden gezet.');
+        }
+
+        $data = $request->validate([
+            'status' => ['required', 'in:' . implode(',', ApplicationStatus::toArray())],
+        ]);
+
+        if ($data['status'] !== ApplicationStatus::Active->value) {
+            return redirect()->back()->with('error', 'Deze actie kan alleen gebruikt worden om een aanmelding op betaald te zetten.');
+        }
+
+        $payment = $application->payments()->latest('created_at')->first();
+
+        if ($payment) {
+            $payment->status = PaymentStatus::paid;
+            $payment->paidAt = $payment->paidAt ?? now();
+            $payment->save();
+        }
+
+        $application->update(['status' => ApplicationStatus::Active]);
+        $application->activity->updateApplications();
+
+        return redirect()->back()->with('success', 'De aanmelding is op betaald gezet.');
     }
 
     /**

@@ -58,6 +58,7 @@ class PaymentFailed extends Mailable
 
         $jsonBody = json_encode([
             'email' => $this->user->email,
+            'emails' => $this->user->registeredEmails(),
             'subject' => ($this->content->title ?: 'Betaling mislukt') . ': ' . $this->payment->description . ' #Z',
             'body' => $renderedContent,
         ], JSON_PRETTY_PRINT);

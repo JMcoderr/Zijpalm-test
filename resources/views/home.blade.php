@@ -19,7 +19,9 @@
     {{-- Title & subtitle --}}
     {{-- id={{$homepageBanner->name}} --}}
     {{-- src={{$homepageBanner->getFile(returns either <a> or <img> link)}} --}}
-    <x-zijpalm-div :id="$banner->id" :name="$banner->name" color='transparent' :editables="['Titel', 'Tekst']" :title="$banner->title" :text="$banner->textHTML" textSize="text-xl"/>
+    @if($banner)
+        <x-zijpalm-div :id="$banner->id" :name="$banner->name" color='transparent' :editables="['Titel', 'Tekst']" :title="$banner->title" :text="$banner->textHTML" textSize="text-xl"/>
+    @endif
 
     {{-- Buttons --}}
     <div class="flex flex-wrap items-center justify-items-center justify-center gap-2.5">
@@ -39,8 +41,12 @@
     <div class="transition-all duration-1000 md:h-full h-0"></div>
 
     {{-- Middle div / Introduction, description --}}
-    <x-zijpalm-div :id="$info->id" :name="$info->name" :editables="['Titel', 'Tekst']" :title="$info->title" :text="$info->textHTML"/>
+    @if($info)
+        <x-zijpalm-div :id="$info->id" :name="$info->name" :editables="['Titel', 'Tekst']" :title="$info->title" :text="$info->textHTML"/>
+    @endif
 
     {{-- Bottom div / Activity idea box --}}
-    <x-zijpalm-div :id="$idea->id" :name="$idea->name" color="light" :textIsLink=false textColor="text-zijpalm-400" :editables="['Titel', 'Tekst']" titleFontSize="text-2xl" :title="$idea->title" :text="$idea->textHTML" />
+    @if($idea)
+        <x-zijpalm-div :id="$idea->id" :name="$idea->name" color="light" :textIsLink=true :href="route('activity.suggestion')" textColor="text-zijpalm-400" :editables="['Titel', 'Tekst']" titleFontSize="text-2xl" :title="$idea->title" :text="$idea->textHTML" />
+    @endif
 </x-page-wrapper>

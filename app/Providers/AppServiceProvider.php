@@ -38,10 +38,10 @@ class AppServiceProvider extends ServiceProvider
                 // Build a custom MailMessage
                     return (new MailMessage)
                         ->subject('Wachtwoord vergeten #Z')
-                    ->line('U ontvangt deze email omdat we een wachtwoord reset aanvraag hebben ontvangen voor uw account.')
-                    ->action('Reset Wachtwoord', $url)
+                    ->line('Je ontvangt deze e-mail omdat we een wachtwoordresetaanvraag voor je account hebben ontvangen.')
+                    ->action('Wachtwoord vernieuwen', $url)
                     ->line('Deze link verloopt over ' . $count . ' minuten.')
-                    ->line('Als u geen nieuw wachtwoord heeft aangevraagd hoeft u verder niks te doen.');
+                    ->line('Als je geen wachtwoord hebt aangevraagd, hoef je verder niets te doen.');
             }
         );
     }

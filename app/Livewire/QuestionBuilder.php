@@ -55,12 +55,20 @@ class QuestionBuilder extends Component{
         // If existing questions are given, map them to the structure expected by the builder UI.
         if($questions){
             $this->questions = collect($questions)->map(function($item, $key) {
+                $questionId = data_get($item, 'id', $key);
+
                 if(is_array($item)){
-                    return array_merge(['id' => $key], $item);
+                    return array_merge([
+                        'id' => $questionId,
+                        'vraag' => $item['vraag'] ?? $item['query'] ?? null,
+                        'prijs' => $item['prijs'] ?? $item['price'] ?? null,
+                        'max' => $item['max'] ?? $item['max_amount'] ?? null,
+                        'options' => $item['options'] ?? [],
+                    ], $item);
                 }
                 // Map Question model to the array structure the blade expects
                 return [
-                    'id'      => $key,
+                    'id'      => $questionId,
                     'type'    => $item->type instanceof \BackedEnum ? $item->type->value : $item->type,
                     'vraag'   => $item->query,
                     'prijs'   => $item->price,
@@ -70,8 +78,7 @@ class QuestionBuilder extends Component{
                         'prijs' => $o->price,
                     ])->toArray(),
                 ];
-            })->all();
-            // dd($this->questions);
+            })->keyBy('id')->toArray();
         }
     }
 

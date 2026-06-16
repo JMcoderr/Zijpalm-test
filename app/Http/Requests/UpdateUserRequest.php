@@ -4,7 +4,9 @@
 
 namespace App\Http\Requests;
 
+use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdateUserRequest extends FormRequest
 {
@@ -23,11 +25,16 @@ class UpdateUserRequest extends FormRequest
      */
     public function rules(): array
     {
+        $user = $this->route('user');
+        $userId = $user instanceof User ? $user->id : null;
+
         return [
-            'firstName' => ['sometimes', 'string', 'max:255'],
-            'lastName' => ['sometimes', 'string', 'max:255'],
+            'firstName' => ['sometimes', 'required', 'string', 'max:255'],
+            'lastName' => ['sometimes', 'required', 'string', 'max:255'],
             'phone' => ['sometimes', 'nullable', 'string', 'regex:/^\d{8}$/'],
-            'email' => ['sometimes', 'email', 'max:255'],
+            'email' => ['sometimes', 'required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($userId)],
+            'emailSecondary' => ['sometimes', 'nullable', 'email', 'max:255', Rule::unique('users', 'emailSecondary')->ignore($userId)],
+            'emailTertiary' => ['sometimes', 'nullable', 'email', 'max:255', Rule::unique('users', 'emailTertiary')->ignore($userId)],
             'is_admin' => ['sometimes', 'boolean'],
             'type' => ['sometimes', 'in:' . implode(',', \App\UserType::toArray())],
         ];
@@ -49,6 +56,10 @@ class UpdateUserRequest extends FormRequest
             'phone.regex' => 'Het telefoonnummer moet uit precies 8 cijfers bestaan',
             'email.email' => 'Voer een geldig e-mailadres in',
             'email.max' => 'Het e-mailadres mag niet langer zijn dan 255 tekens',
+            'emailSecondary.email' => 'Voer een geldig extra e-mailadres in',
+            'emailSecondary.max' => 'Het extra e-mailadres mag niet langer zijn dan 255 tekens',
+            'emailTertiary.email' => 'Voer een geldig extra e-mailadres in',
+            'emailTertiary.max' => 'Het extra e-mailadres mag niet langer zijn dan 255 tekens',
             'is_admin.boolean' => 'De waarde voor beheerder moet waar of onwaar zijn',
             'type.in' => 'Het geselecteerde type is ongeldig',
         ];

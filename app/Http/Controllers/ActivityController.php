@@ -53,15 +53,59 @@ class ActivityController extends Controller
      */
     public function suggestion()
     {
-        //
+        return view('activities.suggestion');
     }
 
     /**
      * Process the suggestion form.
      */
-    public function processSuggestion()
+    public function processSuggestion(Request $request)
     {
-        //
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email'],
+            'activity_name' => ['required', 'string', 'max:255'],
+            'description' => ['required', 'string', 'max:5000'],
+            'attachments' => ['nullable', 'array'],
+            'attachments.*' => ['file', 'max:10240'], // 10MB per file
+        ]);
+
+        // Prepare attachment file paths if any
+        $attachments = [];
+        if ($request->hasFile('attachments')) {
+            foreach ($request->file('attachments') as $file) {
+                $path = Storage::disk('local')->put('suggestion_attachments', $file);
+                $attachments[] = [
+                    'name' => $file->getClientOriginalName(),
+                    'path' => $path,
+                ];
+            }
+        }
+
+        // Send suggestion email to Zijpalm inbox
+        try {
+            Mail::to('zijpalm@almere.nl', 'Zijpalm')->send(
+                new \App\Mail\ActivitySuggestion(
+                    $validated['name'],
+                    $validated['email'],
+                    $validated['activity_name'],
+                    $validated['description'],
+                    $attachments
+                )
+            );
+        } catch (\Throwable $e) {
+            // Log any error (including type errors) but don't break the user flow.
+            \Illuminate\Support\Facades\Log::error('Failed to send activity suggestion', [
+                'error' => $e->getMessage(),
+                'email' => $validated['email'],
+            ]);
+
+            return redirect()->route('activity.suggestion')
+                ->with('error', 'Er ging iets mis bij het versturen. Probeer het opnieuw of neem contact op met het bestuur.');
+        }
+
+        return redirect()->route('activity.suggestion')
+            ->with('success', 'Bedankt voor je idee! We hebben het ontvangen en zullen dit binnenkort bekijken.');
     }
 
     /***
@@ -191,7 +235,7 @@ class ActivityController extends Controller
             throw ValidationException::withMessages($errorArray)->errorBag('reminderMail');
         }
 
-            // English comment: Persist reminder mail settings so they are shown next time the modal opens.
+            // Persist reminder mail settings so they are shown next time the modal opens.
             try {
                 \App\Models\MailSetting::updateOrCreate(
                     ['name' => 'reminder'],
@@ -228,7 +272,7 @@ class ActivityController extends Controller
         $allOptedIn = User::query()
             ->notSoftDeleted()
             ->get()
-            ->filter(fn ($u) => $u->wantsNotification(UserNotifications::NEW_ACTIVITY) && filter_var($u->email, FILTER_VALIDATE_EMAIL))
+            ->filter(fn ($u) => filter_var($u->email, FILTER_VALIDATE_EMAIL))
             ->pluck('email')
             ->unique()
             ->values();
@@ -242,7 +286,7 @@ class ActivityController extends Controller
             throw ValidationException::withMessages($errorArray)->errorBag('announcementMail');
         }
 
-        // English comment: Persist the chosen announcement mail settings so they are shown next time the modal opens.
+        // Persist the chosen announcement mail settings so they are shown next time the modal opens.
         try {
             \App\Models\MailSetting::updateOrCreate(
                 ['name' => 'announcement'],
@@ -274,7 +318,7 @@ class ActivityController extends Controller
             'delay' => 'required|integer|between:' . config('mail.power_automate.delay.min') . ',' . config('mail.power_automate.delay.max'),
         ]);
 
-        // English comment: persist digest settings so user input is remembered across modal opens
+        // Persist digest settings so user input is remembered across modal opens
         try {
             \App\Models\MailSetting::updateOrCreate(
                 ['name' => 'digest'],
@@ -445,6 +489,8 @@ class ActivityController extends Controller
      */
     public function edit(Activity $activity){
         // Show the edit form with the current activity data
+        $activity->load('questions.selectOptions');
+
         return view('activities.edit', compact('activity'));
     }
 
@@ -457,15 +503,28 @@ class ActivityController extends Controller
 
         $copy = $activity->replicate();
         $copy->title = $activity->title . ' (kopie)';
+        $copy->cancellationEnd = $activity->cancellationEnd;
         $copy->save();
 
         foreach ($activity->questions as $question) {
-            $questionCopy = $copy->questions()->create([
-                'type' => $question->type,
+            $questionData = [
+                'type' => $question->type instanceof \BackedEnum ? $question->type->value : $question->type,
                 'query' => $question->query,
                 'price' => $question->price,
                 'max_amount' => $question->max_amount,
+            ];
+
+            $questionCopy = $copy->questions()->create([
+                'type' => $questionData['type'],
+                'query' => $questionData['query'],
+                'price' => $questionData['price'],
+                'max_amount' => $questionData['max_amount'],
             ]);
+
+            if ($questionData['type'] === 'number' && empty($questionData['max_amount'])) {
+                $questionCopy->max_amount = null;
+                $questionCopy->save();
+            }
 
             foreach ($question->selectOptions as $option) {
                 $questionCopy->selectOptions()->create([
@@ -474,6 +533,8 @@ class ActivityController extends Controller
                 ]);
             }
         }
+
+        $copy->load('questions.selectOptions');
 
         return redirect()->route('activity.edit', $copy)
             ->with('success', "Activiteit '{$activity->title}' is gekopieerd. Je kunt nu de kopie bewerken.");
