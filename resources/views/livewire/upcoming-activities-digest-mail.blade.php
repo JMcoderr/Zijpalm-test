@@ -1,5 +1,15 @@
 {{-- This view file shows part of the interface and is kept simple so it is easy to follow. --}}
 <div>
+    @php
+        $digestActivities = \App\Models\Activity::query()
+            ->whereNotNull('start')
+            ->where('start', '>=', now()->startOfDay())
+            ->where('type', '!=', \App\ActivityType::Cancelled)
+            ->where('registrationStart', '<=', now())
+            ->where('registrationEnd', '>=', now())
+            ->orderBy('start')
+            ->get();
+    @endphp
     <div class="flex flex-col">
         {{-- Show errors, if any --}}
         @if((isset($componentErrors) && !empty($componentErrors)) || (isset($errors) && method_exists($errors,'any') && $errors->any()))
@@ -48,6 +58,25 @@
                         <p>Ontvangers: <span id="upcoming-digest-recipient-count">{{ $recipientCount ?? 0 }}</span></p>
                         <p>Geschatte duur: <span id="upcoming-digest-estimate">-</span></p>
                     </div>
+
+                    <div class="mt-4">
+                        <p class="font-semibold text-gray-900 mb-2">Welke activiteiten wilt u opnemen in de mail?</p>
+                        <p class="text-sm text-gray-700 mb-2">Laat alles aangevinkt om alle activiteiten mee te sturen.</p>
+                        <div class="max-h-56 overflow-y-auto border border-gray-300 rounded p-2 bg-zinc-50">
+                            @forelse($digestActivities as $activity)
+                                <label class="flex items-start gap-2 py-1">
+                                    <input type="checkbox" name="activity_ids[]" value="{{ $activity->id }}" checked>
+                                    <span class="text-sm text-gray-900">
+                                        <strong>{{ $activity->title }}</strong>
+                                        <span class="text-gray-700">({{ formatDate($activity->start) }})</span>
+                                    </span>
+                                </label>
+                            @empty
+                                <p class="text-sm text-gray-700">Geen beschikbare activiteiten gevonden binnen de huidige selectie.</p>
+                            @endforelse
+                        </div>
+                    </div>
+
                     <x-zijpalm-button form="upcoming-activities-digest-form" type="submit" label="Mail toekomstige activiteiten versturen"
                                       center="horizontal" class="mt-2"/>
                 </x-input-group>

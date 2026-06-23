@@ -535,4 +535,17 @@ class AdminController extends Controller
         $user->restore();
         return back()->with('success', 'Gebruikers lidmaatschap succesvol hersteld.');
     }
+
+    public function permanentlyDeleteUser(Request $request, User $user)
+    {
+        // Permanently remove a user from the database.
+        if ($user->type === UserType::System) {
+            return back()->with('error', 'Systeemgebruikers kunnen niet definitief verwijderd worden.');
+        }
+
+        $userName = $user->name;
+        $user->forceDelete();
+
+        return back()->with('success', "Gebruiker {$userName} is definitief verwijderd.");
+    }
 }

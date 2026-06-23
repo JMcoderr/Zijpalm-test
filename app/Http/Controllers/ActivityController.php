@@ -316,6 +316,8 @@ class ActivityController extends Controller
         $validated = $request->validate([
             'batch_size' => 'required|integer|between:' . config('mail.power_automate.batch_size.min') . ',' . config('mail.power_automate.batch_size.max'),
             'delay' => 'required|integer|between:' . config('mail.power_automate.delay.min') . ',' . config('mail.power_automate.delay.max'),
+            'activity_ids' => 'nullable|array',
+            'activity_ids.*' => 'integer|exists:activities,id',
         ]);
 
         // Persist digest settings so user input is remembered across modal opens
@@ -331,6 +333,7 @@ class ActivityController extends Controller
         $exitCode = Artisan::call('app:send-upcoming-activities-digest', [
             '--batch_size' => (int) $validated['batch_size'],
             '--delay' => (int) $validated['delay'],
+            '--activity_ids' => array_values(array_unique(array_map('intval', $validated['activity_ids'] ?? []))),
         ]);
 
         if ($exitCode !== 0) {

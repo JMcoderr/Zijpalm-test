@@ -79,7 +79,7 @@
                                     :title="$member->name"
                                     :email="$member->email"
                                     :href="route('user.edit', $member)"
-                                    :buttons="['edit' => route('user.edit', $member), 'reinstate' => route('admin.reinstateUser', $member)]"
+                                    :buttons="['edit' => route('user.edit', $member), 'reinstate' => route('admin.reinstateUser', $member), 'permanent_delete' => route('admin.permanentlyDeleteUser', $member)]"
                                     :icons="$member->is_admin ? ['star'] : []"
                                     :variables="[
                                         ['text' => 'Oud sinds: ' . $movedToOldDate, 'tag' => 'h3', 'class' => 'font-semibold text-gray-800 whitespace-nowrap'],

@@ -21,7 +21,7 @@ class SendUpcomingActivitiesDigest extends Command
      *
      * @var string
      */
-    protected $signature = 'app:send-upcoming-activities-digest {--batch_size=} {--delay=}';
+    protected $signature = 'app:send-upcoming-activities-digest {--batch_size=} {--delay=} {--activity_ids=*}';
 
     /**
      * The console command description.
@@ -35,23 +35,36 @@ class SendUpcomingActivitiesDigest extends Command
      */
     public function handle(): int
     {
-        $activities = Activity::query()
+        $selectedActivityIds = collect((array) $this->option('activity_ids'))
+            ->filter(fn ($id) => $id !== null && $id !== '')
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+
+        $activitiesQuery = Activity::query()
             ->whereNotNull('start')
             ->where('start', '>=', now()->startOfDay())
             ->where('type', '!=', ActivityType::Cancelled)
             ->where('registrationStart', '<=', now())
             ->where('registrationEnd', '>=', now())
-            ->orderBy('start')
-            ->get();
+            ->orderBy('start');
 
-        $runningActivities = Activity::query()
+        $runningActivitiesQuery = Activity::query()
             ->whereNotNull('start')
             ->whereNotNull('end')
             ->where('start', '<=', now())
             ->where('end', '>=', now())
             ->whereNotIn('type', [ActivityType::Cancelled, ActivityType::Archived])
-            ->orderBy('start')
-            ->get();
+            ->orderBy('start');
+
+        if ($selectedActivityIds->isNotEmpty()) {
+            $activitiesQuery->whereIn('id', $selectedActivityIds->all());
+            $runningActivitiesQuery->whereIn('id', $selectedActivityIds->all());
+        }
+
+        $activities = $activitiesQuery->get();
+
+        $runningActivities = $runningActivitiesQuery->get();
 
         if ($activities->isEmpty()) {
             $this->info('Geen toekomstige activiteiten gevonden binnen 8 weken.');

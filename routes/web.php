@@ -206,6 +206,7 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->controller(AdminC
         Route::post('editor/image-upload', [App\Http\Controllers\EditorImageController::class, 'store'])->name('admin.editor.image-upload');
         Route::delete('lidmaatschap-afmelden/{user}', 'removeUser')->name('removeUser');
         Route::post('lidmaatschap-herstellen/{user}', 'reinstateUser')->name('reinstateUser')->withTrashed();
+        Route::delete('lidmaatschap-definitief-verwijderen/{user}', 'permanentlyDeleteUser')->name('permanentlyDeleteUser')->withTrashed();
         Route::get('verslagen', 'reports')->name('reports');
         Route::get('content', 'content')->name('content');
         Route::get('activiteiten', 'activities')->name('activities');
