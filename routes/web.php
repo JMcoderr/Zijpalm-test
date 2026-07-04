@@ -161,29 +161,32 @@ Route::middleware(['admin'])->prefix('inhoud')->name('content.')->controller(Con
         Route::delete('{content}', 'destroy')->name('destroy');
     }
 );
-// HAS NOT BEEN IMPLEMENTED
-//Route::prefix('shop')->name('product.')->controller(ProductController::class)->group(
-//    function(){
-//        // Index
-//        Route::get('/', 'index')->name('index');
-//
-//        route::middleware('admin')->group(function () {
-//            // Create
-//            Route::get('aanmaken', 'create')->name('create');
-//            Route::post('/', 'store')->name('store');
-//
-//            // Edit
-//            Route::get('{product}/bewerken', 'edit')->name('edit');
-//            Route::put('{product}', 'update')->name('update');
-//
-//            // Delete
-//            Route::delete('{product}', 'destroy')->name('destroy');
-//        });
-//
-//        //Read
-//        Route::get('{product}', 'show')->name('show');
-//    }
-//);
+Route::prefix('shop')->name('product.')->controller(ProductController::class)->group(
+    function(){
+        // Index
+        Route::get('/', 'index')->name('index');
+        Route::get('/activiteiten', 'activities')->name('activities');
+        Route::get('/handdoeken', 'towels')->name('towels');
+
+        route::middleware('admin')->group(function () {
+            // Create
+            Route::get('aanmaken', 'create')->name('create');
+            Route::post('/', 'store')->name('store');
+
+            // Edit
+            Route::get('{product}/bewerken', 'edit')->name('edit');
+            Route::put('{product}', 'update')->name('update');
+            Route::post('{product}/kopieren', 'copy')->name('copy');
+
+            // Delete
+            Route::delete('{product}', 'destroy')->name('destroy');
+        });
+
+        // Read
+        Route::get('{product}', 'show')->name('show');
+        Route::post('{product}/bestellen', 'purchase')->name('purchase');
+    }
+);
 
 // Payment routes
 Route::prefix('mollie')->name('payment.')->controller(PaymentController::class)->group(
@@ -208,6 +211,8 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->controller(AdminC
         Route::post('lidmaatschap-herstellen/{user}', 'reinstateUser')->name('reinstateUser')->withTrashed();
         Route::delete('lidmaatschap-definitief-verwijderen/{user}', 'permanentlyDeleteUser')->name('permanentlyDeleteUser')->withTrashed();
         Route::get('verslagen', 'reports')->name('reports');
+        Route::get('bestellingen', 'orders')->name('orders');
+        Route::get('bestellingen/{order}', 'showOrder')->name('orders.show');
         Route::get('content', 'content')->name('content');
         Route::get('activiteiten', 'activities')->name('activities');
         Route::get('activiteiten/download/{activity}', 'downloadApplications')->name('activities.download');

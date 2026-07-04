@@ -97,8 +97,23 @@ class PaymentController extends Controller
             $paymentMollie = Mollie::api()->payments->get($payment->mollieId);
         }
 
-        // Send the status back to the home page so the UI can show it.
-        return redirect()->route('home')->with('payment_status', $paymentMollie->status ?? "unknown");
+        $status = $paymentMollie->status ?? 'unknown';
+
+        // Order payments should return to the shop flow with explicit user feedback.
+        if ($payment->orders()->exists()) {
+            if ($status === PaymentStatus::paid->value) {
+                return redirect()->route('product.index')->with('success', 'Betaling gelukt! Je bestelling is ontvangen.');
+            }
+
+            if (in_array($status, [PaymentStatus::failed->value, PaymentStatus::canceled->value, PaymentStatus::expired->value], true)) {
+                return redirect()->route('product.index')->with('error', 'Betaling niet afgerond. Probeer het opnieuw.');
+            }
+
+            return redirect()->route('product.index')->with('error', 'Betaling is nog niet afgerond. Controleer de status later opnieuw.');
+        }
+
+        // Default flow for non-order payments.
+        return redirect()->route('home')->with('payment_status', $status);
     }
 
     public function webhook(Request $request)
@@ -148,13 +163,20 @@ class PaymentController extends Controller
             return response('Not Found', 404);
         }
 
+        if (!$payment) {
+            return response('OK');
+        }
+
+        $currentStatus = $paymentDB->status?->value;
+        $latestStatus = $payment->status;
+
         // If nothing changed, just confirm the webhook.
-        if ($paymentDB->status == $payment->status) {
+        if ($currentStatus === $latestStatus) {
             return response('OK');
         }
 
         // Update the stored payment status to match Mollie.
-        $paymentDB->status = $payment->status;
+        $paymentDB->status = $latestStatus;
 
         // Store the paid time once, but only if it is not saved yet.
         if ($payment->isPaid() && !$paymentDB->paidAt) {
@@ -181,7 +203,7 @@ class PaymentController extends Controller
         });
 
         // Log the webhook so it is easier to debug when Mollie sends something unexpected.
-        Log::debug("[PaymentController] Webhook: Mollie Webhook received for payment ID: {$paymentId}, status: {$payment->status}");
+        Log::debug("[PaymentController] Webhook: Mollie Webhook received for payment ID: {$paymentId}, status: {$latestStatus}");
 
         // Return 200 so Mollie knows the webhook was received correctly.
         return response('OK');

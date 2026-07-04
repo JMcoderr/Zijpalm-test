@@ -4,9 +4,18 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Order;
+use App\Models\Payment;
 use App\Http\Requests\StoreProductRequest;
 use App\Http\Requests\UpdateProductRequest;
 use App\Models\Product;
+use App\Models\User;
+use App\UserType;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Http\Request;
+use Mollie\Laravel\Facades\Mollie;
+use Throwable;
 
 class ProductController extends Controller
 {
@@ -15,7 +24,53 @@ class ProductController extends Controller
      */
     public function index()
     {
-        //
+        $products = Product::query()
+            ->where('hidden', false)
+            ->where(function ($query) {
+                $query->where('product_type', 'product')
+                    ->orWhereNull('product_type');
+            })
+            ->orderBy('name')
+            ->get();
+
+        return view('shop.index', [
+            'products' => $products,
+        ]);
+    }
+
+    /**
+     * Show activity-focused page with activity products only.
+     */
+    public function activities()
+    {
+        $products = Product::query()
+            ->where('hidden', false)
+            ->where('product_type', 'activity')
+            ->orderBy('name')
+            ->get();
+
+        return view('shop.activities', [
+            'products' => $products,
+        ]);
+    }
+
+    /**
+     * Show towel-focused page with quick order links.
+     */
+    public function towels()
+    {
+        $products = Product::query()
+            ->where('hidden', false)
+            ->where(function ($query) {
+                $query->whereRaw('LOWER(name) LIKE ?', ['%handdoek%'])
+                    ->orWhereRaw('LOWER(description) LIKE ?', ['%handdoek%']);
+            })
+            ->orderBy('name')
+            ->get();
+
+        return view('shop.towels', [
+            'products' => $products,
+        ]);
     }
 
     /**
@@ -23,7 +78,21 @@ class ProductController extends Controller
      */
     public function create()
     {
-        //
+        $defaultType = request()->query('type');
+
+        if (!in_array($defaultType, ['product', 'activity'], true)) {
+            $defaultType = 'product';
+        }
+
+        $defaultName = request()->query('name');
+        if (!is_string($defaultName) || trim($defaultName) === '') {
+            $defaultName = null;
+        }
+
+        return view('shop.create', [
+            'defaultType' => $defaultType,
+            'defaultName' => $defaultName,
+        ]);
     }
 
     /**
@@ -31,7 +100,22 @@ class ProductController extends Controller
      */
     public function store(StoreProductRequest $request)
     {
-        //
+        $validated = $request->validated();
+
+        if ($request->hasFile('imagePath')) {
+            $validated['imagePath'] = $request->file('imagePath')->store('products', 'public');
+        }
+
+        $validated['allow_guest_checkout'] = (bool) ($validated['allow_guest_checkout'] ?? false);
+        $validated['hidden'] = (bool) ($validated['hidden'] ?? false);
+
+        $product = Product::create($validated);
+
+        if (($product->product_type ?? 'product') === 'activity') {
+            return redirect()->route('product.activities')->with('success', 'Activiteit succesvol aangemaakt.');
+        }
+
+        return redirect()->route('product.index')->with('success', 'Product succesvol aangemaakt.');
     }
 
     /**
@@ -39,7 +123,15 @@ class ProductController extends Controller
      */
     public function show(Product $product)
     {
-        //
+        if ($product->hidden && !auth()->user()?->isAdmin()) {
+            abort(404);
+        }
+
+        return view('shop.read', [
+            'product' => $product,
+            'memberPrice' => (float) $product->price,
+            'guestPrice' => $product->displayGuestPrice(),
+        ]);
     }
 
     /**
@@ -47,7 +139,9 @@ class ProductController extends Controller
      */
     public function edit(Product $product)
     {
-        //
+        return view('shop.update', [
+            'product' => $product,
+        ]);
     }
 
     /**
@@ -55,7 +149,18 @@ class ProductController extends Controller
      */
     public function update(UpdateProductRequest $request, Product $product)
     {
-        //
+        $validated = $request->validated();
+
+        if ($request->hasFile('imagePath')) {
+            $validated['imagePath'] = $request->file('imagePath')->store('products', 'public');
+        }
+
+        $validated['allow_guest_checkout'] = (bool) ($validated['allow_guest_checkout'] ?? false);
+        $validated['hidden'] = (bool) ($validated['hidden'] ?? false);
+
+        $product->update($validated);
+
+        return redirect()->route('product.show', $product)->with('success', 'Product succesvol bijgewerkt.');
     }
 
     /**
@@ -63,6 +168,144 @@ class ProductController extends Controller
      */
     public function destroy(Product $product)
     {
-        //
+        if ($product->orders()->exists()) {
+            $product->update(['hidden' => true]);
+
+            return redirect()->route('product.index')->with(
+                'error',
+                'Dit item is gekoppeld aan bestaande bestellingen en is daarom verborgen in plaats van verwijderd.'
+            );
+        }
+
+        $product->delete();
+
+        return redirect()->route('product.index')->with('success', 'Product verwijderd.');
+    }
+
+    public function copy(Product $product)
+    {
+        $copy = $product->replicate();
+        $copy->name = $product->name . ' (kopie)';
+        $copy->hidden = true;
+        $copy->save();
+
+        return redirect()->route('product.edit', $copy)->with('success', 'Product gekopieerd.');
+    }
+
+    public function purchase(Request $request, Product $product)
+    {
+        if ($product->hidden) {
+            abort(404);
+        }
+
+        $registrationEnd = $product->registration_ends_at ?? $product->signup_deadline;
+
+        if ($product->isActivityProduct()) {
+            if ($registrationEnd && now()->startOfDay()->gt($registrationEnd->copy()->startOfDay())) {
+                return back()->with('error', 'De inschrijfdeadline voor deze activiteit is verstreken.');
+            }
+        }
+
+        $validated = $request->validate([
+            'quantity' => 'required|integer|min:1|max:50',
+            'firstName' => 'nullable|string|max:255',
+            'lastName' => 'nullable|string|max:255',
+            'email' => 'nullable|email|max:255',
+            'phone' => 'nullable|string|max:255',
+        ]);
+
+        $quantity = (int) $validated['quantity'];
+
+        $isGuestCheckout = !auth()->check();
+
+        if ($isGuestCheckout) {
+            $request->validate([
+                'firstName' => 'required|string|max:255',
+                'lastName' => 'required|string|max:255',
+                'email' => 'required|email|max:255',
+            ]);
+
+            $customer = User::query()->firstOrCreate(
+                ['email' => mb_strtolower(trim((string) $validated['email']))],
+                [
+                    'firstName' => $validated['firstName'],
+                    'lastName' => $validated['lastName'],
+                    'phone' => $validated['phone'] ?? null,
+                    'type' => UserType::Inhuur,
+                    'password' => null,
+                ]
+            );
+
+            $unitPrice = $product->displayGuestPrice();
+        } else {
+            $customer = auth()->user();
+            $unitPrice = (float) $product->price;
+        }
+
+        $totalPrice = $unitPrice * $quantity;
+
+        if ($totalPrice <= 0) {
+            return back()->with('error', 'Het totaalbedrag moet groter zijn dan 0.');
+        }
+
+        try {
+            $payment = DB::transaction(function () use ($product, $quantity, $customer, $unitPrice, $totalPrice, $isGuestCheckout) {
+                // Lock the product row so stock/capacity checks are safe under concurrent purchases.
+                $lockedProduct = Product::query()->whereKey($product->id)->lockForUpdate()->firstOrFail();
+
+                if ($lockedProduct->isActivityProduct() && $lockedProduct->max_participants) {
+                    $reservedParticipants = (int) $lockedProduct->orders()
+                        ->sum('order_products.quantity');
+
+                    if (($reservedParticipants + $quantity) > (int) $lockedProduct->max_participants) {
+                        throw new \RuntimeException('Er zijn niet genoeg plekken meer beschikbaar voor deze activiteit.');
+                    }
+                }
+
+                if ($lockedProduct->stock !== null && $quantity > (int) $lockedProduct->stock) {
+                    throw new \RuntimeException('Niet genoeg voorraad beschikbaar.');
+                }
+
+                $order = Order::create([
+                    'user_id' => $customer->id,
+                    'is_guest_checkout' => $isGuestCheckout,
+                ]);
+
+                $order->products()->attach($lockedProduct->id, [
+                    'quantity' => $quantity,
+                    'unit_price' => $unitPrice,
+                ]);
+
+                $payment = Payment::generatePayment(
+                    $totalPrice,
+                    "Bestelling #{$order->id} - {$lockedProduct->name}",
+                    null,
+                    [
+                        'orderId' => $order->id,
+                        'newMember' => false,
+                    ]
+                );
+
+                $order->payment_id = $payment->id;
+                $order->save();
+
+                if ($lockedProduct->stock !== null) {
+                    $lockedProduct->decrement('stock', $quantity);
+                }
+
+                return $payment;
+            });
+        } catch (\RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        } catch (Throwable $e) {
+            Log::error('[ProductController] Onverwachte fout bij aanmaken betaling', [
+                'product_id' => $product->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return back()->with('error', 'Betalen is nu tijdelijk niet beschikbaar. Probeer het over een paar minuten opnieuw.');
+        }
+
+        return redirect(Mollie::api()->payments->get($payment->mollieId)->_links->checkout->href, 303);
     }
 }

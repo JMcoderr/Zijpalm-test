@@ -291,11 +291,11 @@
     document.addEventListener(
         'DOMContentLoaded',
         function(){
-            if(@json($type) === 'editor'){
-                toggleRequiredTooltip(document.getElementById('editorjs-data'));
-            }
-            else{
-                toggleRequiredTooltip(document.getElementById(@json($id)));
+            const targetId = @json($type) === 'editor' ? @json($id . '-data') : @json($id);
+            const targetInput = document.getElementById(targetId);
+
+            if (targetInput) {
+                toggleRequiredTooltip(targetInput);
             }
         }
     );
