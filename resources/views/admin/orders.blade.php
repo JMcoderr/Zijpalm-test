@@ -58,63 +58,68 @@
                 ];
             @endphp
 
-            @foreach($sections as $section)
-                <x-zijpalm-div :title="$section['title']" color="light" :editable="false" width="w-full">
-                    <div class="flex flex-wrap items-center gap-2 mb-3 text-xs font-semibold">
-                        <span class="rounded-full px-2.5 py-1 bg-emerald-100 text-emerald-800">Betaald: {{ $section['counts']['paid'] }}</span>
-                        <span class="rounded-full px-2.5 py-1 bg-amber-100 text-amber-800">In afwachting: {{ $section['counts']['pending'] }}</span>
-                        <span class="rounded-full px-2.5 py-1 bg-red-100 text-red-800">Mislukt/geannuleerd: {{ $section['counts']['failed'] }}</span>
+            @if($orderCount === 0)
+                <x-zijpalm-div title="Nog geen webshop bestellingen" color="light" :editable="false" width="w-full">
+                    <div class="rounded-xl bg-white/90 border border-zinc-200 p-4 text-center">
+                        <p class="text-xl font-black text-zijpalm-700">Nog geen bestellingen</p>
+                        <p class="text-sm text-zinc-700 mt-1">Nieuwe shopbestellingen verschijnen hier automatisch zodra iemand afrekent.</p>
                     </div>
-
-                    @if($section['orders']->isEmpty())
-                        <div class="rounded-xl bg-white/90 border border-zinc-200 p-3 text-sm text-zinc-700">
-                            {{ $section['emptyText'] }}
+                </x-zijpalm-div>
+            @else
+                @foreach($sections as $section)
+                    <x-zijpalm-div :title="$section['title']" color="light" :editable="false" width="w-full">
+                        <div class="flex flex-wrap items-center gap-2 mb-3 text-xs font-semibold">
+                            <span class="rounded-full px-2.5 py-1 bg-emerald-100 text-emerald-800">Betaald: {{ $section['counts']['paid'] }}</span>
+                            <span class="rounded-full px-2.5 py-1 bg-amber-100 text-amber-800">In afwachting: {{ $section['counts']['pending'] }}</span>
+                            <span class="rounded-full px-2.5 py-1 bg-red-100 text-red-800">Mislukt/geannuleerd: {{ $section['counts']['failed'] }}</span>
                         </div>
-                    @else
-                        <div class="flex flex-col gap-3">
-                            @foreach($section['orders'] as $order)
-                                @php
-                                    $totalPrice = $order->products->sum(function ($product) {
-                                        $unitPrice = $product->pivot->unit_price ?? $product->price;
-                                        return $unitPrice * $product->pivot->quantity;
-                                    });
 
-                                    $productSummary = $order->products
-                                        ->map(fn ($product) => $product->name . ' x' . $product->pivot->quantity)
-                                        ->implode(', ');
+                        @if($section['orders']->isEmpty())
+                            <div class="rounded-xl bg-white/90 border border-zinc-200 p-3 text-sm text-zinc-700">
+                                {{ $section['emptyText'] }}
+                            </div>
+                        @else
+                            <div class="flex flex-col gap-3">
+                                @foreach($section['orders'] as $order)
+                                    @php
+                                        $totalPrice = $order->products->sum(function ($product) {
+                                            $unitPrice = $product->pivot->unit_price ?? $product->price;
+                                            return $unitPrice * $product->pivot->quantity;
+                                        });
 
-                                    $statusText = $order->payment?->status?->value ?? 'onbekend';
-                                    $statusClass = $statusClassFor($statusText);
-                                    $orderedAt = $order->payment?->created_at?->format('d-m-Y H:i') ?? '-';
-                                @endphp
+                                        $productSummary = $order->products
+                                            ->map(fn ($product) => $product->name . ' x' . $product->pivot->quantity)
+                                            ->implode(', ');
 
-                                <div class="rounded-xl bg-white/95 p-3 border border-zinc-200">
-                                    <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                                        <div class="min-w-0">
-                                            <div class="flex flex-wrap items-center gap-2">
-                                                <span class="text-xl font-black text-zijpalm-700">Bestelling #{{ $order->id }}</span>
-                                                <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold {{ $section['typeBadgeClass'] }}">{{ $section['typeBadge'] }}</span>
-                                                <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold {{ $statusClass }}">{{ $statusText }}</span>
+                                        $statusText = $order->payment?->status?->value ?? 'onbekend';
+                                        $statusClass = $statusClassFor($statusText);
+                                        $orderedAt = $order->payment?->created_at?->format('d-m-Y H:i') ?? '-';
+                                    @endphp
+
+                                    <div class="rounded-xl bg-white/95 p-3 border border-zinc-200">
+                                        <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                                            <div class="min-w-0">
+                                                <div class="flex flex-wrap items-center gap-2">
+                                                    <span class="text-xl font-black text-zijpalm-700">Bestelling #{{ $order->id }}</span>
+                                                    <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold {{ $section['typeBadgeClass'] }}">{{ $section['typeBadge'] }}</span>
+                                                    <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold {{ $statusClass }}">{{ $statusText }}</span>
+                                                </div>
+                                                <p class="text-sm opacity-90">{{ $order->user?->email ?? 'Geen e-mail bekend' }}</p>
+                                                <p class="text-sm opacity-90">Besteld op: {{ $orderedAt }}</p>
+                                                <p class="text-sm opacity-80 mt-1">{{ $productSummary ?: '-' }}</p>
                                             </div>
-                                            <p class="text-sm opacity-90">{{ $order->user?->email ?? 'Geen e-mail bekend' }}</p>
-                                            <p class="text-sm opacity-90">Besteld op: {{ $orderedAt }}</p>
-                                            <p class="text-sm opacity-80 mt-1">{{ $productSummary ?: '-' }}</p>
-                                        </div>
 
-                                        <div class="flex items-center gap-2 shrink-0">
-                                            <span class="font-bold">{{ formatPrice($totalPrice) }}</span>
-                                            <x-zijpalm-button :href="route('admin.orders.show', $order)" label="Openen" type="redirect" />
+                                            <div class="flex items-center gap-2 shrink-0">
+                                                <span class="font-bold">{{ formatPrice($totalPrice) }}</span>
+                                                <x-zijpalm-button :href="route('admin.orders.show', $order)" label="Openen" type="redirect" />
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            @endforeach
-                        </div>
-                    @endif
-                </x-zijpalm-div>
-            @endforeach
-
-            @if($orderCount === 0)
-                <x-zijpalm-div title="Nog geen bestellingen" text="Nieuwe bestellingen verschijnen hier automatisch." color="light" :editable="false" width="w-full" />
+                                @endforeach
+                            </div>
+                        @endif
+                    </x-zijpalm-div>
+                @endforeach
             @endif
         </x-admin.layout>
     </x-zijpalm-div>
