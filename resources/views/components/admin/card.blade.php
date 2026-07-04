@@ -27,7 +27,7 @@
     <a href="{{$href}}" class="flex max-w-full sm:w-[300px] flex-1 overflow-hidden text-center sm:text-left">
         <h3 class="font-semibold text-gray-800 truncate">{{ $title }}</h3>
         @isset($email)
-            <a class="align-middle font-semibold text-gray-800 text-[1.17em] ml-2 truncate" href="mailto:{{$email}}">{{ $email }}</a>
+            <a class="align-middle font-semibold text-gray-800 text-xl whitespace-nowrap ml-2 truncate" href="mailto:{{$email}}">{{ $email }}</a>
         @endisset
         @if(!empty($variables))
             <div class="flex justify-end grow items-center gap-4">

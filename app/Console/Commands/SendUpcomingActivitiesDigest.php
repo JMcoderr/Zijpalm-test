@@ -41,13 +41,13 @@ class SendUpcomingActivitiesDigest extends Command
             ->unique()
             ->values();
 
-        $activitiesQuery = Activity::query()
-            ->whereNotNull('start')
-            ->where('start', '>=', now()->startOfDay())
-            ->where('type', '!=', ActivityType::Cancelled)
-            ->where('registrationStart', '<=', now())
-            ->where('registrationEnd', '>=', now())
-            ->orderBy('start');
+        // Only include regular upcoming activities (no weekly, no archived, no cancelled).
+        $activities = Activity::query()
+            ->where('end', '>', now())
+            ->whereNotIn('type', [ActivityType::Weekly, ActivityType::Cancelled])
+            ->get()
+            ->sortBy('start')
+            ->values();
 
         $runningActivitiesQuery = Activity::query()
             ->whereNotNull('start')
@@ -58,16 +58,15 @@ class SendUpcomingActivitiesDigest extends Command
             ->orderBy('start');
 
         if ($selectedActivityIds->isNotEmpty()) {
-            $activitiesQuery->whereIn('id', $selectedActivityIds->all());
-            $runningActivitiesQuery->whereIn('id', $selectedActivityIds->all());
+            $selectedIds = $selectedActivityIds->all();
+            $activities = $activities->whereIn('id', $selectedIds)->values();
+            $runningActivitiesQuery->whereIn('id', $selectedIds);
         }
-
-        $activities = $activitiesQuery->get();
 
         $runningActivities = $runningActivitiesQuery->get();
 
         if ($activities->isEmpty()) {
-            $this->info('Geen toekomstige activiteiten gevonden binnen 8 weken.');
+            $this->info('Geen activiteiten gevonden voor de huidige selectie.');
             return self::SUCCESS;
         }
 
