@@ -13,5 +13,4 @@
 @vite(['resources/css/app.css', 'resources/js/app.js'])
 
 {{-- Add stack to push scripts or styles into head --}}
-@stack('scripts')
 @stack('styles')

@@ -140,21 +140,26 @@ class InformationController extends Controller
 
         // If there is a contribution to pay, create an order and redirect to Mollie checkout.
         if ($price > 0) {
-            // Create the order
-            $order = Order::createWithProducts(
-                [
+            try {
+                // Create the order
+                $order = Order::createWithProducts(
                     [
-                        'productId' => $contribution->id,
-                        'quantity' => $months,
-                    ]
-                ],
-                // Voorbeeld contributie
-                // Contributie voornaam achternaam 2025
-                'Contributie ' . $user->firstName . ' ' . $user->lastName . ' ' . now()->format('Y'),
-                $user,
-                // The user is a new member, because they just signed up
-                true
-            );
+                        [
+                            'productId' => $contribution->id,
+                            'quantity' => $months,
+                        ]
+                    ],
+                    // Voorbeeld contributie
+                    // Contributie voornaam achternaam 2025
+                    'Contributie ' . $user->firstName . ' ' . $user->lastName . ' ' . now()->format('Y'),
+                    $user,
+                    // The user is a new member, because they just signed up
+                    true
+                );
+            } catch (\RuntimeException $exception) {
+                return redirect()->back()->withInput()->with('error', $exception->getMessage());
+            }
+
             // Get the payment from Mollie
             $mollie = Mollie::api()->payments->get($order->payment->mollieId);
 

@@ -156,4 +156,22 @@ window.initializeEditorJsHolders = function () {
   });
 };
 
-window.initializeEditorJsHolders();
+function runEditorInitialization() {
+  if (typeof window.initializeEditorJsHolders === 'function') {
+    window.initializeEditorJsHolders();
+
+    // Retry once on the next frame for content that becomes visible right after render.
+    requestAnimationFrame(() => {
+      window.initializeEditorJsHolders();
+    });
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', runEditorInitialization, { once: true });
+} else {
+  runEditorInitialization();
+}
+
+// Re-run after Livewire navigate swaps page content.
+document.addEventListener('livewire:navigated', runEditorInitialization);

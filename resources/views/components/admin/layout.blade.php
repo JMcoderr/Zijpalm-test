@@ -4,6 +4,7 @@
         <flux:navlist>
             <flux:navlist.item :href="route('admin.activities')" wire:navigate>{{ __('Activiteiten') }}</flux:navlist.item>
             <flux:navlist.item :href="route('admin.users')" wire:navigate>{{ __('Gebruikers') }}</flux:navlist.item>
+            <flux:navlist.item :href="route('admin.orders')" wire:navigate>{{ __('Bestellingen') }}</flux:navlist.item>
             <flux:navlist.item :href="route('admin.reports')" wire:navigate>{{ __('Verslagen') }}</flux:navlist.item>
             <flux:navlist.item :href="route('admin.content')" wire:navigate>{{ __('Content') }}</flux:navlist.item>
             <flux:navlist.item :href="route('admin.notifyAllMembers')">{{ __('Mail leden') }}</flux:navlist.item>
