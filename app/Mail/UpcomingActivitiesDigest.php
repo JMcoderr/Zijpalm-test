@@ -56,6 +56,16 @@ class UpcomingActivitiesDigest extends Mailable
      */
     public function content(): Content
     {
+        $runningActivityIds = $this->runningActivities
+            ->pluck('id')
+            ->filter()
+            ->unique()
+            ->values();
+
+        $upcomingActivities = $this->activities
+            ->reject(fn ($activity) => $runningActivityIds->contains($activity->id))
+            ->values();
+
         $mailSubject = 'Zijpalm | Komende activiteiten';
             $introHtml = '<p>Beste leden,</p><p>Hieronder vinden jullie de komende activiteiten van Zijpalm.</p>';
 
@@ -81,7 +91,7 @@ class UpcomingActivitiesDigest extends Mailable
             $renderedContent = view('mail.upcoming-activities-digest', [
                 'user' => null,
                 'introHtml' => $introHtml,
-                'activities' => $this->activities,
+                'activities' => $upcomingActivities,
                 'runningActivities' => $this->runningActivities,
                 'batch_size' => $this->validatedData['batch_size'],
                 'delay' => $this->validatedData['delay'],
@@ -106,10 +116,10 @@ class UpcomingActivitiesDigest extends Mailable
                 $renderedContent .= '</ul>';
             }
 
-            if ($this->activities->isNotEmpty()) {
+            if ($upcomingActivities->isNotEmpty()) {
                 $renderedContent .= '<p><strong>Komende activiteiten:</strong></p><ul>';
 
-                foreach ($this->activities as $activity) {
+                foreach ($upcomingActivities as $activity) {
                     $renderedContent .= '<li><strong>' . e($activity->title) . '</strong><br>';
                     $renderedContent .= e((string) formatDate($activity->start));
 

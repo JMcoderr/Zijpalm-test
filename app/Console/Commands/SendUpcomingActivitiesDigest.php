@@ -43,6 +43,8 @@ class SendUpcomingActivitiesDigest extends Command
 
         // Only include regular upcoming activities (no weekly, no archived, no cancelled).
         $activities = Activity::query()
+            ->whereNotNull('start')
+            ->where('start', '>', now())
             ->where('end', '>', now())
             ->whereNotIn('type', [ActivityType::Weekly, ActivityType::Cancelled])
             ->get()
@@ -65,7 +67,7 @@ class SendUpcomingActivitiesDigest extends Command
 
         $runningActivities = $runningActivitiesQuery->get();
 
-        if ($activities->isEmpty()) {
+        if ($activities->isEmpty() && $runningActivities->isEmpty()) {
             $this->info('Geen activiteiten gevonden voor de huidige selectie.');
             return self::SUCCESS;
         }
@@ -114,7 +116,8 @@ class SendUpcomingActivitiesDigest extends Command
             return self::FAILURE;
         }
 
-        $this->info("Mail verzonden voor {$activities->count()} activiteiten naar {$emails->count()} ontvangers.");
+        $totalActivities = $activities->count() + $runningActivities->count();
+        $this->info("Mail verzonden voor {$totalActivities} activiteiten naar {$emails->count()} ontvangers.");
 
         return self::SUCCESS;
     }
