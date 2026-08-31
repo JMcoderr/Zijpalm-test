@@ -169,6 +169,7 @@
         </flux:sidebar>
         {{$slot}}
         @fluxScripts
+        @stack('scripts')
 
         {{-- Login modal --}}
         @guest
