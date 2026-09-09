@@ -35,6 +35,13 @@ Route::middleware('auth')->group(
         );
 
         // Routes for user management
+        Route::middleware('admin')->prefix('lid')->name('user.')->group(
+            function(){
+                Route::get('aanmaken', [UserController::class, 'create'])->name('create');
+                Route::post('/', [UserController::class, 'store'])->name('store');
+            }
+        );
+
         Route::middleware('admin_or_self')->prefix('lid')->name('user.')->group(
             function(){
                 Route::get('{user}', [UserController::class, 'edit'])->name('edit')->withTrashed();

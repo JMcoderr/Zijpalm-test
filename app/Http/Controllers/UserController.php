@@ -12,6 +12,8 @@ use App\UserType;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class UserController extends Controller
 {
@@ -28,7 +30,11 @@ class UserController extends Controller
      */
     public function create()
     {
-        //
+        if (!auth()->user()?->isAdmin()) {
+            abort(403);
+        }
+
+        return view('users.create');
     }
 
     /**
@@ -36,7 +42,56 @@ class UserController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        if (!auth()->user()?->isAdmin()) {
+            abort(403);
+        }
+
+        $data = $request->validate([
+            'firstName' => ['required', 'string', 'max:255'],
+            'lastName' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')],
+            'phone' => ['nullable', 'string', 'regex:/^\d{8}$/'],
+            'type' => ['required', 'in:' . implode(',', array_filter(UserType::toArray(), fn ($type) => $type !== UserType::System->value))],
+            'is_admin' => ['sometimes', 'boolean'],
+        ], [
+            'firstName.required' => 'Vul een voornaam in',
+            'lastName.required' => 'Vul een achternaam in',
+            'email.required' => 'Vul een e-mailadres in',
+            'email.email' => 'Voer een geldig e-mailadres in',
+            'email.unique' => 'Dit e-mailadres is al in gebruik',
+            'phone.regex' => 'Het telefoonnummer moet uit precies 8 cijfers bestaan',
+            'type.required' => 'Kies een gebruikerstype',
+            'type.in' => 'Het geselecteerde type is ongeldig',
+        ]);
+
+        $user = User::create([
+            'firstName' => $data['firstName'],
+            'lastName' => $data['lastName'],
+            'email' => $data['email'],
+            'phone' => $data['phone'] ?? null,
+            'type' => UserType::from($data['type']),
+            'password' => Str::random(40),
+        ]);
+
+        $user->is_admin = $request->has('is_admin');
+        $user->save();
+
+        $status = Password::sendResetLink([
+            'email' => $user->email,
+        ]);
+
+        if ($status === Password::RESET_LINK_SENT) {
+            return redirect()->route('user.edit', $user)->with('success', 'Gebruiker is aangemaakt en de resetmail is verstuurd.');
+        }
+
+        Log::warning('[UserController] New user created but password reset link failed', [
+            'admin_id' => auth()->id(),
+            'target_user_id' => $user->id,
+            'target_user_email' => $user->email,
+            'status' => $status,
+        ]);
+
+        return redirect()->route('user.edit', $user)->with('success', 'Gebruiker is aangemaakt. Verstuur de resetmail handmatig via de knop Reset wachtwoord.');
     }
 
     /**

@@ -306,7 +306,7 @@
 
                 <div class="flex flex-col lg:flex-row gap-5 w-full">
                     <x-zijpalm-div title="Beschrijving" :editable="false" width="w-full lg:w-2/3" class="">
-                        <div class="bg-[rgba(0,0,0,0.15)] rounded-md flex flex-col p-2 text-left">
+                        <div class="bg-[rgba(0,0,0,0.15)] rounded-md flex flex-col p-2 text-left space-y-3 whitespace-pre-line">
                             {!!$activity->descriptionHTML!!}
                         </div>
                     </x-zijpalm-div>
@@ -425,7 +425,7 @@
             @else
                 {{-- Activity Description --}}
                 <x-zijpalm-div title="Beschrijving" :editable="false" width="w-full" class="">
-                    <div class="bg-[rgba(0,0,0,0.15)] rounded-md flex flex-col p-2 text-left">
+                    <div class="bg-[rgba(0,0,0,0.15)] rounded-md flex flex-col p-2 text-left space-y-3 whitespace-pre-line">
                         {!!$activity->descriptionHTML!!}
                     </div>
                 </x-zijpalm-div>

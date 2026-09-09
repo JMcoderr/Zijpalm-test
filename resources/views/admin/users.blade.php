@@ -33,8 +33,10 @@
             {{-- Creates a dropdown with all the members for each user group --}}
             {{-- Also add deleted users here --}}
             <div class="flex flex-row justify-end">
+                <x-zijpalm-button :href="route('user.create')" type="redirect" variant="default" label="Lid toevoegen" />
+
                 <x-zijpalm-modal text="Importeer medewerkers" livewire include="import-members" modal="importEmployees" :variables="['id' => 'import-employees-form', 'endpoint' => route('admin.importEmployees'), 'errors' => $errors->importEmployees->all()]" />
-                <x-zijpalm-button type="action" variant="default" label="Importeer medewerkers" x-on:click="importEmployees = true" />
+                <x-zijpalm-button class="ml-2" type="action" variant="default" label="Importeer medewerkers" x-on:click="importEmployees = true" />
 
                 <x-zijpalm-modal text="Importeer overig" livewire include="import-members" modal="importMembers" :variables="['id' => 'import-members-form', 'endpoint' => route('admin.importMembers'), 'errors' => $errors->importMembers->all()]" />
                 <x-zijpalm-button class="ml-2" type="action" variant="default" label="Importeer overig" x-on:click="importMembers = true" />
