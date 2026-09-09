@@ -31,6 +31,17 @@
                         <x-zijpalm-button :href="route('report.create', $activity)" label="Creëer verslag" variant="obvious" class="h-full"/>
                     @endif
                     <x-zijpalm-button :href="route('activity.edit', $activity)" label="Bewerk activiteit" variant="obvious" type="redirect" class="h-full"/>
+                    @if($activity->type === \App\ActivityType::Archived)
+                        <form id="activity-restore" method="POST" action="{{route('activity.restore', $activity)}}" onsubmit="return confirm('Weet je zeker dat je deze activiteit terug wilt zetten naar de normale activiteiten?')" class="h-full">
+                            @csrf
+                            <x-zijpalm-button type="submit" form="activity-restore" label="Terug naar activiteiten" variant="obvious" class="h-full"/>
+                        </form>
+                    @elseif($activity->type !== \App\ActivityType::Cancelled)
+                        <form id="activity-mark-late" method="POST" action="{{route('activity.markLate', $activity)}}" onsubmit="return confirm('Weet je zeker dat je deze activiteit handmatig op Te laat wilt zetten?')" class="h-full">
+                            @csrf
+                            <x-zijpalm-button type="submit" form="activity-mark-late" label="Te laat zetten" variant="obvious" class="h-full"/>
+                        </form>
+                    @endif
                     <x-zijpalm-button label="Verstuur aankondiging" type="action" x-on:click="announcementMailModal = true" variant="obvious" class="h-full"/>
                     <x-zijpalm-modal text="Activiteit aankondiging" livewire include="activity-announcement-mail" modal="announcementMailModal" :variables="['activity' => $activity, 'errors' => $errors->announcementMail->all()]"/>
                     <form id="activity-copy" method="POST" action="{{route('activity.copy', $activity)}}" onsubmit="return confirm('Je staat op het punt de activiteit {{$activity->title}} te kopiëren. Doorgaan?')" class="h-full">

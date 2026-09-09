@@ -78,6 +78,8 @@ Route::prefix('activiteiten')->name('activity.')->controller(ActivityController:
             Route::get('{activity}/bewerken', 'edit')->name('edit');
             Route::put('{activity}', 'update')->name('update');
             Route::post('{activity}/kopieren', 'copy')->name('copy');
+            Route::post('{activity}/te-laat', 'markLate')->name('markLate');
+            Route::post('{activity}/terug-naar-activiteiten', 'restore')->name('restore');
 
             // Delete
             Route::delete('{activity}', 'destroy')->name('destroy');
