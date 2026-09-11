@@ -137,10 +137,10 @@ class UpcomingActivitiesDigest extends Mailable
         $jsonBody = json_encode([
             'emails' => $this->emails->values()->all(),
             'subject' => $mailSubject,
-            'body' => $renderedContent,
+            'body' => prepareMailHtml($renderedContent),
             'batch_size' => $this->validatedData['batch_size'],
             'delay' => $this->validatedData['delay'],
-        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE);
+        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
 
         if ($jsonBody === false) {
             Log::error('[UpcomingActivitiesDigest] JSON encode failed', [
@@ -156,7 +156,7 @@ class UpcomingActivitiesDigest extends Mailable
                 'body' => '<p>Komende activiteiten van Zijpalm.</p>',
                 'batch_size' => $this->validatedData['batch_size'],
                 'delay' => $this->validatedData['delay'],
-            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE) ?: '{}';
+            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '{}';
         }
 
         return new Content(

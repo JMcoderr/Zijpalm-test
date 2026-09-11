@@ -60,8 +60,8 @@ class PaymentFailed extends Mailable
             'email' => $this->user->email,
             'emails' => $this->user->registeredEmails(),
             'subject' => ($this->content->title ?: 'Betaling mislukt') . ': ' . $this->payment->description . ' #Z',
-            'body' => $renderedContent,
-        ], JSON_PRETTY_PRINT);
+            'body' => prepareMailHtml($renderedContent),
+        ], JSON_PRETTY_PRINT | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
 
         return new Content(
             text: 'mail.raw-json',

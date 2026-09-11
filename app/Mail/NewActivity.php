@@ -64,16 +64,16 @@ class NewActivity extends Mailable
             'user' => null,
             'content' => $this->content,
             'introHtml' => $introHtml,
-            'description' => $this->activity->descriptionHTML,
+            'description' => prepareMailDescriptionHtml($this->activity->descriptionHTML),
         ])->render();
 
         $jsonBody = json_encode([
             'emails' => $this->emails->values()->all(),
             'subject' => $this->withZSuffix((string) $this->content->title),
-            'body' => $renderedContent,
+            'body' => prepareMailHtml($renderedContent),
             'batch_size' => $this->batchSize,
             'delay' => $this->delay,
-        ], JSON_PRETTY_PRINT);
+        ], JSON_PRETTY_PRINT | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR);
 
         return new Content(
             text: 'mail.raw-json',
@@ -81,6 +81,18 @@ class NewActivity extends Mailable
                 'jsonBody' => $jsonBody,
             ]
         );
+    }
+
+    private function stripGreeting(string $html): string
+    {
+        return preg_replace('/^\s*<p>\s*(?:beste|hallo|geachte)\b.*?<\/p>\s*/is', '', $html) ?? $html;
+    }
+
+    private function withZSuffix(string $subject): string
+    {
+        $subject = trim($subject);
+
+        return Str::endsWith($subject, '#Z') ? $subject : $subject . ' #Z';
     }
 
     /**

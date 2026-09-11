@@ -5,7 +5,7 @@
     <h3>{{$activity->title}}</h3>
 
     {!! $description ?? "" !!}
-    <p>Je kan je hiervoor inschrijven vanaf {{formatDate($activity->registrationStart)}} tot en met {{formatDate($activity->registrationEnd)}}
+    <p>Je kan je hiervoor inschrijven vanaf {{formatDate($activity->registrationStart)}} tot en met {{formatDate($activity->registrationEnd)}}</p>
 
     <p>
         <strong>Wanneer:</strong> {{ formatDate($activity->start)}}<br>

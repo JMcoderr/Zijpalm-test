@@ -162,8 +162,8 @@ class ActivityApplied extends Mailable
             'email' => $this->user->email,
             'emails' => $this->user->registeredEmails(),
             'subject' => $this->content->title . ' ' . $this->activity->title . ' #Z',
-            'body' => $renderedContent,
-        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE);
+            'body' => prepareMailHtml($renderedContent),
+        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
 
         if ($jsonBody === false) {
             // If JSON encoding fails, fall back to an empty body instead of breaking the mail.
@@ -178,7 +178,7 @@ class ActivityApplied extends Mailable
                 'emails' => $this->user->registeredEmails(),
                 'subject' => $this->content->title . ' ' . $this->activity->title . ' #Z',
                 'body' => '',
-            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE) ?: '{}';
+            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '{}';
         }
 
         return new Content(

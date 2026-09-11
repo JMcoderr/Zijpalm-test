@@ -57,16 +57,16 @@ class ActivityReminder extends Mailable
             'activity' => $this->activity,
             'user' => null,
             'content' => $this->content,
-            'description' => EditorPhp::make($this->validatedData['description'])->toHtml()
+            'description' => prepareMailDescriptionHtml(EditorPhp::make($this->validatedData['description'])->toHtml())
         ])->render();
 
         $jsonBody = json_encode([
             'emails' => $this->emails->values()->all(),
             'subject' => $this->content->title . ' ' . $this->activity->title . ' #Z',
-            'body' => $renderedContent,
+            'body' => prepareMailHtml($renderedContent),
             'batch_size' => $this->validatedData['batch_size'],
             'delay' => $this->validatedData['delay'],
-        ], JSON_PRETTY_PRINT);
+        ], JSON_PRETTY_PRINT | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
 
         return new Content(
             text: 'mail.raw-json',

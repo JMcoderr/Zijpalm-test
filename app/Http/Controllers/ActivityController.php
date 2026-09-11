@@ -289,6 +289,7 @@ class ActivityController extends Controller
             ->unique()
             ->values();
 
+        // Send the announcement to opted-in members who are not registered for this activity.
         $nonParticipantEmails = $allOptedIn->diff($participantEmails)->values();
 
         // Check if provided Power Automate variables could cause issues.

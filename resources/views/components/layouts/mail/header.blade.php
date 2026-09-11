@@ -7,17 +7,17 @@
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <style>
-            .h-12 { height: 72px; }
-            .w-auto { width: auto; }
-            .my-1 { margin: 4px auto; }
             #logo { margin: auto; text-align: center; }
+            #logo img { display: block; width: auto; height: 72px; max-width: 240px; margin: 4px auto; }
         </style>
         @stack('styles')
     </head>
     <body style="padding:0; margin:0; background-color: #fff; max-width: 100%; font-size: large;">
         <div id="header" style="padding: 20px; background-color: #96c8e6; width: 100%; max-width: 100%; box-sizing: border-box;">
             <div id="inner" style="margin: auto; max-width: 400px; width: 100%;">
-                <x-app-logo />
+                <div id="logo">
+                    <img src="{{ asset('storage/images/zijpalm_logo_rgba5_77_124.png') }}" alt="Logo Zijpalm" style="display: block; width: auto; height: 72px; max-width: 240px; margin: 4px auto;">
+                </div>
                 @if(!$hideGreeting && !empty($user))
                     <p style="margin-bottom: 15px;">Beste {{ $user->name }},</p>
                 @endif
