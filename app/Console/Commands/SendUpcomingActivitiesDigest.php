@@ -122,14 +122,4 @@ class SendUpcomingActivitiesDigest extends Command
         return self::SUCCESS;
     }
 
-    private function recipientEmails()
-    {
-        return User::query()
-            ->notSoftDeleted()
-            ->get()
-            ->filter(fn ($u) => $u->wantsNotification(UserNotifications::NEWSLETTER) && filter_var($u->email, FILTER_VALIDATE_EMAIL))
-            ->pluck('email')
-            ->unique()
-            ->values();
-    }
 }

@@ -66,7 +66,6 @@ class UpcomingActivitiesDigest extends Mailable
             ->reject(fn ($activity) => $runningActivityIds->contains($activity->id))
             ->values();
 
-        $mailSubject = 'Zijpalm | Komende activiteiten';
             $introHtml = '<p>Beste leden,</p><p>Hieronder vinden jullie de komende activiteiten van Zijpalm.</p>';
 
             if ($this->content?->text) {
@@ -136,11 +135,11 @@ class UpcomingActivitiesDigest extends Mailable
 
         $jsonBody = json_encode([
             'emails' => $this->emails->values()->all(),
-            'subject' => $mailSubject,
-            'body' => prepareMailHtml($renderedContent),
+            'subject' => 'Zijpalm | Komende activiteiten',
+            'body' => $renderedContent,
             'batch_size' => $this->validatedData['batch_size'],
             'delay' => $this->validatedData['delay'],
-        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE);
 
         if ($jsonBody === false) {
             Log::error('[UpcomingActivitiesDigest] JSON encode failed', [
@@ -150,13 +149,7 @@ class UpcomingActivitiesDigest extends Mailable
                 'running_activities' => $this->runningActivities->count(),
             ]);
 
-            $jsonBody = json_encode([
-                'emails' => $this->emails->values()->all(),
-                'subject' => $mailSubject,
-                'body' => '<p>Komende activiteiten van Zijpalm.</p>',
-                'batch_size' => $this->validatedData['batch_size'],
-                'delay' => $this->validatedData['delay'],
-            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '{}';
+            $jsonBody = '{}';
         }
 
         return new Content(

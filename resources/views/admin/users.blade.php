@@ -56,7 +56,7 @@
             </div>
             @foreach (array_merge($userGroups, ['Oud leden (Meest recent verwijderde eerst)' => $deletedUsers]) as $name => $members)
                 @if (count($members) > 0)
-                    <x-dropdown :title="$name" :open="$loop->first" class="flex flex-col gap-2">
+                    <x-dropdown :title="$name" :open="false" class="flex flex-col gap-2">
                         @if($name == 'Medewerkers')
                             @foreach ($members as $member)
                                 {{-- If the member is an admin, show a star next to their name --}}

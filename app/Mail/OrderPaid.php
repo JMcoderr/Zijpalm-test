@@ -68,8 +68,8 @@ class OrderPaid extends Mailable
             'email' => $this->user->email,
             'emails' => $this->user->registeredEmails(),
             'subject' => $this->content->title . ' #Z',
-            'body' => prepareMailHtml($renderedContent),
-        ], JSON_PRETTY_PRINT | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+            'body' => $renderedContent,
+        ], JSON_PRETTY_PRINT);
 
         return new Content(
             text: 'mail.raw-json',

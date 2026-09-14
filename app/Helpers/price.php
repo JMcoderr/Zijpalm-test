@@ -34,6 +34,10 @@ function formatPriceForDb(string $price){
  * @return float The calculated price based on the answer and question type.
  */
 function getAnswerPrice($answer): float {
+    if (!$answer?->question) {
+        return 0.0;
+    }
+
     switch ($answer->question->type) {
         case QuestionType::Text:
             return 0.0;
