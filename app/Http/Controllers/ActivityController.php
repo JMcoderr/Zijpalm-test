@@ -15,6 +15,7 @@ use App\ActivityType;
 use App\Models\User;
 use App\ApplicationStatus;
 use App\UserNotifications;
+use App\UserType;
 use BumpCore\EditorPhp\EditorPhp;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -497,7 +498,19 @@ class ActivityController extends Controller
         $reserves->each(fn ($application) => $application->setRelation('activity', $activity));
         $pending->each(fn ($application) => $application->setRelation('activity', $activity));
 
-        return view('activities.read', compact('activity', 'applications', 'reserves', 'pending'));
+        // Admins can add members to the participant list by hand, so give them the members that are not signed up yet.
+        $assignableUsers = collect();
+
+        if (auth()->user()?->isAdmin()) {
+            $assignableUsers = User::notSoftDeleted()
+                ->where('type', '!=', UserType::System)
+                ->whereNotIn('id', $applications->pluck('user_id')->filter()->all())
+                ->orderBy('firstName')
+                ->orderBy('lastName')
+                ->get();
+        }
+
+        return view('activities.read', compact('activity', 'applications', 'reserves', 'pending', 'assignableUsers'));
     }
 
     /**

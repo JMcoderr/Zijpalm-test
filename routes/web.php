@@ -102,6 +102,9 @@ Route::middleware(['auth'])->prefix('aanmeldingen')->name('application.')->contr
         Route::post('{activity}', 'store')->name('store');
         Route::get('aanmaken', 'create')->name('create');
 
+        // Admins can put members on the participant list by hand
+        Route::middleware('admin')->post('{activity}/handmatig-toevoegen', 'adminStore')->name('adminStore');
+
         // Update
         Route::get('{application}/bewerken', 'edit')->name('edit');
         Route::put('{application}', 'update')->name('update');

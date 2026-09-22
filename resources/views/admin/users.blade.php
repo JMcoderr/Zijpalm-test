@@ -15,20 +15,43 @@
             <div class="grid grid-cols-[min-content_min-content] text-left self-center">
                 <div class="font-bold border-b-2 border-e-2 border-[rgba(0,0,0,0.55)] px-4 py-2">{{ __('Lid type') }}</div>
                 <div class="font-bold border-b-2 border-[rgba(0,0,0,0.55)] px-4 py-2">{{ __('Aantal') }}</div>
-                @foreach ($userGroups as $name => $members)
+                @foreach ($userCounts as $name => $amount)
                     <div class="border-e-2 border-[rgba(0,0,0,0.55)] px-4 py-2">{{ $name }}</div>
-                    <div class="px-4 py-2">{{ count($members) }}</div>
+                    <div class="px-4 py-2">{{ $amount }}</div>
                     @if (!$loop->last)
                         <div class="border-b border-[rgba(0,0,0,0.55)] col-span-2 mx-2"></div>
                     @endif
                 @endforeach
                 <div class="font-bold border-t-2 border-e-2 border-[rgba(0,0,0,0.55)] px-4 py-2">{{ __('Totaal') }}</div>
                 <div class="font-bold border-t-2 border-[rgba(0,0,0,0.55)] px-4 py-2">
-                    {{ array_sum(array_map('count', $userGroups)) }}
+                    {{ array_sum($userCounts) }}
                 </div>
                 <div class="font-bold border-e-2 border-[rgba(0,0,0,0.55)] px-4 py-2">{{ __('Beheerders') }}</div>
                 <div class="font-bold px-4 py-2">{{$admins}}</div>
             </div>
+
+            {{-- Search the whole member list by name --}}
+            <form id="member-search-form" method="GET" action="{{ route('admin.users') }}" class="flex flex-wrap items-end gap-2 justify-center mt-4">
+                <div class="flex flex-col text-left">
+                    <label class="font-bold text-lg" for="member-search">Zoek een lid op naam</label>
+                    <input id="member-search" type="search" name="zoek" value="{{ $search }}" autocomplete="off" placeholder="Bijvoorbeeld: Jan" class="bg-zinc-100 rounded-md shadow-sm px-3 h-11 w-80 max-w-full text-lg focus:outline-0 focus:ring-2 focus:ring-zijpalm-400">
+                </div>
+                <x-zijpalm-button type="submit" form="member-search-form" label="Zoeken" variant="default" />
+                @if($search !== '')
+                    <x-zijpalm-button :href="route('admin.users')" type="redirect" variant="default" label="Toon alle leden" />
+                @endif
+            </form>
+
+            @if($search !== '')
+                @php $searchResultCount = array_sum(array_map('count', $userGroups)) + count($deletedUsers); @endphp
+                <p class="mt-2 text-lg">
+                    @if($searchResultCount === 0)
+                        Geen lid gevonden met de naam "{{ $search }}".
+                    @else
+                        {{ $searchResultCount }} {{ $searchResultCount === 1 ? 'lid gevonden' : 'leden gevonden' }} met de naam "{{ $search }}".
+                    @endif
+                </p>
+            @endif
 
             {{-- Creates a dropdown with all the members for each user group --}}
             {{-- Also add deleted users here --}}
@@ -56,7 +79,8 @@
             </div>
             @foreach (array_merge($userGroups, ['Oud leden (Meest recent verwijderde eerst)' => $deletedUsers]) as $name => $members)
                 @if (count($members) > 0)
-                    <x-dropdown :title="$name" :open="false" class="flex flex-col gap-2">
+                    {{-- Open the groups right away when someone is searching --}}
+                    <x-dropdown :title="$name" :open="$search !== ''" class="flex flex-col gap-2">
                         @if($name == 'Medewerkers')
                             @foreach ($members as $member)
                                 {{-- If the member is an admin, show a star next to their name --}}

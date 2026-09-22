@@ -84,19 +84,39 @@ class AdminController extends Controller
         return view('admin.settings');
     }
 
-    public function users()
+    public function users(Request $request)
     {
         set_time_limit(0);
         ini_set('max_execution_time', 0);
 
-        $medewerkers = User::getByType(UserType::Medewerker)->notSoftDeleted()->orderBy('firstName')->get();
-        $stagiairs = User::getByType(UserType::Stagiair)->notSoftDeleted()->orderBy('firstName')->get();
-        $inhuur = User::getByType(UserType::Inhuur)->notSoftDeleted()->orderBy('firstName')->get();
-        $gepensioneerden = User::getByType(UserType::Gepensioneerde)->notSoftDeleted()->orderBy('firstName')->get();
-        $ereleden = User::getByType(UserType::EreLid)->notSoftDeleted()->orderBy('firstName')->get();
+        // Admins can search the member list by name (or e-mail), every word has to match something.
+        $search = trim((string) $request->query('zoek', ''));
+        $searchTerms = $search === '' ? [] : preg_split('/\s+/', $search, -1, PREG_SPLIT_NO_EMPTY);
+
+        $applySearch = function ($query) use ($searchTerms) {
+            if (empty($searchTerms)) {
+                return $query;
+            }
+
+            return $query->where(function ($outer) use ($searchTerms) {
+                foreach ($searchTerms as $term) {
+                    $outer->where(function ($inner) use ($term) {
+                        $inner->where('firstName', 'like', '%' . $term . '%')
+                              ->orWhere('lastName', 'like', '%' . $term . '%')
+                              ->orWhere('email', 'like', '%' . $term . '%');
+                    });
+                }
+            });
+        };
+
+        $medewerkers = $applySearch(User::getByType(UserType::Medewerker)->notSoftDeleted())->orderBy('firstName')->get();
+        $stagiairs = $applySearch(User::getByType(UserType::Stagiair)->notSoftDeleted())->orderBy('firstName')->get();
+        $inhuur = $applySearch(User::getByType(UserType::Inhuur)->notSoftDeleted())->orderBy('firstName')->get();
+        $gepensioneerden = $applySearch(User::getByType(UserType::Gepensioneerde)->notSoftDeleted())->orderBy('firstName')->get();
+        $ereleden = $applySearch(User::getByType(UserType::EreLid)->notSoftDeleted())->orderBy('firstName')->get();
 
         // Get all the deleted users sorted by newest delete date first
-        $deletedUsers = User::softDeletedPast()->orderBy('deleted_at', 'desc')->get();
+        $deletedUsers = $applySearch(User::softDeletedPast())->orderBy('deleted_at', 'desc')->get();
 
         $admins = User::where("is_admin", true)->where('type', '!=', UserType::System)->get()->count();
 
@@ -108,7 +128,16 @@ class AdminController extends Controller
             'Ereleden' => $ereleden,
         ];
 
-        return view('admin.users', compact('userGroups', 'admins', 'deletedUsers'));
+        // The overview table always shows the real totals, so a search does not change the numbers.
+        $userCounts = [
+            'Medewerkers' => User::getByType(UserType::Medewerker)->notSoftDeleted()->count(),
+            'Stagiairs' => User::getByType(UserType::Stagiair)->notSoftDeleted()->count(),
+            'Inhuur' => User::getByType(UserType::Inhuur)->notSoftDeleted()->count(),
+            'Gepensioneerden' => User::getByType(UserType::Gepensioneerde)->notSoftDeleted()->count(),
+            'Ereleden' => User::getByType(UserType::EreLid)->notSoftDeleted()->count(),
+        ];
+
+        return view('admin.users', compact('userGroups', 'userCounts', 'admins', 'deletedUsers', 'search'));
     }
 
     public function sendAnnualInvoices(Request $request)
