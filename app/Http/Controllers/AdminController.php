@@ -18,8 +18,10 @@ use App\Mail\NotifyAllMembers;
 use App\Mail\NotifyNewEmployees;
 use App\Models\Activity;
 use App\Models\Content;
+use App\Models\Order;
 use App\Models\Report;
 use App\Models\User;
+use App\PaymentStatus;
 use App\UserType;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -82,19 +84,39 @@ class AdminController extends Controller
         return view('admin.settings');
     }
 
-    public function users()
+    public function users(Request $request)
     {
         set_time_limit(0);
         ini_set('max_execution_time', 0);
 
-        $medewerkers = User::getByType(UserType::Medewerker)->notSoftDeleted()->orderBy('firstName')->get();
-        $stagiairs = User::getByType(UserType::Stagiair)->notSoftDeleted()->orderBy('firstName')->get();
-        $inhuur = User::getByType(UserType::Inhuur)->notSoftDeleted()->orderBy('firstName')->get();
-        $gepensioneerden = User::getByType(UserType::Gepensioneerde)->notSoftDeleted()->orderBy('firstName')->get();
-        $ereleden = User::getByType(UserType::EreLid)->notSoftDeleted()->orderBy('firstName')->get();
+        // Admins can search the member list by name (or e-mail), every word has to match something.
+        $search = trim((string) $request->query('zoek', ''));
+        $searchTerms = $search === '' ? [] : preg_split('/\s+/', $search, -1, PREG_SPLIT_NO_EMPTY);
+
+        $applySearch = function ($query) use ($searchTerms) {
+            if (empty($searchTerms)) {
+                return $query;
+            }
+
+            return $query->where(function ($outer) use ($searchTerms) {
+                foreach ($searchTerms as $term) {
+                    $outer->where(function ($inner) use ($term) {
+                        $inner->where('firstName', 'like', '%' . $term . '%')
+                              ->orWhere('lastName', 'like', '%' . $term . '%')
+                              ->orWhere('email', 'like', '%' . $term . '%');
+                    });
+                }
+            });
+        };
+
+        $medewerkers = $applySearch(User::getByType(UserType::Medewerker)->notSoftDeleted())->orderBy('firstName')->get();
+        $stagiairs = $applySearch(User::getByType(UserType::Stagiair)->notSoftDeleted())->orderBy('firstName')->get();
+        $inhuur = $applySearch(User::getByType(UserType::Inhuur)->notSoftDeleted())->orderBy('firstName')->get();
+        $gepensioneerden = $applySearch(User::getByType(UserType::Gepensioneerde)->notSoftDeleted())->orderBy('firstName')->get();
+        $ereleden = $applySearch(User::getByType(UserType::EreLid)->notSoftDeleted())->orderBy('firstName')->get();
 
         // Get all the deleted users sorted by newest delete date first
-        $deletedUsers = User::softDeletedPast()->orderBy('deleted_at', 'desc')->get();
+        $deletedUsers = $applySearch(User::softDeletedPast())->orderBy('deleted_at', 'desc')->get();
 
         $admins = User::where("is_admin", true)->where('type', '!=', UserType::System)->get()->count();
 
@@ -106,7 +128,16 @@ class AdminController extends Controller
             'Ereleden' => $ereleden,
         ];
 
-        return view('admin.users', compact('userGroups', 'admins', 'deletedUsers'));
+        // The overview table always shows the real totals, so a search does not change the numbers.
+        $userCounts = [
+            'Medewerkers' => User::getByType(UserType::Medewerker)->notSoftDeleted()->count(),
+            'Stagiairs' => User::getByType(UserType::Stagiair)->notSoftDeleted()->count(),
+            'Inhuur' => User::getByType(UserType::Inhuur)->notSoftDeleted()->count(),
+            'Gepensioneerden' => User::getByType(UserType::Gepensioneerde)->notSoftDeleted()->count(),
+            'Ereleden' => User::getByType(UserType::EreLid)->notSoftDeleted()->count(),
+        ];
+
+        return view('admin.users', compact('userGroups', 'userCounts', 'admins', 'deletedUsers', 'search'));
     }
 
     public function sendAnnualInvoices(Request $request)
@@ -323,6 +354,55 @@ class AdminController extends Controller
 
         // Render the grouped content overview page.
         return view('admin.content', compact('contentGroups'));
+    }
+
+    public function orders()
+    {
+        $orders = Order::query()
+            ->with(['user', 'payment', 'products'])
+            ->whereHas('payment', function ($query) {
+                // Only show real webshop orders in the admin order overview.
+                $query->where('description', 'like', 'Bestelling #%');
+            })
+            ->orderByDesc('id')
+            ->get();
+
+        $isGuestOrder = function (Order $order): bool {
+            if ($order->is_guest_checkout !== null) {
+                return (bool) $order->is_guest_checkout;
+            }
+
+            // Fallback for very old orders before the dedicated guest flag existed.
+            return $order->user?->password === null;
+        };
+
+        $guestOrders = $orders->filter($isGuestOrder)->values();
+        $memberOrders = $orders->reject($isGuestOrder)->values();
+
+        $statusCounts = function ($collection): array {
+            return [
+                'paid' => $collection->filter(fn ($order) => $order->payment?->status === PaymentStatus::paid)->count(),
+                'pending' => $collection->filter(fn ($order) => in_array($order->payment?->status, [PaymentStatus::pending, PaymentStatus::open, PaymentStatus::authorized], true))->count(),
+                'failed' => $collection->filter(fn ($order) => in_array($order->payment?->status, [PaymentStatus::failed, PaymentStatus::expired, PaymentStatus::canceled], true))->count(),
+            ];
+        };
+
+        $memberStatusCounts = $statusCounts($memberOrders);
+        $guestStatusCounts = $statusCounts($guestOrders);
+
+        return view('admin.orders', compact('memberOrders', 'guestOrders', 'memberStatusCounts', 'guestStatusCounts'));
+    }
+
+    public function showOrder(Order $order)
+    {
+        $order->load(['user', 'payment', 'products']);
+
+        // Guard against opening non-webshop orders directly by URL.
+        if (!str_starts_with((string) $order->payment?->description, 'Bestelling #')) {
+            abort(404);
+        }
+
+        return view('admin.order-show', compact('order'));
     }
 
     /**

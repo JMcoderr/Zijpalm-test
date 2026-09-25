@@ -43,10 +43,9 @@
                     {{__('Verslagen')}}
                 </flux:navbar.item>
 
-                {{-- TO DO: Add :current, set to 'Goodie' page, SHOP HAS NOT BEEN IMPLEMENTED --}}
-{{--                <flux:navbar.item :href="route('product.index')" :current="request()->routeIs('product.*')" wire:navigate>--}}
-{{--                    {{__('Shop')}}--}}
-{{--                </flux:navbar.item>--}}
+                <flux:navbar.item :href="route('product.towels')" :current="request()->routeIs('product.*') || request()->routeIs('product.towels')" wire:navigate>
+                    {{__('Handdoeken')}}
+                </flux:navbar.item>
 
                 <flux:navbar.item :href="route('information.charity')" :current="request()->routeIs('information.charity')" wire:navigate>
                     {{__('Lief & Leed')}}
@@ -146,10 +145,9 @@
                     <p> Verslagen </p>
                 </flux:navlist.item>
 
-                {{-- TO DO: Add :current, set to 'Goodie' page, SHOP HAS NOT BEEN IMPLEMENTED--}}
-{{--                <flux:navlist.item :href="route('product.index')" :current="request()->routeIs('product.*')" icon="percent-badge" iconColor="text-zijpalm-600" iconVariant="solid" iconSize="size-6">--}}
-{{--                    <p> Shop </p>--}}
-{{--                </flux:navlist.item>--}}
+                <flux:navlist.item :href="route('product.towels')" :current="request()->routeIs('product.*') || request()->routeIs('product.towels')" icon="gift" iconColor="text-zijpalm-600" iconVariant="solid" iconSize="size-6">
+                    <p> Handdoeken </p>
+                </flux:navlist.item>
 
                 {{-- TO DO: Add :current, set to 'Lief & Leed' page --}}
                 <flux:navlist.item :href="route('information.charity')" :current="request()->routeIs('information.charity')" icon="heart" iconColor="text-zijpalm-600" iconVariant="solid" iconSize="size-6">
@@ -171,6 +169,7 @@
         </flux:sidebar>
         {{$slot}}
         @fluxScripts
+        @stack('scripts')
 
         {{-- Login modal --}}
         @guest

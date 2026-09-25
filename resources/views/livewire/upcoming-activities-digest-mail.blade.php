@@ -2,13 +2,11 @@
 <div>
     @php
         $digestActivities = \App\Models\Activity::query()
-            ->whereNotNull('start')
-            ->where('start', '>=', now()->startOfDay())
-            ->where('type', '!=', \App\ActivityType::Cancelled)
-            ->where('registrationStart', '<=', now())
-            ->where('registrationEnd', '>=', now())
-            ->orderBy('start')
-            ->get();
+            ->where('end', '>', now())
+            ->whereNotIn('type', [\App\ActivityType::Weekly, \App\ActivityType::Cancelled])
+            ->get()
+            ->sortBy('start')
+            ->values();
     @endphp
     <div class="flex flex-col">
         {{-- Show errors, if any --}}
@@ -72,7 +70,7 @@
                                     </span>
                                 </label>
                             @empty
-                                <p class="text-sm text-gray-700">Geen beschikbare activiteiten gevonden binnen de huidige selectie.</p>
+                                <p class="text-sm text-gray-700">Geen aankomende activiteiten gevonden.</p>
                             @endforelse
                         </div>
                     </div>

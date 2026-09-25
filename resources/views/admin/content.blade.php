@@ -5,7 +5,7 @@
             {{-- Creates a dropdown with all the content pieces for each content group --}}
             @foreach ($contentGroups as $name => $contents)
                 @if (count($contents) > 0)
-                    <x-dropdown :title="$name" :open="$loop->first">
+                    <x-dropdown :title="$name" :open="false">
                         @foreach ($contents as $content)
                         {{-- If the type is "bestuurslid", show the title for more obvious names --}}
                             <x-admin.card

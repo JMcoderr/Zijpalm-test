@@ -162,8 +162,8 @@ class ActivityApplied extends Mailable
             'email' => $this->user->email,
             'emails' => $this->user->registeredEmails(),
             'subject' => $this->content->title . ' ' . $this->activity->title . ' #Z',
-            'body' => $renderedContent,
-        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE);
+            'body' => prepareMailHtml($renderedContent),
+        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
 
         if ($jsonBody === false) {
             // If JSON encoding fails, fall back to an empty body instead of breaking the mail.
@@ -178,7 +178,7 @@ class ActivityApplied extends Mailable
                 'emails' => $this->user->registeredEmails(),
                 'subject' => $this->content->title . ' ' . $this->activity->title . ' #Z',
                 'body' => '',
-            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE) ?: '{}';
+            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '{}';
         }
 
         return new Content(
@@ -212,6 +212,13 @@ class ActivityApplied extends Mailable
         // Normalize non-breaking spaces from copy/paste content (Word/Outlook).
         $sanitized = str_replace(["\xC2\xA0", '&nbsp;'], ' ', $sanitized);
 
+        // Convert pasted Markdown links before HTML parsing so following text is never added to the URL.
+        $sanitized = preg_replace_callback(
+            '/\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)/i',
+            fn (array $matches) => '<p>' . e($matches[2]) . '</p>',
+            $sanitized
+        ) ?? $sanitized;
+
         // Keep the markup simple so Power Automate only receives basic, predictable HTML.
         $sanitized = strip_tags($sanitized, '<p><br><a><strong><em><b><i><u><ul><ol><li>') ?? $sanitized;
 
@@ -221,6 +228,7 @@ class ActivityApplied extends Mailable
         // Keep anchors clickable, but strip any non-essential attributes.
         $sanitized = preg_replace('/<a\s+([^>]*?)href=("[^"]*"|\'[^\']*\')([^>]*)>/i', '<a href=$2>', $sanitized) ?? $sanitized;
         $sanitized = preg_replace('/<a\s+href=("[^"]*"|\'[^\']*\')\s*>/i', '<a href=$1>', $sanitized) ?? $sanitized;
+        $sanitized = $this->cleanMalformedAnchorUrls($sanitized);
 
         // If a link starts with www., make it absolute for mail clients.
         $sanitized = preg_replace_callback('/<a\s+href=("|\')(www\.[^"\']+)\1>/i', function (array $matches) {
@@ -323,12 +331,42 @@ class ActivityApplied extends Mailable
     }
 
     /**
+     * Remove editor markup that was accidentally stored inside an anchor URL.
+     */
+    private function cleanMalformedAnchorUrls(string $html): string
+    {
+        return preg_replace_callback(
+            '/(<a\s+href=("|\'))(.*?)(\2)/is',
+            function (array $matches): string {
+                $url = $this->trimUrlAtMarkup($matches[3]);
+
+                if (!filter_var($url, FILTER_VALIDATE_URL) || !preg_match('/^https?:\/\//i', $url)) {
+                    return '<a href="#">';
+                }
+
+                return $matches[1] . e($url) . $matches[4];
+            },
+            $html
+        ) ?? $html;
+    }
+
+    /**
+     * Stop a URL before editor markup, including markup encoded by JSON as u003C.
+     */
+    private function trimUrlAtMarkup(string $url): string
+    {
+        $parts = preg_split('/<\/?(?:p|div|br|strong|em|b|i|u|ul|ol|li)\b[^>]*>|\/(?:\\\\)?u003[cC]/i', $url, 2);
+
+        return trim($parts[0] ?? $url, ' \t\n\r\0\x0B.,;:!?');
+    }
+
+    /**
      * Convert HTTPS URLs into copy-safe text to avoid aggressive link filtering/quarantine.
      */
     private function obfuscateHttpsUrls(string $html): string
     {
         $replaceUrl = function (string $url): string {
-            return str_replace('https://', 'https://', $url);
+            return $this->trimUrlAtMarkup($url);
         };
 
         // Replace anchor tags that point to any HTTPS URL.
@@ -338,7 +376,7 @@ class ActivityApplied extends Mailable
                 $url = $matches[2];
                 $safe = e($replaceUrl($url));
 
-                return '<p><strong>Link:</strong><br>' . $safe . '</p>';
+                return '<strong>Link:</strong><br>' . $safe;
             },
             $html
         ) ?? $html;

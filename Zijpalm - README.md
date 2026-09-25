@@ -67,6 +67,26 @@ De standaardwaarden voor het versturen naar Power Automate en de standaardwaarde
 
 De waarden bij Bestuur gaan over het e-mailadres waarop Power Automate is ingesteld en van waaruit verdere acties worden uitgevoerd.
 
+### Power Automate: inkomende mail doorsturen
+Voor het automatisch doorsturen van alles wat binnenkomt op `zijpalm@almere.nl` naar `hans@zijpalm.nl`, maak deze flow in Power Automate:
+
+1. Ga naar Power Automate en klik op **Create** > **Automated cloud flow**.
+2. Geef de flow naam: `Zijpalm - Inbox Forward naar Hans`.
+3. Kies trigger: **Office 365 Outlook - When a new email arrives (V3)**.
+4. Stel bij de trigger in:
+	- `Original Mailbox Address`: `zijpalm@almere.nl`
+	- `Folder`: `Inbox`
+	- `Only with Attachments`: `No` (alles meenemen)
+	- `Include Attachments`: `Yes`
+5. Voeg actie toe: **Office 365 Outlook - Forward an email (V2)**.
+6. Stel bij de actie in:
+	- `Message Id`: kies dynamische waarde **Message Id** uit de trigger
+	- `To`: `hans@zijpalm.nl`
+	- `Comment`: `Automatisch doorgestuurd vanaf zijpalm@almere.nl`
+7. Sla de flow op en test met een testmail naar `zijpalm@almere.nl`.
+
+Tip: als je ook een kopie naar bestuur wilt houden, voeg dan in de Forward-actie een extra ontvanger toe in `Cc` of maak een tweede actie.
+
 ## Mollie
 Om de Mollie API te kunnen gebruiken moet de API key worden geplaatst in het `.env` bestand: `MOLLIE_KEY=`
 

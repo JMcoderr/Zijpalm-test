@@ -46,16 +46,16 @@ class NotifyAllMembers extends Mailable
     {
         // Pass the values to the Blade template that builds the message body.
         $renderedContent = view('mail.notify-all-members', [
-            'description' => EditorPhp::make($this->validatedData['description'])->toHtml(),
+            'description' => prepareMailDescriptionHtml(EditorPhp::make($this->validatedData['description'])->toHtml()),
         ])->render();
 
         $jsonBody = json_encode([
             'emails' => $this->emails,
             'subject' => $this->validatedData['subject'] . ' #Z',
-            'body' => $renderedContent,
+            'body' => prepareMailHtml($renderedContent),
             'batch_size' => $this->validatedData['batch_size'],
             'delay' => $this->validatedData['delay'],
-        ], JSON_PRETTY_PRINT);
+        ], JSON_PRETTY_PRINT | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
 
         return new Content(
             text: 'mail.raw-json',

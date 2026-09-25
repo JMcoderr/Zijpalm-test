@@ -26,8 +26,13 @@ class UpcomingActivitiesDigestMail extends Component
             $this->delay = $settings->delay;
         }
 
-        // Count all active users (members) to whom the digest will be sent
-        $this->recipientCount = \App\Models\User::notSoftDeleted()->count();
+        // Count all active users who can receive the digest.
+        $this->recipientCount = \App\Models\User::notSoftDeleted()
+            ->get()
+            ->filter(fn ($user) => $user->wantsNotification(\App\UserNotifications::NEWSLETTER) && filter_var($user->email, FILTER_VALIDATE_EMAIL))
+            ->pluck('email')
+            ->unique()
+            ->count();
     }
 
     public function sendDigest()

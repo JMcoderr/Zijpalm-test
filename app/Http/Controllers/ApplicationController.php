@@ -11,6 +11,7 @@ use App\Models\Activity;
 use App\Models\Answer;
 use App\Models\Guest;
 use App\Models\Payment;
+use App\Models\User;
 use App\ApplicationStatus;
 use App\PaymentStatus;
 use Illuminate\Http\Request;
@@ -197,6 +198,81 @@ class ApplicationController extends Controller
     }
 
     /**
+     * Let an admin add a member to the participant list by hand, no matter if they paid or not.
+     */
+    public function adminStore(Request $request, Activity $activity)
+    {
+        $data = $request->validateWithBag('addParticipant', [
+            'user_id' => ['required', 'integer', 'exists:users,id'],
+            'participants' => ['required', 'integer', 'min:1', 'max:50'],
+            'status' => ['required', 'in:' . ApplicationStatus::Active->value . ',' . ApplicationStatus::Pending->value . ',' . ApplicationStatus::Reserve->value],
+            'comment' => ['nullable', 'string', 'max:500'],
+        ], [
+            'user_id.required' => 'Kies eerst een lid door in stap 1 op een naam te klikken.',
+            'user_id.integer' => 'Kies eerst een lid door in stap 1 op een naam te klikken.',
+            'user_id.exists' => 'Dit lid bestaat niet meer.',
+            'participants.required' => 'Vul in met hoeveel personen dit lid komt.',
+            'participants.integer' => 'Vul bij het aantal personen een heel getal in.',
+            'participants.min' => 'Het aantal personen moet minimaal 1 zijn.',
+            'participants.max' => 'Je kunt maximaal 50 personen tegelijk toevoegen.',
+            'status.required' => 'Kies in stap 3 hoe dit lid op de lijst komt.',
+            'status.in' => 'Kies in stap 3 een van de drie mogelijkheden.',
+            'comment.max' => 'De opmerking mag maximaal 500 tekens lang zijn.',
+        ]);
+
+        $user = User::withTrashed()->find($data['user_id']);
+
+        if (!$user) {
+            return redirect()->back()->with('error', 'Dit lid bestaat niet meer.');
+        }
+
+        // Someone can only be on the list once, cancelled sign-ups do not count.
+        $alreadyApplied = Application::where('activity_id', $activity->id)
+            ->where('user_id', $user->id)
+            ->where('status', '!=', ApplicationStatus::Cancelled)
+            ->exists();
+
+        if ($alreadyApplied) {
+            return redirect()->back()->with('error', "{$user->name} staat al op de deelnemerslijst.");
+        }
+
+        $status = ApplicationStatus::from($data['status']);
+
+        try {
+            // Empty profile contact details must still satisfy the applications table.
+            $application = Application::create([
+                'activity_id' => $activity->id,
+                'user_id' => $user->id,
+                'email' => $user->email ?? '',
+                'phone' => $user->phone ?? '',
+                'participants' => (int) $data['participants'],
+                'comment' => filled($data['comment'] ?? null) ? $data['comment'] : 'Handmatig toegevoegd door een beheerder.',
+                'status' => $status,
+            ]);
+
+            // Give every question a default answer so exports and overviews keep working.
+            foreach ($activity->questions as $question) {
+                $application->answers()->create([
+                    'question_id' => $question->id,
+                    'answer' => 'Nee',
+                ]);
+            }
+        } catch (Throwable $exception) {
+            Log::error('[ApplicationController] Manually adding a participant failed', [
+                'activity_id' => $activity->id,
+                'user_id' => $user->id,
+                'error' => $exception->getMessage(),
+            ]);
+
+            return redirect()->back()->with('error', "{$user->name} kon niet worden toegevoegd. Controleer of het profiel van dit lid compleet is en probeer het opnieuw.");
+        }
+
+        $activity->updateApplications();
+
+        return redirect()->back()->with('success', "{$user->name} is toegevoegd aan de deelnemerslijst.");
+    }
+
+    /**
      * Display the specified resource.
      */
     public function show(Application $application)
@@ -253,9 +329,11 @@ class ApplicationController extends Controller
      */
     public function destroy(Application $application, bool $adminOverride = false)
     {
+        $isAdmin = (bool) auth()->user()?->isAdmin();
+
         // Allow admins to bypass the cancellation period check.
         // Regular participants can only cancel if a cancellation date is set and we are still within that period.
-        if (!$adminOverride && !auth()->user()?->isAdmin()) {
+        if (!$adminOverride && !$isAdmin) {
             // If no cancellation date is set (checkbox "Kosteloos annuleren is niet mogelijk" is checked), block cancellation.
             if (!$application->activity->cancellationEnd) {
                 return redirect()->back()->with('error', 'Annuleren is niet mogelijk voor deze activiteit. Neem contact op met het bestuur met verdere vragen.');
@@ -281,7 +359,12 @@ class ApplicationController extends Controller
             }
         });
 
-        return redirect()->back()->with('success', 'U heeft zich succesvol afgemeld voor deze activiteit.');
+        $isOwnApplication = $application->user_id === auth()->id();
+        $participantName = $application->user?->name ?? 'De deelnemer';
+
+        return redirect()->back()->with('success', $isOwnApplication
+            ? 'U heeft zich succesvol afgemeld voor deze activiteit.'
+            : "{$participantName} is van de deelnemerslijst verwijderd.");
 
         // If an application is removed, cancel it and generate a payment link for the first back-up application
         // https://docs.mollie.com/reference/create-payment-link

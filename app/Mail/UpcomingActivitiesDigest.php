@@ -56,7 +56,16 @@ class UpcomingActivitiesDigest extends Mailable
      */
     public function content(): Content
     {
-        $mailSubject = 'Zijpalm | Komende activiteiten';
+        $runningActivityIds = $this->runningActivities
+            ->pluck('id')
+            ->filter()
+            ->unique()
+            ->values();
+
+        $upcomingActivities = $this->activities
+            ->reject(fn ($activity) => $runningActivityIds->contains($activity->id))
+            ->values();
+
             $introHtml = '<p>Beste leden,</p><p>Hieronder vinden jullie de komende activiteiten van Zijpalm.</p>';
 
             if ($this->content?->text) {
@@ -81,7 +90,7 @@ class UpcomingActivitiesDigest extends Mailable
             $renderedContent = view('mail.upcoming-activities-digest', [
                 'user' => null,
                 'introHtml' => $introHtml,
-                'activities' => $this->activities,
+                'activities' => $upcomingActivities,
                 'runningActivities' => $this->runningActivities,
                 'batch_size' => $this->validatedData['batch_size'],
                 'delay' => $this->validatedData['delay'],
@@ -106,10 +115,10 @@ class UpcomingActivitiesDigest extends Mailable
                 $renderedContent .= '</ul>';
             }
 
-            if ($this->activities->isNotEmpty()) {
+            if ($upcomingActivities->isNotEmpty()) {
                 $renderedContent .= '<p><strong>Komende activiteiten:</strong></p><ul>';
 
-                foreach ($this->activities as $activity) {
+                foreach ($upcomingActivities as $activity) {
                     $renderedContent .= '<li><strong>' . e($activity->title) . '</strong><br>';
                     $renderedContent .= e((string) formatDate($activity->start));
 
@@ -126,7 +135,7 @@ class UpcomingActivitiesDigest extends Mailable
 
         $jsonBody = json_encode([
             'emails' => $this->emails->values()->all(),
-            'subject' => $mailSubject,
+            'subject' => 'Zijpalm | Komende activiteiten',
             'body' => $renderedContent,
             'batch_size' => $this->validatedData['batch_size'],
             'delay' => $this->validatedData['delay'],
@@ -140,13 +149,7 @@ class UpcomingActivitiesDigest extends Mailable
                 'running_activities' => $this->runningActivities->count(),
             ]);
 
-            $jsonBody = json_encode([
-                'emails' => $this->emails->values()->all(),
-                'subject' => $mailSubject,
-                'body' => '<p>Komende activiteiten van Zijpalm.</p>',
-                'batch_size' => $this->validatedData['batch_size'],
-                'delay' => $this->validatedData['delay'],
-            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE) ?: '{}';
+            $jsonBody = '{}';
         }
 
         return new Content(

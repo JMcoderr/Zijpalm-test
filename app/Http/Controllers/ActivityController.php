@@ -15,6 +15,7 @@ use App\ActivityType;
 use App\Models\User;
 use App\ApplicationStatus;
 use App\UserNotifications;
+use App\UserType;
 use BumpCore\EditorPhp\EditorPhp;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -36,13 +37,25 @@ class ActivityController extends Controller
         // $activities = Activity::all();
 
         // Get ongoing activities that aren't cancelled, sorted by starting date/time
-        $activities = Activity::where('end', '>', now())->whereNotIn('type', [ActivityType::Weekly, ActivityType::Cancelled])->get()->sortBy('start');
+        $activities = Activity::where('end', '>', now())
+            ->whereNotIn('type', [ActivityType::Weekly, ActivityType::Cancelled, ActivityType::Archived])
+            ->get()
+            ->sortBy('start');
 
         // Get all recurring activities, since they are treated separately
         $recurringActivities = Activity::where('type', ActivityType::Weekly)->get()->sortBy('title');
 
         // Get activities that are past the end date/time, from the last year only, with the latest ones on top, excluding weekly or cancelled activities
-        $archivedActivities = Activity::where('end', '<', now())->where('end', '>=', now()->subYear())->whereNotIn('type', [ActivityType::Weekly, ActivityType::Cancelled])->get()->sortBy('end');
+        $archivedActivities = Activity::where(function ($query) {
+                $query->where('type', ActivityType::Archived)
+                    ->orWhere(function ($query) {
+                        $query->where('end', '<', now())
+                            ->where('end', '>=', now()->subYear())
+                            ->whereNotIn('type', [ActivityType::Weekly, ActivityType::Cancelled, ActivityType::Archived]);
+                    });
+            })
+            ->get()
+            ->sortByDesc('end');
 
         // Return the index with all 3 as compact
         return view('activities.index', compact('activities', 'recurringActivities', 'archivedActivities'));
@@ -277,6 +290,7 @@ class ActivityController extends Controller
             ->unique()
             ->values();
 
+        // Send the announcement to opted-in members who are not registered for this activity.
         $nonParticipantEmails = $allOptedIn->diff($participantEmails)->values();
 
         // Check if provided Power Automate variables could cause issues.
@@ -484,7 +498,19 @@ class ActivityController extends Controller
         $reserves->each(fn ($application) => $application->setRelation('activity', $activity));
         $pending->each(fn ($application) => $application->setRelation('activity', $activity));
 
-        return view('activities.read', compact('activity', 'applications', 'reserves', 'pending'));
+        // Admins can add members to the participant list by hand, so give them the members that are not signed up yet.
+        $assignableUsers = collect();
+
+        if (auth()->user()?->isAdmin()) {
+            $assignableUsers = User::notSoftDeleted()
+                ->where('type', '!=', UserType::System)
+                ->whereNotIn('id', $applications->pluck('user_id')->filter()->all())
+                ->orderBy('firstName')
+                ->orderBy('lastName')
+                ->get();
+        }
+
+        return view('activities.read', compact('activity', 'applications', 'reserves', 'pending', 'assignableUsers'));
     }
 
     /**
@@ -544,6 +570,32 @@ class ActivityController extends Controller
     }
 
     /**
+     * Mark an activity as late before its end date has passed.
+     */
+    public function markLate(Activity $activity)
+    {
+        $activity->update(['type' => ActivityType::Archived]);
+
+        return redirect()->route('activity.show', $activity)
+            ->with('success', "Activiteit '{$activity->title}' staat nu bij 'Te laat'.");
+    }
+
+    /**
+     * Restore an archived activity to the regular activity list.
+     */
+    public function restore(Activity $activity)
+    {
+        $type = $activity->start && $activity->end && !$activity->start->isSameDay($activity->end)
+            ? ActivityType::MultiDay
+            : ActivityType::OneDay;
+
+        $activity->update(['type' => $type]);
+
+        return redirect()->route('activity.show', $activity)
+            ->with('success', "Activiteit '{$activity->title}' staat weer bij de normale activiteiten.");
+    }
+
+    /**
      * Update the specified resource in storage.
      */
     public function update(UpdateActivityRequest $request, Activity $activity){
@@ -554,7 +606,9 @@ class ActivityController extends Controller
 
         // Determine activity type
         $type = ActivityType::OneDay;
-        if(isset($data['recurring'])){
+        if ($activity->type === ActivityType::Archived) {
+            $type = ActivityType::Archived;
+        } elseif(isset($data['recurring'])){
             $type = ActivityType::Weekly;
         } elseif(isset($data['start-date'], $data['end-date']) && $data['start-date'] !== $data['end-date']){
             $type = ActivityType::MultiDay;

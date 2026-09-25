@@ -3,9 +3,11 @@
                 x-data="{
                     signupModal: {{$errors->signupActivity->any() ? 'true' : 'false'}},
                     reminderMailModal: {{$errors->reminderMail->any() ? 'true' : 'false'}},
+                    addParticipantModal: {{$errors->addParticipant->any() ? 'true' : 'false'}},
                     announcementMailModal: {{$errors->announcementMail->any() ? 'true' : 'false'}}}"
                 x-init="$watch('signupModal', v => document.body.classList.toggle('overflow-hidden', v));
                         $watch('reminderMailModal', v => document.body.classList.toggle('overflow-hidden', v));
+                        $watch('addParticipantModal', v => document.body.classList.toggle('overflow-hidden', v));
                         $watch('announcementMailModal', v => document.body.classList.toggle('overflow-hidden', v));">
                 <x-zijpalm-div title="{{$activity->title}}" color="transparent" :editable="false"/>
         {{-- Show buttons if a user is logged in --}}
@@ -31,6 +33,17 @@
                         <x-zijpalm-button :href="route('report.create', $activity)" label="Creëer verslag" variant="obvious" class="h-full"/>
                     @endif
                     <x-zijpalm-button :href="route('activity.edit', $activity)" label="Bewerk activiteit" variant="obvious" type="redirect" class="h-full"/>
+                    @if($activity->type === \App\ActivityType::Archived)
+                        <form id="activity-restore" method="POST" action="{{route('activity.restore', $activity)}}" onsubmit="return confirm('Weet je zeker dat je deze activiteit terug wilt zetten naar de normale activiteiten?')" class="h-full">
+                            @csrf
+                            <x-zijpalm-button type="submit" form="activity-restore" label="Terug naar activiteiten" variant="obvious" class="h-full"/>
+                        </form>
+                    @elseif($activity->type !== \App\ActivityType::Cancelled)
+                        <form id="activity-mark-late" method="POST" action="{{route('activity.markLate', $activity)}}" onsubmit="return confirm('Weet je zeker dat je deze activiteit handmatig op Te laat wilt zetten?')" class="h-full">
+                            @csrf
+                            <x-zijpalm-button type="submit" form="activity-mark-late" label="Te laat zetten" variant="obvious" class="h-full"/>
+                        </form>
+                    @endif
                     <x-zijpalm-button label="Verstuur aankondiging" type="action" x-on:click="announcementMailModal = true" variant="obvious" class="h-full"/>
                     <x-zijpalm-modal text="Activiteit aankondiging" livewire include="activity-announcement-mail" modal="announcementMailModal" :variables="['activity' => $activity, 'errors' => $errors->announcementMail->all()]"/>
                     <form id="activity-copy" method="POST" action="{{route('activity.copy', $activity)}}" onsubmit="return confirm('Je staat op het punt de activiteit {{$activity->title}} te kopiëren. Doorgaan?')" class="h-full">
@@ -209,8 +222,14 @@
                 <x-zijpalm-div :editable="false" color="light" 
                     title="Aanmeldingen ({{ $applications->reduce(function($carry, $application) { return $carry + 1 + $application->guests->count(); }, 0) }}{{$activity->maxParticipants ? '/' . $activity->maxParticipants : ''}})" 
                     width="w-full lg:max-w-1/2" class="flex flex-col flex-1 self-stretch max-h-[40rem] md:h-[40rem]">
-                    @if($applications->isNotEmpty())
-                        <div class="absolute top-2 right-2 flex items-center gap-2">
+                    <div class="absolute top-2 right-2 flex items-center gap-2">
+                        {{-- Admins may add any member by hand, paid or not --}}
+                        <flux:tooltip content="Deelnemer toevoegen">
+                            <flux:button x-on:click="addParticipantModal = true" variant="primary" class="bg-linear-to-t from-zijpalm-700 to-zijpalm-500 inset-shadow-400 border-none size-8! hover:scale-110 hover:brightness-110 duration-300 rounded-xl! group">
+                                <flux:icon name="user-plus" class="text-zinc-100 size-7! stroke-2 group-hover:scale-105 duration-600 p-0.5"/>
+                            </flux:button>
+                        </flux:tooltip>
+                        @if($applications->isNotEmpty())
                             <!-- remindermailModal and button are linked together-->
                             <x-zijpalm-modal text="Herinnering versturen" livewire include="reminder-mail" modal="reminderMailModal" :variables="['activity'=>$activity, 'errors'=>$errors->reminderMail->all()]"></x-zijpalm-modal>
                             <flux:tooltip content="Verstuur herinnering">
@@ -223,8 +242,123 @@
                                     <flux:icon name="arrow-down-tray" class="text-zinc-100 size-7! stroke-2 group-hover:scale-105 duration-600 p-0.5"/>
                                 </flux:button>
                             </flux:tooltip>
-                        </div>
-                    @endif
+                        @endif
+                    </div>
+
+                    {{-- Form to put a member on the participant list without a payment --}}
+                    <x-zijpalm-modal title="Deelnemer toevoegen" text="{{$activity->title}}" modal="addParticipantModal">
+                        @if($errors->addParticipant->any())
+                            <div class="bg-red-100 border border-red-400 text-red-700 rounded-md p-3 text-left mb-3">
+                                <p class="font-bold">Er ging iets mis:</p>
+                                <ul class="list-disc ps-5">
+                                    @foreach($errors->addParticipant->all() as $error)
+                                        <li>{{ $error }}</li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        @endif
+
+                        @if($assignableUsers->isEmpty())
+                            <p class="text-lg text-left">Alle leden staan al op de deelnemerslijst.</p>
+                        @else
+                            @php
+                                // Small list for the search box, the search value is prepared here so the page stays simple.
+                                $memberOptions = $assignableUsers->map(fn ($member) => [
+                                    'id' => $member->id,
+                                    'name' => $member->name,
+                                    'email' => $member->email,
+                                    'search' => mb_strtolower($member->name),
+                                ])->values();
+                            @endphp
+
+                            <form id="add-participant-form" method="POST" action="{{ route('application.adminStore', $activity) }}" class="flex flex-col gap-6 text-left text-lg"
+                                  x-data="{
+                                      query: '',
+                                      chosen: null,
+                                      listOpen: false,
+                                      members: {{ \Illuminate\Support\Js::from($memberOptions) }},
+                                      results() {
+                                          const needle = this.query.trim().toLowerCase();
+                                          if (needle === '') return this.members;
+                                          return this.members.filter(member => member.search.includes(needle));
+                                      }
+                                  }">
+                                @csrf
+                                <input type="hidden" name="user_id" :value="chosen ? chosen.id : ''">
+
+                                {{-- Step 1: pick the member --}}
+                                <div class="flex flex-col gap-2">
+                                    <p class="text-2xl font-bold">Stap 1 &ndash; Kies een lid</p>
+                                    <label class="font-bold" for="add-participant-search">Typ (een deel van) de naam</label>
+                                    <input id="add-participant-search" type="text" x-model="query" x-on:input="listOpen = true" autocomplete="off" placeholder="Bijvoorbeeld: Jan" class="bg-zinc-100 rounded-md shadow-sm px-3 h-11 text-lg focus:outline-0 focus:ring-2 focus:ring-zijpalm-400">
+
+                                    {{-- The list starts closed so the form stays short --}}
+                                    <button type="button" x-on:click="listOpen = !listOpen"
+                                            class="flex items-center justify-between gap-2 bg-zinc-200 rounded-md px-3 h-11 border border-zinc-400 cursor-pointer hover:bg-zijpalm-100">
+                                        <span class="font-bold" x-text="listOpen ? 'Verberg de ledenlijst' : 'Toon de ledenlijst (' + results().length + ')'"></span>
+                                        <flux:icon name="chevron-down" x-show="!listOpen"/>
+                                        <flux:icon name="chevron-up" x-show="listOpen" x-cloak/>
+                                    </button>
+
+                                    <div x-show="listOpen" x-cloak class="max-h-64 overflow-y-auto flex flex-col gap-1 bg-zinc-100 rounded-md p-2 border border-zinc-300">
+                                        <template x-for="member in results()" :key="member.id">
+                                            <button type="button" x-on:click="chosen = member; listOpen = false"
+                                                    class="text-left px-3 py-2 rounded-md cursor-pointer hover:bg-zijpalm-100 border border-transparent"
+                                                    :class="chosen && chosen.id === member.id ? 'bg-zijpalm-200 border-zijpalm-500 font-bold' : ''">
+                                                <span class="block text-lg" x-text="member.name"></span>
+                                                <span class="block text-sm opacity-60" x-text="member.email"></span>
+                                            </button>
+                                        </template>
+                                        <p x-show="results().length === 0" class="px-3 py-2 opacity-70">Geen lid gevonden met deze naam.</p>
+                                    </div>
+
+                                    <div class="rounded-md px-3 py-2 border" :class="chosen ? 'bg-emerald-50 border-emerald-400' : 'bg-zinc-100 border-zinc-300'">
+                                        <span x-show="!chosen">Er is nog geen lid gekozen. Typ een naam of open de ledenlijst en klik op een naam.</span>
+                                        <span x-show="chosen" x-cloak>Gekozen lid: <strong x-text="chosen ? chosen.name : ''"></strong></span>
+                                    </div>
+                                </div>
+
+                                {{-- Step 2: how many people --}}
+                                <div class="flex flex-col gap-2">
+                                    <p class="text-2xl font-bold">Stap 2 &ndash; Met hoeveel personen komt dit lid?</p>
+                                    <p class="text-base opacity-70">Tel het lid zelf mee. Komt het lid alleen? Vul dan 1 in.</p>
+                                    <input id="add-participant-count" type="number" name="participants" min="1" max="50" step="1" value="{{ old('participants', 1) }}" required class="bg-zinc-100 rounded-md shadow-sm px-3 h-11 w-28 text-lg focus:outline-0 focus:ring-2 focus:ring-zijpalm-400">
+                                </div>
+
+                                {{-- Step 3: status in plain words --}}
+                                <div class="flex flex-col gap-2">
+                                    <p class="text-2xl font-bold">Stap 3 &ndash; Hoe zet je dit lid op de lijst?</p>
+                                    @php
+                                        $statusChoices = [
+                                            'active' => ['Gewoon op de deelnemerslijst', 'Het lid doet mee. Er hoeft niets (meer) betaald te worden.'],
+                                            'pending' => ['Op de lijst, maar moet nog betalen', 'Het lid doet mee, maar de betaling is nog niet binnen.'],
+                                            'reserve' => ['Op de reservelijst', 'Het lid doet alleen mee als er een plek vrijkomt.'],
+                                        ];
+                                        $chosenStatus = old('status', 'active');
+                                    @endphp
+                                    @foreach($statusChoices as $value => $choice)
+                                        <label class="flex items-start gap-3 bg-zinc-100 rounded-md p-3 border border-zinc-300 cursor-pointer hover:bg-zijpalm-100">
+                                            <input type="radio" name="status" value="{{ $value }}" class="mt-1 size-5" @checked($chosenStatus === $value) required>
+                                            <span>
+                                                <span class="block font-bold">{{ $choice[0] }}</span>
+                                                <span class="block text-base opacity-70">{{ $choice[1] }}</span>
+                                            </span>
+                                        </label>
+                                    @endforeach
+                                </div>
+
+                                {{-- Optional note --}}
+                                <div class="flex flex-col gap-2">
+                                    <label class="text-2xl font-bold" for="add-participant-comment">Opmerking</label>
+                                    <p class="text-base opacity-70">Dit veld mag leeg blijven.</p>
+                                    <input id="add-participant-comment" type="text" name="comment" maxlength="500" value="{{ old('comment') }}" placeholder="Bijvoorbeeld: contant betaald op kantoor" class="bg-zinc-100 rounded-md shadow-sm px-3 h-11 text-lg focus:outline-0 focus:ring-2 focus:ring-zijpalm-400">
+                                </div>
+
+                                <x-zijpalm-button type="submit" form="add-participant-form" label="Lid toevoegen" variant="obvious" center="horizontal"
+                                                  x-bind:disabled="!chosen" x-bind:class="!chosen ? 'opacity-50 pointer-events-none' : ''"/>
+                            </form>
+                        @endif
+                    </x-zijpalm-modal>
 
                     @if($applications->isEmpty())
                         <div class="opacity-50"> Er zijn nog geen aanmeldingen voor deze activiteit </div>
@@ -238,6 +372,7 @@
                                 <span class="flex-1">Naam</span>
                                 <span class="flex-1">Telefoon</span>
                                 <span class="flex-1 hidden md:flex">Mail</span>
+                                <span class="w-8 shrink-0"></span>
                             </div>
 
                             <flux:separator/>
@@ -255,20 +390,34 @@
                                 <div class="bg-[rgba(0,0,0,0.05)] p-1 rounded-xl flex flex-col gap-y-1 {{$reserves->contains($application) ? 'opacity-50' : ''}} {{$pending->contains($application) ? 'opacity-75' : ''}}">
 
                                     {{-- User data --}}
-                                    <div class="flex px-2 gap-x-2 rounded-full overflow-clip bg-linear-to-t from-zijpalm-500 to-zijpalm-300 inset-shadow-zijpalm-200 text-zinc-100">
-                                        <span class="flex-1 truncate">{{ $application->created_at?->format('d/m/Y') }}</span>
-                                        <span class="flex-1 truncate">{{$application->user->name}}</span>
-                                        <span class="flex-1 truncate">{{formatPhoneNumber($application->phone)}}</span>
-                                        <span class="flex-1 hidden md:flex truncate">{{$application->email}}</span>
+                                    <div class="flex items-center gap-x-1">
+                                        <div class="flex flex-1 min-w-0 px-2 gap-x-2 rounded-full overflow-clip bg-linear-to-t from-zijpalm-500 to-zijpalm-300 inset-shadow-zijpalm-200 text-zinc-100">
+                                            <span class="flex-1 truncate">{{ $application->created_at?->format('d/m/Y') }}</span>
+                                            <span class="flex-1 truncate">{{$application->user?->name ?? 'Onbekend lid'}}</span>
+                                            <span class="flex-1 truncate">{{formatPhoneNumber($application->phone)}}</span>
+                                            <span class="flex-1 hidden md:flex truncate">{{$application->email}}</span>
+                                        </div>
+                                        {{-- Admins can take anyone off the list, paid or not --}}
+                                        <form method="POST" action="{{route('application.destroy', $application)}}" class="shrink-0"
+                                              onsubmit="return confirm('Weet je zeker dat je {{ $application->user?->name ?? 'deze deelnemer' }} van de deelnemerslijst wilt halen? Een eventuele betaling wordt teruggestort.')">
+                                            @csrf
+                                            @method('DELETE')
+                                            <flux:tooltip content="Verwijder van deelnemerslijst">
+                                                <flux:button type="submit" variant="primary" icon="trash" square="true" class="cursor-pointer bg-linear-to-t from-zijpalm-700 to-zijpalm-500 border-none size-6!"/>
+                                            </flux:tooltip>
+                                        </form>
                                     </div>
 
                                     {{-- Guest data --}}
                                     @foreach($application->guests as $guest)
-                                        <div class="flex px-2 gap-x-2 rounded-full overflow-clip bg-linear-to-t from-zinc-300 to-zinc-200 inset-shadow-zinc-50 border-b border-[rgba(0,0,0,0.15)]">
-                                        <span class="flex-1 truncate">{{ $application->created_at?->format('d/m/Y') }}</span>
-                                            <span class="flex-1 truncate">{{$guest->name}}</span>
-                                            <span class="flex-1 truncate">{{formatPhoneNumber($guest->phone)}}</span>
-                                            <span class="flex-1 hidden md:flex truncate">{{$guest->email}}</span>
+                                        <div class="flex items-center gap-x-1">
+                                            <div class="flex flex-1 min-w-0 px-2 gap-x-2 rounded-full overflow-clip bg-linear-to-t from-zinc-300 to-zinc-200 inset-shadow-zinc-50 border-b border-[rgba(0,0,0,0.15)]">
+                                                <span class="flex-1 truncate">{{ $application->created_at?->format('d/m/Y') }}</span>
+                                                <span class="flex-1 truncate">{{$guest->name}}</span>
+                                                <span class="flex-1 truncate">{{formatPhoneNumber($guest->phone)}}</span>
+                                                <span class="flex-1 hidden md:flex truncate">{{$guest->email}}</span>
+                                            </div>
+                                            <span class="w-6 shrink-0"></span>
                                         </div>
                                     @endforeach
                                 </div>
@@ -306,7 +455,7 @@
 
                 <div class="flex flex-col lg:flex-row gap-5 w-full">
                     <x-zijpalm-div title="Beschrijving" :editable="false" width="w-full lg:w-2/3" class="">
-                        <div class="bg-[rgba(0,0,0,0.15)] rounded-md flex flex-col p-2 text-left">
+                        <div class="bg-[rgba(0,0,0,0.15)] rounded-md flex flex-col p-2 text-left space-y-3 whitespace-pre-line">
                             {!!$activity->descriptionHTML!!}
                         </div>
                     </x-zijpalm-div>
@@ -373,7 +522,7 @@
                                     @endphp
                                     <tr class="align-top hover:bg-[rgba(0,0,0,0.05)] {{ $application->status === App\ApplicationStatus::Reserve ? 'opacity-60' : '' }} {{ $application->status === App\ApplicationStatus::Pending ? 'opacity-80' : '' }}">
                                         <td class="p-2">
-                                            <div class="font-semibold">{{ $application->user->name }}</div>
+                                            <div class="font-semibold">{{ $application->user?->name ?? 'Onbekend lid' }}</div>
                                             @if($application->guests->isNotEmpty())
                                                 <div class="text-xs opacity-70">Gasten: {{ $application->guests->pluck('name')->join(', ') }}</div>
                                             @endif
@@ -405,16 +554,25 @@
                                         <td class="p-2 text-right font-semibold">{{ formatPrice($totalCost) }}</td>
                                         <td class="p-2 text-right font-semibold">{{ formatPrice($paidAmount) }}</td>
                                         <td class="p-2 text-right">
-                                            @if($application->status === App\ApplicationStatus::Pending)
-                                                <form id="mark-paid-{{ $application->id }}" method="POST" action="{{ route('application.update', $application) }}" class="inline">
+                                            <div class="flex items-center justify-end gap-2">
+                                                @if($application->status === App\ApplicationStatus::Pending)
+                                                    <form id="mark-paid-{{ $application->id }}" method="POST" action="{{ route('application.update', $application) }}" class="inline">
+                                                        @csrf
+                                                        @method('PUT')
+                                                        <input type="hidden" name="status" value="active">
+                                                    </form>
+                                                    <x-zijpalm-button form="mark-paid-{{ $application->id }}" type="submit" label="Zet op betaald" variant="default" />
+                                                @endif
+                                                {{-- Removing works for everyone, paid or not --}}
+                                                <form method="POST" action="{{ route('application.destroy', $application) }}"
+                                                      onsubmit="return confirm('Weet je zeker dat je {{ $application->user?->name ?? 'deze deelnemer' }} van de deelnemerslijst wilt halen? Een eventuele betaling wordt teruggestort.')">
                                                     @csrf
-                                                    @method('PUT')
-                                                    <input type="hidden" name="status" value="active">
+                                                    @method('DELETE')
+                                                    <flux:tooltip content="Verwijder van deelnemerslijst">
+                                                        <flux:button type="submit" variant="primary" icon="trash" square="true" class="cursor-pointer bg-linear-to-t from-zijpalm-700 to-zijpalm-500 border-none"/>
+                                                    </flux:tooltip>
                                                 </form>
-                                                <x-zijpalm-button form="mark-paid-{{ $application->id }}" type="submit" label="Zet op betaald" variant="default" />
-                                            @else
-                                                <span class="opacity-50">-</span>
-                                            @endif
+                                            </div>
                                         </td>
                                     </tr>
                                 @endforeach
@@ -425,7 +583,7 @@
             @else
                 {{-- Activity Description --}}
                 <x-zijpalm-div title="Beschrijving" :editable="false" width="w-full" class="">
-                    <div class="bg-[rgba(0,0,0,0.15)] rounded-md flex flex-col p-2 text-left">
+                    <div class="bg-[rgba(0,0,0,0.15)] rounded-md flex flex-col p-2 text-left space-y-3 whitespace-pre-line">
                         {!!$activity->descriptionHTML!!}
                     </div>
                 </x-zijpalm-div>

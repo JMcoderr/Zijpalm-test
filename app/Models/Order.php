@@ -12,6 +12,7 @@ use App\Mail\PaymentFailed;
 use App\PaymentStatus;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Mollie\Laravel\Facades\Mollie;
@@ -24,6 +25,11 @@ class Order extends Model
     protected $fillable = [
         'user_id',
         'payment_id',
+        'is_guest_checkout',
+    ];
+
+    protected $casts = [
+        'is_guest_checkout' => 'boolean',
     ];
 
     public function payment()
@@ -38,50 +44,71 @@ class Order extends Model
 
     public function products()
     {
-        return $this->belongsToMany(Product::class, 'order_products')->withPivot('quantity');
+        return $this->belongsToMany(Product::class, 'order_products')->withPivot('quantity', 'unit_price');
     }
 
     public static function createWithProducts($products = [['productId', 'quantity']], $paymentDescription, User $user, bool $newMember = false): Order
     {
-        // Initialize the price var
-        $price = 0.00;
+        return DB::transaction(function () use ($products, $paymentDescription, $user, $newMember) {
+            // Initialize the price var
+            $price = 0.00;
+            $lockedProducts = [];
 
-        // Calculate the price adding each products price times the quantity
-        foreach($products as $product) {
-            $productModel = Product::findOrFail($product['productId']);
-            $price += $productModel->price * $product['quantity'];
-        };
+            // Lock products first so stock checks and updates stay safe under concurrent requests.
+            foreach ($products as $product) {
+                $quantity = (int) ($product['quantity'] ?? 0);
+                $productModel = Product::query()->whereKey($product['productId'])->lockForUpdate()->firstOrFail();
 
-        // Format the price
-        $price = (string)number_format($price, 2, '.');
+                if ($productModel->stock !== null && $quantity > (int) $productModel->stock) {
+                    throw new \RuntimeException('Niet genoeg voorraad beschikbaar.');
+                }
 
-        $order = self::create([
-            'user_id' => $user->id,
-        ]);
+                $price += (float) $productModel->price * $quantity;
+                $lockedProducts[] = [
+                    'model' => $productModel,
+                    'quantity' => $quantity,
+                ];
+            }
 
-        foreach ($products as $product) {
-            $order->products()->attach($product['productId'], ['quantity' => $product['quantity']]);
-        }
+            // Format the price
+            $price = (string) number_format($price, 2, '.');
 
-        // Create a metadata array for the payment
-        // This will be used to indentify the order and if the user is a new member
-        $metadata = [
-            'orderId' => $order->id,
-            'newMember' => $newMember,
-        ];
+            $order = self::create([
+                'user_id' => $user->id,
+                'is_guest_checkout' => false,
+            ]);
 
-        $payment = Payment::generatePayment(
-            $price,
-            $paymentDescription,
-            $metadata['newMember'] ? null : $order->id,
-            $metadata
-        );
+            foreach ($lockedProducts as $product) {
+                $order->products()->attach($product['model']->id, [
+                    'quantity' => $product['quantity'],
+                ]);
 
-        // Set the payment id on the order
-        $order->payment_id = $payment->id;
+                if ($product['model']->stock !== null) {
+                    $product['model']->decrement('stock', $product['quantity']);
+                }
+            }
 
-        $order->save();
-        return $order;
+            // Create a metadata array for the payment
+            // This will be used to indentify the order and if the user is a new member
+            $metadata = [
+                'orderId' => $order->id,
+                'newMember' => $newMember,
+            ];
+
+            $payment = Payment::generatePayment(
+                $price,
+                $paymentDescription,
+                $metadata['newMember'] ? null : $order->id,
+                $metadata
+            );
+
+            // Set the payment id on the order
+            $order->payment_id = $payment->id;
+
+            $order->save();
+
+            return $order;
+        });
     }
 
     // This function is called when the payment status changes
@@ -102,7 +129,7 @@ class Order extends Model
 
         $newMember = $metadata->newMember ?? false;
 
-        // Send confirmation email to the user
+        // Send confirmation email only when payment is definitively paid.
         if ($payment->status === PaymentStatus::paid){
             // If the user is a new member, send the new member email
             if ($newMember) {
@@ -114,8 +141,24 @@ class Order extends Model
                 Mail::to(config('mail.bestuur.address'), config('mail.bestuur.name'))->send(new OrderPaid($this));
                 Mail::to(config('mail.bestuur.address'), config('mail.bestuur.name'))->send(new BoardNewOrder(User::find(1), $this));
             }
-        } else {
-            Log::debug("[OrderModel]Payment failed Errors: payment_id {$payment->id}, status: {$payment->status}, mollie_id {$payment->mollieId}");
+
+            return;
+        }
+
+        // Keep order as-is for non-terminal statuses.
+        if (in_array($payment->status, [PaymentStatus::open, PaymentStatus::pending, PaymentStatus::authorized], true)) {
+            return;
+        }
+
+        // Payment failed/canceled/expired: release reserved stock and clean up order.
+        if (in_array($payment->status, [PaymentStatus::failed, PaymentStatus::canceled, PaymentStatus::expired], true)) {
+            Log::debug("[OrderModel]Payment failed Errors: payment_id {$payment->id}, status: {$payment->status->value}, mollie_id {$payment->mollieId}");
+
+            foreach ($this->products as $product) {
+                if ($product->stock !== null) {
+                    $product->increment('stock', (int) $product->pivot->quantity);
+                }
+            }
 
             // Send the payment failed email
             Mail::to(config('mail.bestuur.address'), config('mail.bestuur.name'))->send(new PaymentFailed($payment, $this->user));
@@ -125,6 +168,8 @@ class Order extends Model
             if ($newMember) {
                 $this->user()->delete();
             }
+
+            return;
         }
     }
 }

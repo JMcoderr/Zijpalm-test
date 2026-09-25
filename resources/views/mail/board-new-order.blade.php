@@ -15,10 +15,13 @@
     <h3 style="margin: 0; padding: 0;">Product(en):</h3>
     @foreach ($order->products as $product)
         <div style="margin-bottom: 10px;">
+            @php
+                $unitPrice = $product->pivot->unit_price ?? $product->price;
+            @endphp
             <strong>{{ $product->name }}</strong><br>
             Aantal: {{ $product->pivot->quantity }}<br>
-            Prijs per stuk: {{ formatPrice($product->price) }}<br>
-            Totaal: {{ formatPrice($product->pivot->quantity * $product->price) }}
+            Prijs per stuk: {{ formatPrice($unitPrice) }}<br>
+            Totaal: {{ formatPrice($product->pivot->quantity * $unitPrice) }}
         </div>
     @endforeach
     {{-- Show the total amount at the bottom so it is easy to check. --}}
