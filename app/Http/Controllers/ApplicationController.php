@@ -238,22 +238,33 @@ class ApplicationController extends Controller
 
         $status = ApplicationStatus::from($data['status']);
 
-        $application = Application::create([
-            'activity_id' => $activity->id,
-            'user_id' => $user->id,
-            'email' => $user->email,
-            'phone' => $user->phone,
-            'participants' => (int) $data['participants'],
-            'comment' => filled($data['comment'] ?? null) ? $data['comment'] : 'Handmatig toegevoegd door een beheerder.',
-            'status' => $status,
-        ]);
-
-        // Give every question a default answer so exports and overviews keep working.
-        foreach ($activity->questions as $question) {
-            $application->answers()->create([
-                'question_id' => $question->id,
-                'answer' => 'Nee',
+        try {
+            // Empty profile contact details must still satisfy the applications table.
+            $application = Application::create([
+                'activity_id' => $activity->id,
+                'user_id' => $user->id,
+                'email' => $user->email ?? '',
+                'phone' => $user->phone ?? '',
+                'participants' => (int) $data['participants'],
+                'comment' => filled($data['comment'] ?? null) ? $data['comment'] : 'Handmatig toegevoegd door een beheerder.',
+                'status' => $status,
             ]);
+
+            // Give every question a default answer so exports and overviews keep working.
+            foreach ($activity->questions as $question) {
+                $application->answers()->create([
+                    'question_id' => $question->id,
+                    'answer' => 'Nee',
+                ]);
+            }
+        } catch (Throwable $exception) {
+            Log::error('[ApplicationController] Manually adding a participant failed', [
+                'activity_id' => $activity->id,
+                'user_id' => $user->id,
+                'error' => $exception->getMessage(),
+            ]);
+
+            return redirect()->back()->with('error', "{$user->name} kon niet worden toegevoegd. Controleer of het profiel van dit lid compleet is en probeer het opnieuw.");
         }
 
         $activity->updateApplications();
