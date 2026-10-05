@@ -84,7 +84,7 @@
                         @if($name == 'Medewerkers')
                             @foreach ($members as $member)
                                 {{-- If the member is an admin, show a star next to their name --}}
-                                <x-admin.card :title="$member->name" :email="$member->email" :href="route('user.edit', $member)" :buttons="['edit' => route('user.edit', $member)]" :icons="$member->is_admin ? ['star'] : []" />
+                                <x-admin.card :title="$member->name" :email="$member->email" :href="route('user.edit', $member)" :buttons="['edit' => route('user.edit', $member)]" :icons="$member->is_admin ? ['star'] : []" :variables="[['text' => 'Ingangsdatum: ' . ($member->membership_start_date?->format('d-m-Y') ?? '-'), 'tag' => 'h3', 'class' => 'font-semibold text-gray-800 whitespace-nowrap']]" />
                             @endforeach
                         @elseif($name == 'Oud leden (Meest recent verwijderde eerst)')
                             @foreach ($members as $member)
@@ -116,7 +116,7 @@
                         @else
                             @foreach ($members as $member)
                                 {{-- If the member is an admin, show a star next to their name --}}
-                                <x-admin.card :title="$member->name" :email="$member->email" :href="route('user.edit', $member)" :buttons="['edit' => route('user.edit', $member), 'delete' => route('admin.removeUser', $member)]" :icons="$member->is_admin ? ['star'] : []" />
+                                <x-admin.card :title="$member->name" :email="$member->email" :href="route('user.edit', $member)" :buttons="['edit' => route('user.edit', $member), 'delete' => route('admin.removeUser', $member)]" :icons="$member->is_admin ? ['star'] : []" :variables="[['text' => 'Ingangsdatum: ' . ($member->membership_start_date?->format('d-m-Y') ?? '-'), 'tag' => 'h3', 'class' => 'font-semibold text-gray-800 whitespace-nowrap']]" />
                             @endforeach
                         @endif
                     </x-dropdown>

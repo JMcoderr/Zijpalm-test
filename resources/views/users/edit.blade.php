@@ -21,6 +21,7 @@
                     <x-input-field type="email" label="Extra e-mailadres 1" id="emailSecondary" value="{{$user->emailSecondary}}" inputmode="email" :disabled="!$canUpdateIdentity" />
                     <x-input-field type="email" label="Extra e-mailadres 2" id="emailTertiary" value="{{$user->emailTertiary}}" inputmode="email" :disabled="!$canUpdateIdentity" />
                     <x-input-field type="phone" label="Telefoonnummer" id="phone" value="{{$user->phone}}" inputmode="numeric" />
+                    <x-input-field type="date" label="Ingangsdatum lidmaatschap" id="membership_start_date" value="{{ $user->membership_start_date?->format('Y-m-d') }}" :disabled="!$canUpdateIdentity" />
                     @isset($user->employee_number)
                         <x-input-field type="text" label="Medewerkernummer" id="employee_number" value="{{$user->employee_number}}" :disabled="!$user->canUpdatePersonalia()" />
                     @endisset

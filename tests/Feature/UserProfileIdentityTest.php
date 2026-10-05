@@ -19,6 +19,7 @@ it('prevents regular users from updating their own name and email', function () 
             'lastName' => 'Name',
             'email' => 'changed@example.com',
             'phone' => '87654321',
+            'membership_start_date' => '2026-10-01',
         ])
         ->assertRedirect();
 
@@ -27,7 +28,8 @@ it('prevents regular users from updating their own name and email', function () 
     expect($user->firstName)->toBe('Jordy')
         ->and($user->lastName)->toBe('Meijer')
         ->and($user->email)->toBe('jordy@example.com')
-        ->and($user->phone)->toBe('87654321');
+        ->and($user->phone)->toBe('87654321')
+        ->and($user->membership_start_date)->toBeNull();
 });
 
 it('allows admins to update user name and email', function () {
@@ -51,4 +53,19 @@ it('allows admins to update user name and email', function () {
     expect($user->firstName)->toBe('Changed')
         ->and($user->lastName)->toBe('Name')
         ->and($user->email)->toBe('changed@example.com');
+});
+
+it('allows admins to update a user membership start date', function () {
+    $admin = User::factory()->admin()->create();
+    $user = User::factory()->create([
+        'type' => 'gepensioneerde',
+    ]);
+
+    $this->actingAs($admin)
+        ->put(route('user.update', $user), [
+            'membership_start_date' => '2026-10-01',
+        ])
+        ->assertRedirect();
+
+    expect($user->fresh()->membership_start_date->format('Y-m-d'))->toBe('2026-10-01');
 });

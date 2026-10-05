@@ -19,6 +19,7 @@ $price = number_format($priceTillEndOfYear, 2, ',', '.');
                     <x-input-field id="email" name="email" type="email" label="E-mail" required autocomplete="email" />
                     <x-input-field id="phone" name="phone" type="tel" label="Telefoonnummer" required autocomplete="tel" pattern="\d{1,10}$" />
                 </x-input-group>
+                <x-input-field id="membership_start_date" name="membership_start_date" type="date" label="Ingangsdatum lidmaatschap" value="{{ old('membership_start_date', now()->toDateString()) }}" required />
                 <div name="radio" class="flex flex-col">
                     {{-- Hidden by default --}}
                     <x-input-field type="radio" id="type" name="type" label="Kies wat van toepassing is:" required action="changeEndDateVisibility()" :options="['inhuur' => 'Ik ben inhuur', 'gepensioneerde' => 'Ik ben pensionado', 'stagiair' => 'Ik ben stagiair']" />

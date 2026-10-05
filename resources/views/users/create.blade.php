@@ -13,6 +13,7 @@
                 <x-input-field type="text" label="Achternaam" id="lastName" value="{{ old('lastName') }}" required />
                 <x-input-field type="text" label="E-mail" id="email" value="{{ old('email') }}" inputmode="email" required />
                 <x-input-field type="phone" label="Telefoonnummer" id="phone" value="{{ old('phone') }}" inputmode="numeric" />
+                <x-input-field type="date" label="Ingangsdatum lidmaatschap" id="membership_start_date" value="{{ old('membership_start_date') }}" />
             </x-input-group>
 
             <x-input-group id="admin" title="Account" padding="p-0" grid="grid grid-cols-1 sm:grid-cols-2" height="h-min">

@@ -186,6 +186,7 @@ class AdminController extends Controller
             'Email',
             'Phone',
             'Type',
+            'Membership start date',
             'Employee number',
             'Contribution',
             'Is admin',
@@ -203,6 +204,7 @@ class AdminController extends Controller
                 $user->email,
                 $phone,
                 $user->type->value,
+                optional($user->membership_start_date)->format('d-m-Y'),
                 $user->employee_number,
                 number_format((float) $user->contribution, 2, '.', ''),
                 $user->is_admin ? 'yes' : 'no',
@@ -214,7 +216,7 @@ class AdminController extends Controller
             $row++;
         }
 
-        foreach (range('A', 'H') as $column) {
+        foreach (range('A', 'I') as $column) {
             $sheet->getColumnDimension($column)->setAutoSize(true);
         }
 
@@ -246,6 +248,7 @@ class AdminController extends Controller
             'Email',
             'Phone',
             'Former type',
+            'Membership start date',
             'Deleted at',
             'Is admin',
         ];
@@ -264,6 +267,7 @@ class AdminController extends Controller
                 $user->email,
                 $phone,
                 $formerType,
+                optional($user->membership_start_date)->format('d-m-Y'),
                 $deletedAt,
                 $user->is_admin ? 'yes' : 'no',
             ], null, 'A' . $row);
@@ -274,7 +278,7 @@ class AdminController extends Controller
             $row++;
         }
 
-        foreach (range('A', 'G') as $column) {
+        foreach (range('A', 'H') as $column) {
             $sheet->getColumnDimension($column)->setAutoSize(true);
         }
 

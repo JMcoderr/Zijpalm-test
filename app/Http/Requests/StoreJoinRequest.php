@@ -30,6 +30,7 @@ class StoreJoinRequest extends FormRequest
             'email' => 'required|email|max:255|unique:users,email',
             'phone' => 'required|string|max:255|regex:^\d{1,10}$^',
             'type' => 'required|in:inhuur,gepensioneerde,stagiair',
+            'membership_start_date' => ['required', 'date'],
             'endDate' => [
                 Rule::requiredIf($this->input('type') === 'stagiar'),
                 'nullable',
@@ -66,6 +67,9 @@ class StoreJoinRequest extends FormRequest
 
             'type.required' => 'Type is verplicht',
             'type.in' => 'Type moet één van de volgende zijn: inhuur, pensionado, stagiar',
+
+            'membership_start_date.required' => 'Ingangsdatum is verplicht',
+            'membership_start_date.date' => 'Ingangsdatum moet een geldige datum zijn',
 
             'endDate.required_if' => 'Einddatum is verplicht als het type "stagiar" is',
             'endDate.date' => 'Einddatum moet een geldige datum zijn',

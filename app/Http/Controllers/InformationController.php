@@ -132,6 +132,7 @@ class InformationController extends Controller
             'email' => $request->email,
             'phone' => $request->phone,
             'type' => $request->type,
+            'membership_start_date' => $request->membership_start_date,
             'contribution' => $price,
             'accepted_terms_at' => now(),
             'accepted_privacy_at' => now(),

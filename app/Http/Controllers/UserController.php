@@ -52,6 +52,7 @@ class UserController extends Controller
             'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')],
             'phone' => ['nullable', 'string', 'regex:/^\d{8}$/'],
             'type' => ['required', 'in:' . implode(',', array_filter(UserType::toArray(), fn ($type) => $type !== UserType::System->value))],
+            'membership_start_date' => ['nullable', 'date'],
             'is_admin' => ['sometimes', 'boolean'],
         ], [
             'firstName.required' => 'Vul een voornaam in',
@@ -70,6 +71,7 @@ class UserController extends Controller
             'email' => $data['email'],
             'phone' => $data['phone'] ?? null,
             'type' => UserType::from($data['type']),
+            'membership_start_date' => $data['membership_start_date'] ?? null,
             'password' => Str::random(40),
         ]);
 
@@ -161,6 +163,10 @@ class UserController extends Controller
 
             if ($request->has('type') && in_array($request->input('type'), UserType::toArray())) {
                 $user->type = UserType::from($request->input('type'));
+            }
+
+            if ($request->exists('membership_start_date')) {
+                $user->membership_start_date = $request->input('membership_start_date');
             }
         }
 

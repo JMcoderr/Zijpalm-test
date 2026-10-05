@@ -37,6 +37,7 @@ class UpdateUserRequest extends FormRequest
             'emailTertiary' => ['sometimes', 'nullable', 'email', 'max:255', Rule::unique('users', 'emailTertiary')->ignore($userId)],
             'is_admin' => ['sometimes', 'boolean'],
             'type' => ['sometimes', 'in:' . implode(',', \App\UserType::toArray())],
+            'membership_start_date' => ['sometimes', 'nullable', 'date'],
         ];
     }
 
