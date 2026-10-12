@@ -88,6 +88,13 @@ Voor het automatisch doorsturen van alles wat binnenkomt op `zijpalm@almere.nl` 
 Tip: als je ook een kopie naar bestuur wilt houden, voeg dan in de Forward-actie een extra ontvanger toe in `Cc` of maak een tweede actie.
 
 ## Mollie
+### Aanmeldingen handmatig corrigeren
+Beheerders kunnen op de activiteitpagina naast **Deelnemer toevoegen** op het potloodknopje **Aanmeldingen bewerken** klikken. Zoek een deelnemer, kies **Aangemeld**, **Reserve** of **In afwachting van betaling** en sla de wijzigingen op. Gasten volgen de status van de bijbehorende aanmelding.
+
+Dit is een statuscorrectie: betalingen worden niet als betaald gemarkeerd, betaallinks worden niet geannuleerd en er worden geen e-mails verstuurd of bedragen teruggestort. Voor afmelden met eventuele terugbetaling blijft de prullenbak beschikbaar. Reserves worden tijdens het opslaan niet automatisch doorgeschoven; de bestaande doorschuifprocedure blijft beschikbaar bij een volgende annulering. Betalingsupdates plaatsen een reserve niet terug op de deelnemerslijst. Bij later doorschuiven wordt rekening gehouden met reeds betaalde, niet-teruggestorte bedragen.
+
+Voor deze functie zijn geen migraties nodig. Bouw de frontend met `npm run build`, upload de gewijzigde PHP- en Blade-bestanden en de gebouwde CSS/manifest in `public/build`, en wis indien nodig de route- en viewcache (`php artisan route:clear` en `php artisan view:clear`).
+
 Om de Mollie API te kunnen gebruiken moet de API key worden geplaatst in het `.env` bestand: `MOLLIE_KEY=`
 
 Daarnaast moet er tijdens de lokale ontwikkeling iets zoals ngrok gebruikt worden om de betalingen lokaal te doorlopen.

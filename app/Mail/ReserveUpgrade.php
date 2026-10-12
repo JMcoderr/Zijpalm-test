@@ -60,8 +60,8 @@ class ReserveUpgrade extends Mailable
     public function content(): Content
     {
         // Pass the values to the Blade template that builds the message body.
-        // Calculate the total cost for the application
-        $this->totalCost = $this->application->calculateTotalCost();
+        // Deduct earlier payments, including any refunds.
+        $this->totalCost = $this->application->calculateRemainingCost();
 
         // Generate a Mollie payment link for the user
         $payment = Payment::generatePaymentLink(

@@ -62,6 +62,16 @@ class Application extends Model
 
     // This function is called when the payment status changes
     public function handleNewStatus(Payment $payment) {
+        if ($this->status === ApplicationStatus::Reserve) {
+            Log::info('[ApplicationModel] Payment updated while application remains on reserve list', [
+                'application_id' => $this->id,
+                'payment_id' => $payment->id,
+                'payment_status' => $payment->status->value,
+            ]);
+
+            return;
+        }
+
         // Set application status to active and send confirmation email to the user on succesful payment
         if($payment->status === PaymentStatus::paid && $this->status === ApplicationStatus::Pending) {
             $this->status = ApplicationStatus::Active;
@@ -140,5 +150,10 @@ class Application extends Model
     public function calculateTotalCost(): float
     {
         return $this->calculateBaseCost() + $this->calculateExtrasCost();
+    }
+
+    public function calculateRemainingCost(): float
+    {
+        return max(0, $this->calculateTotalCost() - $this->calculateTotalPaid());
     }
 }

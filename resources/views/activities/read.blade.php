@@ -4,10 +4,12 @@
                     signupModal: {{$errors->signupActivity->any() ? 'true' : 'false'}},
                     reminderMailModal: {{$errors->reminderMail->any() ? 'true' : 'false'}},
                     addParticipantModal: {{$errors->addParticipant->any() ? 'true' : 'false'}},
+                    editApplicationsModal: {{$errors->editApplications->any() ? 'true' : 'false'}},
                     announcementMailModal: {{$errors->announcementMail->any() ? 'true' : 'false'}}}"
                 x-init="$watch('signupModal', v => document.body.classList.toggle('overflow-hidden', v));
                         $watch('reminderMailModal', v => document.body.classList.toggle('overflow-hidden', v));
                         $watch('addParticipantModal', v => document.body.classList.toggle('overflow-hidden', v));
+                        $watch('editApplicationsModal', v => document.body.classList.toggle('overflow-hidden', v));
                         $watch('announcementMailModal', v => document.body.classList.toggle('overflow-hidden', v));">
                 <x-zijpalm-div title="{{$activity->title}}" color="transparent" :editable="false"/>
         {{-- Show buttons if a user is logged in --}}
@@ -218,15 +220,26 @@
 
             {{-- Registrations for the Activity, Admin Only --}}
             @if(auth()->user()?->isAdmin() && $activity->type !== \App\ActivityType::Weekly)
+                @php
+                    $registeredParticipantCount = $applications
+                        ->reject(fn ($application) => $application->status === App\ApplicationStatus::Reserve)
+                        ->sum('participants');
+                    $reserveParticipantCount = $reserves->sum('participants');
+                @endphp
                 {{-- Registrations --}}
                 <x-zijpalm-div :editable="false" color="light" 
-                    title="Aanmeldingen ({{ $applications->reduce(function($carry, $application) { return $carry + 1 + $application->guests->count(); }, 0) }}{{$activity->maxParticipants ? '/' . $activity->maxParticipants : ''}})" 
+                    title="Aanmeldingen ({{ $registeredParticipantCount }}{{$activity->maxParticipants ? '/' . $activity->maxParticipants : ''}}{{ $reserveParticipantCount > 0 ? ', ' . $reserveParticipantCount . ' ' . ($reserveParticipantCount === 1 ? 'reserve' : 'reserves') : '' }})"
                     width="w-full lg:max-w-1/2" class="flex flex-col flex-1 self-stretch max-h-[40rem] md:h-[40rem]">
                     <div class="absolute top-2 right-2 flex items-center gap-2">
                         {{-- Admins may add any member by hand, paid or not --}}
                         <flux:tooltip content="Deelnemer toevoegen">
                             <flux:button x-on:click="addParticipantModal = true" variant="primary" class="bg-linear-to-t from-zijpalm-700 to-zijpalm-500 inset-shadow-400 border-none size-8! hover:scale-110 hover:brightness-110 duration-300 rounded-xl! group">
                                 <flux:icon name="user-plus" class="text-zinc-100 size-7! stroke-2 group-hover:scale-105 duration-600 p-0.5"/>
+                            </flux:button>
+                        </flux:tooltip>
+                        <flux:tooltip content="Aanmeldingen bewerken">
+                            <flux:button x-on:click="editApplicationsModal = true" aria-label="Aanmeldingen bewerken" variant="primary" class="bg-linear-to-t from-zijpalm-700 to-zijpalm-500 inset-shadow-400 border-none size-8! hover:scale-110 hover:brightness-110 duration-300 rounded-xl! group">
+                                <flux:icon name="pencil-square" class="text-zinc-100 size-7! stroke-2 group-hover:scale-105 duration-600 p-0.5"/>
                             </flux:button>
                         </flux:tooltip>
                         @if($applications->isNotEmpty())
@@ -244,6 +257,54 @@
                             </flux:tooltip>
                         @endif
                     </div>
+
+                    <x-zijpalm-modal title="Aanmeldingen bewerken" text="{{$activity->title}}" modal="editApplicationsModal">
+                        @if($errors->editApplications->any())
+                            <div role="alert" class="bg-red-100 border border-red-400 text-red-700 rounded-md p-3 text-left mb-3">
+                                <ul class="list-disc ps-5">
+                                    @foreach($errors->editApplications->all() as $error)
+                                        <li>{{ $error }}</li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        @endif
+                        @if($applications->isEmpty())
+                            <p class="text-lg text-left">Er zijn nog geen aanmeldingen om te bewerken.</p>
+                        @else
+                            <form id="edit-applications-form" method="POST" action="{{ route('application.adminUpdateStatuses', $activity) }}" class="flex flex-col gap-4 text-left" x-data="{ search: '' }">
+                                @csrf
+                                @method('PUT')
+                                <p class="text-base">Wijzig de status per aanmelding en klik op Opslaan. Eventuele gasten krijgen dezelfde status als het lid.</p>
+                                <p class="text-base bg-zinc-100 rounded-md p-3">Dit wijzigt alleen de deelnemerslijst: er worden geen e-mails verstuurd, betalingen aangemaakt of teruggestort. Bestaande betaallinks worden niet geannuleerd. Reserves worden bij deze correctie niet automatisch doorgeschoven. Gebruik de prullenbak in de deelnemerslijst voor afmelden met eventuele terugbetaling.</p>
+                                <label for="edit-applications-search" class="font-bold">Zoek op naam of e-mailadres</label>
+                                <input id="edit-applications-search" type="search" x-model="search" placeholder="Zoek een deelnemer..." class="bg-zinc-100 rounded-md shadow-sm px-3 h-11 text-lg focus:outline-0 focus:ring-2 focus:ring-zijpalm-400">
+                                <div class="max-h-96 overflow-y-auto flex flex-col gap-2">
+                                    @foreach($applications->values() as $index => $application)
+                                        @php
+                                            $editStatus = old("applications.{$index}.id") == $application->id
+                                                ? old("applications.{$index}.status", $application->status->value)
+                                                : $application->status->value;
+                                        @endphp
+                                        <div class="flex flex-col md:flex-row md:items-center gap-2 rounded-md bg-zinc-100 p-3" data-search="{{ mb_strtolower(($application->user?->name ?? '') . ' ' . $application->email) }}" x-show="$el.dataset.search.includes(search.trim().toLowerCase())">
+                                            <div class="flex-1 min-w-0">
+                                                <label for="edit-application-{{ $application->id }}" class="block font-bold">{{ $application->user?->name ?? 'Onbekend lid' }}</label>
+                                                <span class="block text-base break-all">{{ $application->email }}</span>
+                                                <span class="block text-sm">{{ $application->participants }} {{ $application->participants === 1 ? 'persoon' : 'personen (inclusief gasten)' }}</span>
+                                            </div>
+                                            <input type="hidden" name="applications[{{ $index }}][id]" value="{{ $application->id }}">
+                                            <input type="hidden" name="applications[{{ $index }}][previous_status]" value="{{ $application->status->value }}">
+                                            <select id="edit-application-{{ $application->id }}" name="applications[{{ $index }}][status]" required class="bg-white rounded-md border border-zinc-300 px-3 h-11 text-base">
+                                                <option value="active" @selected($editStatus === 'active')>Aangemeld</option>
+                                                <option value="reserve" @selected($editStatus === 'reserve')>Reserve</option>
+                                                <option value="pending" @selected($editStatus === 'pending')>In afwachting van betaling</option>
+                                            </select>
+                                        </div>
+                                    @endforeach
+                                </div>
+                                <x-zijpalm-button type="submit" form="edit-applications-form" label="Wijzigingen opslaan" variant="obvious" center="horizontal"/>
+                            </form>
+                        @endif
+                    </x-zijpalm-modal>
 
                     {{-- Form to put a member on the participant list without a payment --}}
                     <x-zijpalm-modal title="Deelnemer toevoegen" text="{{$activity->title}}" modal="addParticipantModal">
@@ -382,7 +443,7 @@
                                 {{-- If there are reserves, add a header before the first of them --}}
                                 @if($reserves->isNotEmpty() && $reserves->first() == $application)
                                     <flux:separator/>
-                                    <div class="flex font-bold self-center">Reserves</div>
+                                    <div class="flex font-bold self-center">Reserves ({{ $reserveParticipantCount }})</div>
                                 @elseif($pending->isNotEmpty() && $pending->first() == $application)
                                     <flux:separator/>
                                     <div class="flex font-bold self-center">In afwachting van betaling</div>

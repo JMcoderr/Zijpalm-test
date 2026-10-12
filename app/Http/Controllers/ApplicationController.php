@@ -17,8 +17,11 @@ use App\PaymentStatus;
 use Illuminate\Http\Request;
 use App\Http\Requests\StoreApplicationRequest;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Mollie\Laravel\Facades\Mollie;
 use Throwable;
 
@@ -73,7 +76,7 @@ class ApplicationController extends Controller
         $canRegisterFree = $isOrganizer && ($activeFreeOrganizers < $activity->free_organizer_count);
 
         // Determine the application status based on capacity and cost
-        if($activity->maxParticipants > 0 && (($activity->participants->all->count() + $participants) > $activity->maxParticipants)){
+        if($activity->maxParticipants > 0 && $activity->participants->capacity < $participants){
             // No more spots available, place on reserve list regardless of price
             $status = ApplicationStatus::Reserve;
         }
@@ -286,6 +289,86 @@ class ApplicationController extends Controller
     public function edit(Application $application)
     {
         //
+    }
+
+    public function adminUpdateStatuses(Request $request, Activity $activity)
+    {
+        $data = $request->validateWithBag('editApplications', [
+            'applications' => ['required', 'array', 'min:1'],
+            'applications.*.id' => [
+                'required',
+                'integer',
+                'distinct',
+                Rule::exists('applications', 'id')->where(fn ($query) => $query
+                    ->where('activity_id', $activity->id)
+                    ->where('status', '!=', ApplicationStatus::Cancelled->value)),
+            ],
+            'applications.*.status' => ['required', Rule::in([
+                ApplicationStatus::Active->value,
+                ApplicationStatus::Pending->value,
+                ApplicationStatus::Reserve->value,
+            ])],
+            'applications.*.previous_status' => ['required', Rule::in([
+                ApplicationStatus::Active->value,
+                ApplicationStatus::Pending->value,
+                ApplicationStatus::Reserve->value,
+            ])],
+        ], [
+            'applications.required' => 'Er zijn geen aanmeldingen om te wijzigen.',
+            'applications.*.id.exists' => 'Een aanmelding is niet meer beschikbaar voor deze activiteit. Vernieuw de pagina.',
+            'applications.*.id.distinct' => 'Een aanmelding mag maar eenmaal worden gewijzigd.',
+            'applications.*.status.required' => 'Kies voor iedere aanmelding een status.',
+            'applications.*.status.in' => 'Kies Aangemeld, Reserve of In afwachting van betaling.',
+            'applications.*.previous_status.required' => 'De oorspronkelijke status ontbreekt. Vernieuw de pagina.',
+            'applications.*.previous_status.in' => 'De oorspronkelijke status is ongeldig. Vernieuw de pagina.',
+        ]);
+
+        $changedCount = DB::transaction(function () use ($data, $activity) {
+            $applications = $activity->applications()
+                ->whereIn('id', array_column($data['applications'], 'id'))
+                ->lockForUpdate()
+                ->get()
+                ->keyBy('id');
+
+            $changedCount = 0;
+
+            foreach ($data['applications'] as $entry) {
+                $application = $applications->get($entry['id']);
+
+                if (!$application || $application->status === ApplicationStatus::Cancelled) {
+                    throw ValidationException::withMessages([
+                        'applications' => 'Een aanmelding is ondertussen verwijderd of geannuleerd. Vernieuw de pagina.',
+                    ])->errorBag('editApplications');
+                }
+
+                if ($application->status->value !== $entry['previous_status']) {
+                    throw ValidationException::withMessages([
+                        'applications' => 'Een aanmelding is ondertussen gewijzigd, bijvoorbeeld door een betaling of een andere beheerder. Vernieuw de pagina en probeer opnieuw.',
+                    ])->errorBag('editApplications');
+                }
+
+                $status = ApplicationStatus::from($entry['status']);
+
+                if ($application->status !== $status) {
+                    $previousStatus = $application->status;
+                    $application->update(['status' => $status]);
+                    Log::info('[ApplicationController] Admin corrected application status', [
+                        'admin_id' => auth()->id(),
+                        'activity_id' => $activity->id,
+                        'application_id' => $application->id,
+                        'previous_status' => $previousStatus->value,
+                        'status' => $status->value,
+                    ]);
+                    $changedCount++;
+                }
+            }
+
+            // Corrections must not immediately promote the people just moved to reserve.
+            return $changedCount;
+        });
+
+        return redirect()->route('activity.show', $activity)->with('success',
+            $changedCount === 0 ? 'Er zijn geen statussen gewijzigd.' : "De aanmeldingen zijn bijgewerkt ({$changedCount} gewijzigd).");
     }
 
     /**

@@ -104,6 +104,7 @@ Route::middleware(['auth'])->prefix('aanmeldingen')->name('application.')->contr
 
         // Admins can put members on the participant list by hand
         Route::middleware('admin')->post('{activity}/handmatig-toevoegen', 'adminStore')->name('adminStore');
+        Route::middleware('admin')->put('{activity}/statussen', 'adminUpdateStatuses')->name('adminUpdateStatuses');
 
         // Update
         Route::get('{application}/bewerken', 'edit')->name('edit');
