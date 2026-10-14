@@ -43,8 +43,8 @@
                     {{__('Verslagen')}}
                 </flux:navbar.item>
 
-                <flux:navbar.item :href="route('product.towels')" :current="request()->routeIs('product.*') || request()->routeIs('product.towels')" wire:navigate>
-                    {{__('Handdoeken')}}
+                <flux:navbar.item :href="route('product.index')" :current="request()->routeIs('product.*')" wire:navigate>
+                    <span style="text-transform: none;">{{__('Shop/Overig')}}</span>
                 </flux:navbar.item>
 
                 <flux:navbar.item :href="route('information.charity')" :current="request()->routeIs('information.charity')" wire:navigate>
@@ -145,8 +145,8 @@
                     <p> Verslagen </p>
                 </flux:navlist.item>
 
-                <flux:navlist.item :href="route('product.towels')" :current="request()->routeIs('product.*') || request()->routeIs('product.towels')" icon="gift" iconColor="text-zijpalm-600" iconVariant="solid" iconSize="size-6">
-                    <p> Handdoeken </p>
+                <flux:navlist.item :href="route('product.index')" :current="request()->routeIs('product.*')" icon="gift" iconColor="text-zijpalm-600" iconVariant="solid" iconSize="size-6">
+                    <p style="text-transform: none;">Shop/Overig</p>
                 </flux:navlist.item>
 
                 {{-- TO DO: Add :current, set to 'Lief & Leed' page --}}

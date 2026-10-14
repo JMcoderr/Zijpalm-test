@@ -12,6 +12,7 @@ use App\Mail\PaymentFailed;
 use App\PaymentStatus;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -45,6 +46,21 @@ class Order extends Model
     public function products()
     {
         return $this->belongsToMany(Product::class, 'order_products')->withPivot('quantity', 'unit_price');
+    }
+
+    public function isAwaitingPayment(): bool
+    {
+        return in_array($this->payment?->status, [
+            PaymentStatus::open,
+            PaymentStatus::pending,
+            PaymentStatus::authorized,
+        ], true);
+    }
+
+    public function scopeWebshop(Builder $query): Builder
+    {
+        return $query->whereHas('payment', fn (Builder $query) => $query
+            ->where('description', 'like', 'Bestelling #%'));
     }
 
     public static function createWithProducts($products = [['productId', 'quantity']], $paymentDescription, User $user, bool $newMember = false): Order
@@ -139,7 +155,7 @@ class Order extends Model
                 Mail::to(config('mail.bestuur.address'), config('mail.bestuur.name'))->send(new BoardNewMembers(User::find(1), new Collection([$this->user])));
             } else { // Send the order paid email
                 Mail::to(config('mail.bestuur.address'), config('mail.bestuur.name'))->send(new OrderPaid($this));
-                Mail::to(config('mail.bestuur.address'), config('mail.bestuur.name'))->send(new BoardNewOrder(User::find(1), $this));
+                Mail::to(config('mail.bestuur.address'), config('mail.bestuur.name'))->send(new BoardNewOrder($this->user, $this));
             }
 
             return;

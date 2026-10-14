@@ -225,7 +225,9 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->controller(AdminC
         Route::delete('lidmaatschap-definitief-verwijderen/{user}', 'permanentlyDeleteUser')->name('permanentlyDeleteUser')->withTrashed();
         Route::get('verslagen', 'reports')->name('reports');
         Route::get('bestellingen', 'orders')->name('orders');
+        Route::get('bestellingen/download', 'downloadOrders')->name('orders.download');
         Route::get('bestellingen/{order}', 'showOrder')->name('orders.show');
+        Route::delete('bestellingen/{order}', 'deletePendingOrder')->name('orders.destroy');
         Route::get('content', 'content')->name('content');
         Route::get('activiteiten', 'activities')->name('activities');
         Route::get('activiteiten/download/{activity}', 'downloadApplications')->name('activities.download');

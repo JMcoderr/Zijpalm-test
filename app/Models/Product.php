@@ -6,6 +6,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Builder;
+use App\PaymentStatus;
 
 class Product extends Model
 {
@@ -54,5 +56,37 @@ class Product extends Model
     public function displayGuestPrice(): float
     {
         return (float) ($this->guest_price ?? $this->price);
+    }
+
+    public function scopeVisibleTo(Builder $query, bool $admin): Builder
+    {
+        return $admin ? $query : $query->where('hidden', false);
+    }
+
+    public function scopeOfType(Builder $query, string $type): Builder
+    {
+        return $query->where(function (Builder $query) use ($type) {
+            $query->where('product_type', $type);
+
+            if ($type === 'product') {
+                $query->orWhereNull('product_type');
+            }
+        });
+    }
+
+    public function availableQuantity(): ?int
+    {
+        $stock = $this->stock === null ? null : (int) $this->stock;
+
+        if (!$this->isActivityProduct() || !$this->max_participants) {
+            return $stock;
+        }
+
+        $reserved = (int) $this->orders()->whereHas('payment', fn (Builder $query) => $query
+            ->whereIn('status', [PaymentStatus::open, PaymentStatus::pending, PaymentStatus::authorized, PaymentStatus::paid]))
+            ->sum('order_products.quantity');
+        $capacity = max(0, (int) $this->max_participants - $reserved);
+
+        return $stock === null ? $capacity : min($stock, $capacity);
     }
 }

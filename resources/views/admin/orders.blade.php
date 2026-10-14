@@ -20,6 +20,28 @@
 
     <x-zijpalm-div color="light" :editable="false" width="w-full">
         <x-admin.layout :heading="__('Bestellingen')" :subheading="__('Overzicht van webshop bestellingen')">
+            <form method="GET" action="{{ route('admin.orders') }}" class="flex flex-wrap items-end gap-3 mb-3">
+                <div>
+                    <label for="order-type" class="block font-bold">Soort</label>
+                    <select id="order-type" name="type" class="bg-white rounded-md px-3 h-11">
+                        <option value="">Alle producten en activiteiten</option>
+                        <option value="product" @selected(request('type') === 'product')>Producten</option>
+                        <option value="activity" @selected(request('type') === 'activity')>Activiteiten</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="order-product" class="block font-bold">Product of activiteit</label>
+                    <select id="order-product" name="product_id" class="bg-white rounded-md px-3 h-11">
+                        <option value="">Alle items</option>
+                        @foreach($products as $product)
+                            <option value="{{ $product->id }}" @selected((string) request('product_id') === (string) $product->id)>{{ $product->name }} ({{ $product->isActivityProduct() ? 'activiteit' : 'product' }})</option>
+                        @endforeach
+                    </select>
+                </div>
+                <flux:button type="submit" variant="primary">Filteren</flux:button>
+                <flux:button :href="route('admin.orders')">Alles tonen</flux:button>
+                <flux:button :href="route('admin.orders.download', request()->only(['type', 'product_id']))" icon="arrow-down-tray" variant="primary">Download Excel</flux:button>
+            </form>
             <x-zijpalm-div title="Overzicht" color="light" :editable="false" width="w-full" class="mb-2">
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <div class="rounded-xl bg-white/90 p-3 text-center">
@@ -59,10 +81,10 @@
             @endphp
 
             @if($orderCount === 0)
-                <x-zijpalm-div title="Nog geen webshop bestellingen" color="light" :editable="false" width="w-full">
+                <x-zijpalm-div title="Geen bestellingen gevonden" color="light" :editable="false" width="w-full">
                     <div class="rounded-xl bg-white/90 border border-zinc-200 p-4 text-center">
                         <p class="text-xl font-black text-zijpalm-700">Nog geen bestellingen</p>
-                        <p class="text-sm text-zinc-700 mt-1">Nieuwe shopbestellingen verschijnen hier automatisch zodra iemand afrekent.</p>
+                        <p class="text-sm text-zinc-700 mt-1">Er zijn geen bestellingen voor dit filter. Kies Alles tonen om het volledige overzicht te bekijken.</p>
                     </div>
                 </x-zijpalm-div>
             @else
@@ -112,6 +134,15 @@
                                             <div class="flex items-center gap-2 shrink-0">
                                                 <span class="font-bold">{{ formatPrice($totalPrice) }}</span>
                                                 <x-zijpalm-button :href="route('admin.orders.show', $order)" label="Openen" type="redirect" />
+                                                @if($order->isAwaitingPayment())
+                                                    <form method="POST" action="{{ route('admin.orders.destroy', $order) }}" onsubmit="return confirm('Weet je zeker dat je deze openstaande bestelling wilt annuleren en verwijderen?')">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <flux:tooltip content="Bestelling verwijderen">
+                                                            <flux:button type="submit" variant="danger" icon="trash" square="true" aria-label="Bestelling verwijderen" class="cursor-pointer"/>
+                                                        </flux:tooltip>
+                                                    </form>
+                                                @endif
                                             </div>
                                         </div>
                                     </div>

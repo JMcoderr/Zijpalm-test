@@ -1,5 +1,5 @@
 {{-- This view file shows part of the interface and is kept simple so it is easy to follow. --}}
-<x-layouts.mail.header :user="$user">
+<x-layouts.mail.header hideGreeting>
     {{-- Show the mail content text that comes from the database. --}}
     {!! $content->textHTML !!}
 

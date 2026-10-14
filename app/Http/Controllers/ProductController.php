@@ -8,6 +8,7 @@ use App\Models\Order;
 use App\Models\Payment;
 use App\Http\Requests\StoreProductRequest;
 use App\Http\Requests\UpdateProductRequest;
+use App\Http\Requests\ProductRequest;
 use App\Models\Product;
 use App\Models\User;
 use App\UserType;
@@ -25,11 +26,8 @@ class ProductController extends Controller
     public function index()
     {
         $products = Product::query()
-            ->where('hidden', false)
-            ->where(function ($query) {
-                $query->where('product_type', 'product')
-                    ->orWhereNull('product_type');
-            })
+            ->visibleTo((bool) auth()->user()?->isAdmin())
+            ->ofType('product')
             ->orderBy('name')
             ->get();
 
@@ -44,8 +42,8 @@ class ProductController extends Controller
     public function activities()
     {
         $products = Product::query()
-            ->where('hidden', false)
-            ->where('product_type', 'activity')
+            ->visibleTo((bool) auth()->user()?->isAdmin())
+            ->ofType('activity')
             ->orderBy('name')
             ->get();
 
@@ -59,18 +57,7 @@ class ProductController extends Controller
      */
     public function towels()
     {
-        $products = Product::query()
-            ->where('hidden', false)
-            ->where(function ($query) {
-                $query->whereRaw('LOWER(name) LIKE ?', ['%handdoek%'])
-                    ->orWhereRaw('LOWER(description) LIKE ?', ['%handdoek%']);
-            })
-            ->orderBy('name')
-            ->get();
-
-        return view('shop.towels', [
-            'products' => $products,
-        ]);
+        return redirect()->route('product.index');
     }
 
     /**
@@ -100,16 +87,7 @@ class ProductController extends Controller
      */
     public function store(StoreProductRequest $request)
     {
-        $validated = $request->validated();
-
-        if ($request->hasFile('imagePath')) {
-            $validated['imagePath'] = $request->file('imagePath')->store('products', 'public');
-        }
-
-        $validated['allow_guest_checkout'] = (bool) ($validated['allow_guest_checkout'] ?? false);
-        $validated['hidden'] = (bool) ($validated['hidden'] ?? false);
-
-        $product = Product::create($validated);
+        $product = Product::create($this->productData($request));
 
         if (($product->product_type ?? 'product') === 'activity') {
             return redirect()->route('product.activities')->with('success', 'Activiteit succesvol aangemaakt.');
@@ -149,6 +127,13 @@ class ProductController extends Controller
      */
     public function update(UpdateProductRequest $request, Product $product)
     {
+        $product->update($this->productData($request));
+
+        return redirect()->route('product.show', $product)->with('success', 'Product succesvol bijgewerkt.');
+    }
+
+    private function productData(ProductRequest $request): array
+    {
         $validated = $request->validated();
 
         if ($request->hasFile('imagePath')) {
@@ -157,10 +142,14 @@ class ProductController extends Controller
 
         $validated['allow_guest_checkout'] = (bool) ($validated['allow_guest_checkout'] ?? false);
         $validated['hidden'] = (bool) ($validated['hidden'] ?? false);
+        if ($validated['product_type'] === 'product') {
+            $validated = array_merge($validated, array_fill_keys([
+                'max_participants', 'registration_starts_at', 'registration_ends_at',
+                'activity_starts_at', 'activity_ends_at',
+            ], null));
+        }
 
-        $product->update($validated);
-
-        return redirect()->route('product.show', $product)->with('success', 'Product succesvol bijgewerkt.');
+        return $validated;
     }
 
     /**
@@ -198,10 +187,11 @@ class ProductController extends Controller
             abort(404);
         }
 
-        $registrationEnd = $product->registration_ends_at ?? $product->signup_deadline;
-
         if ($product->isActivityProduct()) {
-            if ($registrationEnd && now()->startOfDay()->gt($registrationEnd->copy()->startOfDay())) {
+            if ($product->registration_starts_at && now()->startOfDay()->lt($product->registration_starts_at)) {
+                return back()->with('error', 'De aanmeldperiode voor deze activiteit is nog niet begonnen.');
+            }
+            if ($product->registration_ends_at && now()->startOfDay()->gt($product->registration_ends_at)) {
                 return back()->with('error', 'De inschrijfdeadline voor deze activiteit is verstreken.');
             }
         }
@@ -219,6 +209,9 @@ class ProductController extends Controller
         $isGuestCheckout = !auth()->check();
 
         if ($isGuestCheckout) {
+            if (!$product->allow_guest_checkout) {
+                return back()->with('error', 'Alleen leden kunnen dit item bestellen. Log eerst in.');
+            }
             $request->validate([
                 'firstName' => 'required|string|max:255',
                 'lastName' => 'required|string|max:255',
@@ -236,34 +229,28 @@ class ProductController extends Controller
                 ]
             );
 
-            $unitPrice = $product->displayGuestPrice();
         } else {
             $customer = auth()->user();
-            $unitPrice = (float) $product->price;
-        }
-
-        $totalPrice = $unitPrice * $quantity;
-
-        if ($totalPrice <= 0) {
-            return back()->with('error', 'Het totaalbedrag moet groter zijn dan 0.');
         }
 
         try {
-            $payment = DB::transaction(function () use ($product, $quantity, $customer, $unitPrice, $totalPrice, $isGuestCheckout) {
+            $payment = DB::transaction(function () use ($product, $quantity, $customer, $isGuestCheckout) {
                 // Lock the product row so stock/capacity checks are safe under concurrent purchases.
                 $lockedProduct = Product::query()->whereKey($product->id)->lockForUpdate()->firstOrFail();
-
-                if ($lockedProduct->isActivityProduct() && $lockedProduct->max_participants) {
-                    $reservedParticipants = (int) $lockedProduct->orders()
-                        ->sum('order_products.quantity');
-
-                    if (($reservedParticipants + $quantity) > (int) $lockedProduct->max_participants) {
-                        throw new \RuntimeException('Er zijn niet genoeg plekken meer beschikbaar voor deze activiteit.');
-                    }
+                if ($lockedProduct->hidden || ($isGuestCheckout && !$lockedProduct->allow_guest_checkout)) {
+                    throw new \RuntimeException('Dit item kan niet meer worden besteld.');
+                }
+                $unitPrice = $isGuestCheckout ? $lockedProduct->displayGuestPrice() : (float) $lockedProduct->price;
+                $totalPrice = $unitPrice * $quantity;
+                if ($totalPrice <= 0) {
+                    throw new \RuntimeException('Het totaalbedrag moet groter zijn dan 0.');
                 }
 
-                if ($lockedProduct->stock !== null && $quantity > (int) $lockedProduct->stock) {
-                    throw new \RuntimeException('Niet genoeg voorraad beschikbaar.');
+                $available = $lockedProduct->availableQuantity();
+                if ($available !== null && $quantity > $available) {
+                    throw new \RuntimeException($lockedProduct->isActivityProduct()
+                        ? 'Er zijn niet genoeg plekken meer beschikbaar voor deze activiteit.'
+                        : 'Niet genoeg voorraad beschikbaar.');
                 }
 
                 $order = Order::create([

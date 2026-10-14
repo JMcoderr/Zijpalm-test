@@ -19,6 +19,8 @@ use App\Mail\NotifyNewEmployees;
 use App\Models\Activity;
 use App\Models\Content;
 use App\Models\Order;
+use App\Models\Payment;
+use App\Models\Product;
 use App\Models\Report;
 use App\Models\User;
 use App\PaymentStatus;
@@ -30,6 +32,9 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Validation\Rule;
+use Illuminate\Database\Eloquent\Builder;
+use Mollie\Laravel\Facades\Mollie;
 use Maatwebsite\Excel\Facades\Excel;
 use PhpOffice\PhpSpreadsheet\Cell\DataType;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
@@ -360,16 +365,34 @@ class AdminController extends Controller
         return view('admin.content', compact('contentGroups'));
     }
 
-    public function orders()
+    private function filteredOrders(Request $request): Builder
     {
-        $orders = Order::query()
-            ->with(['user', 'payment', 'products'])
-            ->whereHas('payment', function ($query) {
-                // Only show real webshop orders in the admin order overview.
-                $query->where('description', 'like', 'Bestelling #%');
-            })
+        $filters = $request->validate([
+            'type' => ['nullable', Rule::in(['product', 'activity'])],
+            'product_id' => ['nullable', 'integer', Rule::exists('products', 'id')],
+        ]);
+
+        return Order::query()->webshop()
+            ->with(['user' => fn ($query) => $query->withTrashed(), 'payment', 'products'])
+            ->when(filled($filters['type'] ?? null) || filled($filters['product_id'] ?? null), function (Builder $query) use ($filters) {
+                $query->whereHas('products', function (Builder $query) use ($filters) {
+                    if (filled($filters['type'] ?? null)) {
+                        $query->ofType($filters['type']);
+                    }
+                    if (filled($filters['product_id'] ?? null)) {
+                        $query->whereKey($filters['product_id']);
+                    }
+                });
+            });
+    }
+
+    public function orders(Request $request)
+    {
+        $orders = $this->filteredOrders($request)
             ->orderByDesc('id')
             ->get();
+        $products = Product::query()->whereHas('orders', fn (Builder $query) => $query->webshop())
+            ->orderBy('name')->get();
 
         $isGuestOrder = function (Order $order): bool {
             if ($order->is_guest_checkout !== null) {
@@ -394,7 +417,76 @@ class AdminController extends Controller
         $memberStatusCounts = $statusCounts($memberOrders);
         $guestStatusCounts = $statusCounts($guestOrders);
 
-        return view('admin.orders', compact('memberOrders', 'guestOrders', 'memberStatusCounts', 'guestStatusCounts'));
+        return view('admin.orders', compact('memberOrders', 'guestOrders', 'memberStatusCounts', 'guestStatusCounts', 'products'));
+    }
+
+    public function downloadOrders(Request $request)
+    {
+        $orders = $this->filteredOrders($request)->orderByDesc('id')->get();
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Bestellingen');
+        $headers = ['Bestelling', 'Besteld op', 'Klanttype', 'Naam', 'E-mail', 'Telefoon',
+            'Betaalstatus', 'Item', 'Type', 'Aantal', 'Prijs per stuk', 'Subtotaal', 'Bestelling totaal'];
+        $sheet->fromArray($headers);
+        $sheet->getStyle('A1:M1')->getFont()->setBold(true);
+        $row = 2;
+
+        foreach ($orders as $order) {
+            foreach ($order->products as $product) {
+                if ($request->filled('product_id') && $product->id !== (int) $request->input('product_id')) {
+                    continue;
+                }
+                if ($request->filled('type') && ($product->isActivityProduct() ? 'activity' : 'product') !== $request->input('type')) {
+                    continue;
+                }
+
+                $unitPrice = (float) ($product->pivot->unit_price ?? $product->price);
+                $values = [
+                    $order->id,
+                    $order->payment->created_at?->format('d-m-Y H:i'),
+                    ($order->is_guest_checkout ?? ($order->user?->password === null)) ? 'Gast' : 'Lid',
+                    $order->user?->name,
+                    $order->user?->email,
+                    $order->user?->phone,
+                    $order->payment->status->value,
+                    $product->name,
+                    $product->isActivityProduct() ? 'Activiteit' : 'Product',
+                    (int) $product->pivot->quantity,
+                    $unitPrice,
+                    $unitPrice * $product->pivot->quantity,
+                    (float) $order->payment->price,
+                ];
+
+                foreach ($values as $index => $value) {
+                    $sheet->setCellValueExplicit(
+                        \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($index + 1) . $row,
+                        $value ?? '',
+                        is_int($value) || is_float($value) ? DataType::TYPE_NUMERIC : DataType::TYPE_STRING
+                    );
+                }
+                $row++;
+            }
+        }
+
+        $sheet->freezePane('A2');
+        $sheet->setAutoFilter('A1:M' . max(1, $row - 1));
+        if ($row > 2) {
+            $sheet->getStyle('K2:M' . ($row - 1))->getNumberFormat()->setFormatCode('0.00');
+        }
+        foreach (range('A', 'M') as $column) {
+            $sheet->getColumnDimension($column)->setAutoSize(true);
+        }
+
+        return response()->streamDownload(function () use ($spreadsheet) {
+            try {
+                (new XlsxWriter($spreadsheet))->save('php://output');
+            } finally {
+                $spreadsheet->disconnectWorksheets();
+            }
+        }, 'bestellingen_' . now()->format('Ymd_His') . '.xlsx', [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
     }
 
     public function showOrder(Order $order)
@@ -407,6 +499,101 @@ class AdminController extends Controller
         }
 
         return view('admin.order-show', compact('order'));
+    }
+
+    public function deletePendingOrder(Order $order)
+    {
+        $order->loadMissing('payment');
+
+        if (!str_starts_with((string) $order->payment?->description, 'Bestelling #')) {
+            abort(404);
+        }
+
+        if (!$order->isAwaitingPayment()) {
+            return back()->with('error', 'Alleen bestellingen met een betaling in afwachting kunnen worden verwijderd.');
+        }
+
+        try {
+            $molliePayment = Mollie::api()->payments->get($order->payment->mollieId);
+
+            if ($molliePayment->status === PaymentStatus::paid->value) {
+                $order->payment->status = PaymentStatus::paid;
+                $order->payment->paidAt = $molliePayment->paidAt ?? now();
+                $order->payment->save();
+
+                return back()->with('error', 'Mollie meldt dat deze bestelling betaald is. De bestelling is daarom niet verwijderd.');
+            }
+
+            if (in_array($molliePayment->status, [
+                PaymentStatus::open->value,
+                PaymentStatus::pending->value,
+                PaymentStatus::authorized->value,
+            ], true)) {
+                Mollie::api()->payments->cancel($order->payment->mollieId);
+            } elseif (!in_array($molliePayment->status, [
+                PaymentStatus::canceled->value,
+                PaymentStatus::expired->value,
+                PaymentStatus::failed->value,
+            ], true)) {
+                return back()->with('error', 'Mollie gaf een onbekende betaalstatus terug. De bestelling is niet verwijderd.');
+            }
+        } catch (\Throwable $exception) {
+            Log::warning('[AdminController] Pending order payment could not be canceled at Mollie', [
+                'order_id' => $order->id,
+                'payment_id' => $order->payment_id,
+                'error' => $exception->getMessage(),
+            ]);
+
+            return back()->with('error', 'De betaling kon niet bij Mollie worden gecontroleerd of geannuleerd. De bestelling is niet verwijderd. Mollie meldt: ' . $exception->getMessage());
+        }
+
+        $result = DB::transaction(function () use ($order) {
+            $lockedOrder = Order::query()->whereKey($order->id)->lockForUpdate()->first();
+
+            if (!$lockedOrder) {
+                $payment = Payment::query()->whereKey($order->payment_id)->lockForUpdate()->first();
+
+                if ($payment?->status === PaymentStatus::paid) {
+                    return 'paid';
+                }
+
+                if ($payment) {
+                    $payment->status = PaymentStatus::canceled;
+                    $payment->save();
+                }
+
+                return 'deleted';
+            }
+
+            $payment = Payment::query()->whereKey($lockedOrder->payment_id)->lockForUpdate()->firstOrFail();
+
+            if ($payment->status === PaymentStatus::paid) {
+                return 'paid';
+            }
+
+            $lockedOrder->load('products');
+
+            foreach ($lockedOrder->products as $product) {
+                if ($product->stock === null) {
+                    continue;
+                }
+
+                $lockedProduct = Product::query()->whereKey($product->id)->lockForUpdate()->firstOrFail();
+                $lockedProduct->increment('stock', (int) $product->pivot->quantity);
+            }
+
+            $payment->status = PaymentStatus::canceled;
+            $payment->save();
+            $lockedOrder->delete();
+
+            return 'deleted';
+        });
+
+        if ($result === 'paid') {
+            return back()->with('error', 'De bestelling is inmiddels betaald en kan niet worden verwijderd.');
+        }
+
+        return redirect()->route('admin.orders')->with('success', 'De openstaande bestelling is geannuleerd en verwijderd.');
     }
 
     /**

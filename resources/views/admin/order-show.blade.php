@@ -21,7 +21,18 @@
         <x-admin.layout :heading="__('Bestelling #' . $order->id)" :subheading="__('Details en acties')">
             <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
                 <x-zijpalm-button :href="route('admin.orders')" label="Terug naar bestellingen" type="redirect" />
-                <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold {{ $statusClass }}">Status: {{ $statusText }}</span>
+                <div class="flex items-center gap-2">
+                    <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold {{ $statusClass }}">Status: {{ $statusText }}</span>
+                    @if($order->isAwaitingPayment())
+                        <form method="POST" action="{{ route('admin.orders.destroy', $order) }}" onsubmit="return confirm('Weet je zeker dat je deze openstaande bestelling wilt annuleren en verwijderen?')">
+                            @csrf
+                            @method('DELETE')
+                            <flux:tooltip content="Bestelling verwijderen">
+                                <flux:button type="submit" variant="danger" icon="trash" square="true" aria-label="Bestelling verwijderen" class="cursor-pointer"/>
+                            </flux:tooltip>
+                        </form>
+                    @endif
+                </div>
             </div>
 
             <x-zijpalm-div title="Samenvatting" color="light" :editable="false" width="w-full">

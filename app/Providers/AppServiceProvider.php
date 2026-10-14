@@ -6,6 +6,7 @@ namespace App\Providers;
 
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -23,6 +24,20 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Vite::createAssetPathsUsing(function (string $path, ?bool $secure): string {
+            $url = asset($path, $secure);
+            if (!str_ends_with($path, '.css')) {
+                return $url;
+            }
+
+            $hash = hash_file('sha256', public_path($path));
+            if ($hash === false) {
+                throw new \RuntimeException('Unable to version stylesheet: ' . $path);
+            }
+
+            return $url . '?v=' . $hash;
+        });
+
         // Override the default reset password notification
         ResetPassword::toMailUsing(function ($notifiable, $token) {
                 // Create the URL as Laravel normally does

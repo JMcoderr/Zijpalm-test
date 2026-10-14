@@ -320,8 +320,8 @@ class ContentSeeder extends Seeder
         Content::create([
             'type' => 'email',
             'name' => 'email-bestelling-betaald',
-            'title' => 'Uw bestelling is betaald!',
-            'text' => '{"time":1750075440441,"blocks":[{"id":"xnNwYZd4RN","type":"paragraph","data":{"text":"Uw bestelling is betaald!"}},{"id":"UIZfWpOyZC","type":"paragraph","data":{"text":"Hieronder vindt u de details van uw bestelling:"}}],"version":"2.31.0-rc.7"}',
+            'title' => 'Je bestelling is betaald!',
+            'text' => '{"time":1750075440441,"blocks":[{"id":"xnNwYZd4RN","type":"paragraph","data":{"text":"Je bestelling is betaald!"}},{"id":"UIZfWpOyZC","type":"paragraph","data":{"text":"Hieronder vind je de details van je bestelling:"}}],"version":"2.31.0-rc.7"}',
             'filePath' => null,
             'fileType' => null,
         ]);

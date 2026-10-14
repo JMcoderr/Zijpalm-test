@@ -67,7 +67,7 @@ class OrderPaid extends Mailable
         $jsonBody = json_encode([
             'email' => $this->user->email,
             'emails' => $this->user->registeredEmails(),
-            'subject' => $this->content->title . ' #Z',
+            'subject' => str_replace('Uw bestelling', 'Je bestelling', $this->content->title) . ' #Z',
             'body' => $renderedContent,
         ], JSON_PRETTY_PRINT);
 

@@ -13,13 +13,13 @@ $price = number_format($priceTillEndOfYear, 2, ',', '.');
             <form action="{{route('information.joinForm')}}" method="POST" class="flex flex-col items-center gap-y-2.5 mt-5">
                 @csrf
                 @method('POST')
-                <x-input-group grid="grid grid-cols-2 grid-rows-2" id="textfields">
+                <x-input-group grid="grid grid-cols-2" id="textfields">
                     <x-input-field id="firstname" name="firstname" type="text" label="Voornaam" required autocomplete="given-name" />
                     <x-input-field id="lastname" name="lastname" type="text" label="Achternaam" required autocomplete="family-name" />
                     <x-input-field id="email" name="email" type="email" label="E-mail" required autocomplete="email" />
                     <x-input-field id="phone" name="phone" type="tel" label="Telefoonnummer" required autocomplete="tel" pattern="\d{1,10}$" />
+                    <x-input-field id="membership_start_date" name="membership_start_date" type="date" label="Ingangsdatum lidmaatschap" value="{{ old('membership_start_date', now()->toDateString()) }}" required />
                 </x-input-group>
-                <x-input-field id="membership_start_date" name="membership_start_date" type="date" label="Ingangsdatum lidmaatschap" value="{{ old('membership_start_date', now()->toDateString()) }}" required />
                 <div name="radio" class="flex flex-col">
                     {{-- Hidden by default --}}
                     <x-input-field type="radio" id="type" name="type" label="Kies wat van toepassing is:" required action="changeEndDateVisibility()" :options="['inhuur' => 'Ik ben inhuur', 'gepensioneerde' => 'Ik ben pensionado', 'stagiair' => 'Ik ben stagiair']" />

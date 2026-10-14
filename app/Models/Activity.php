@@ -503,16 +503,18 @@ class Activity extends Model
             // Add application data to the Excel sheet
             $row = 3;
             foreach ($applications as $application) {
+                $user = $application->user;
+
                 // Color the row
                 $sheet->getStyle([1, $row, $col, $row])->getFill()->setFillType(Fill::FILL_SOLID)
                     ->getStartColor()->setARGB('FF96c8e6');
 //                    ->getStartColor()->setARGB('FF328cbe');
 
                 $sheet->setCellValue([1, $row], optional($application->created_at)->format('d/m/Y'));
-                $sheet->setCellValue([2, $row], 'Lid');
-                $sheet->setCellValue([3, $row], $application->user->name);
-                $sheet->setCellValue([4, $row], $application->email ?: $application->user?->email);
-                $sheet->setCellValue([5, $row], formatPhoneNumber($application->phone ?: $application->user?->phone));
+                $sheet->setCellValue([2, $row], $user ? 'Lid' : 'Lid (account ontbreekt)');
+                $sheet->setCellValue([3, $row], $user?->name ?? 'Account niet gevonden');
+                $sheet->setCellValue([4, $row], $application->email ?: $user?->email);
+                $sheet->setCellValue([5, $row], formatPhoneNumber($application->phone ?: $user?->phone));
                 $sheet->setCellValue([6, $row], $application->comment);
                 
                 // Calculate paid amount from payments and keep numeric cell type for Excel formulas

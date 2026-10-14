@@ -9,6 +9,7 @@ use App\Models\Payment;
 use Illuminate\Http\Request;
 use App\PaymentStatus;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 //use Log;
 use Mollie\Laravel\Facades\Mollie;
 
@@ -167,39 +168,24 @@ class PaymentController extends Controller
             return response('OK');
         }
 
-        $currentStatus = $paymentDB->status?->value;
         $latestStatus = $payment->status;
 
-        // If nothing changed, just confirm the webhook.
-        if ($currentStatus === $latestStatus) {
-            return response('OK');
-        }
+        DB::transaction(function () use ($paymentDB, $payment, $latestStatus) {
+            $lockedPayment = Payment::query()->whereKey($paymentDB->id)->lockForUpdate()->firstOrFail();
 
-        // Update the stored payment status to match Mollie.
-        $paymentDB->status = $latestStatus;
+            if ($lockedPayment->status?->value === $latestStatus) {
+                return;
+            }
 
-        // Store the paid time once, but only if it is not saved yet.
-        if ($payment->isPaid() && !$paymentDB->paidAt) {
-            $paymentDB->paidAt = $payment->paidAt ?? now();
-        }
+            $lockedPayment->status = $latestStatus;
 
-        // Save the new payment state before handling related records.
-        $paymentDB->save();
+            if ($payment->isPaid() && !$lockedPayment->paidAt) {
+                $lockedPayment->paidAt = $payment->paidAt ?? now();
+            }
 
-        // Update all linked orders with the new payment status.
-        $paymentDB->orders()->each(function ($order) use ($paymentDB) {
-            $order->handleNewStatus($paymentDB);
-        });
-
-        // Update the application too, because a payment change can affect the signup status.
-        $paymentDB->application()->each(function ($application) use ($paymentDB) {
-            Log::debug("[PaymentController]Mollie Webhook received for payment of application\n".
-                json_encode([
-                    'application' => $application,
-                    'paymentDb' => $paymentDB,
-                    'this' => $this,
-            ], JSON_PRETTY_PRINT));
-            $application->handleNewStatus($paymentDB);
+            $lockedPayment->save();
+            $lockedPayment->orders()->each(fn ($order) => $order->handleNewStatus($lockedPayment));
+            $lockedPayment->application()->each(fn ($application) => $application->handleNewStatus($lockedPayment));
         });
 
         // Log the webhook so it is easier to debug when Mollie sends something unexpected.
