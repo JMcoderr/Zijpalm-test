@@ -2,6 +2,13 @@
 <x-page-wrapper page="Lief & Leed">
     <x-zijpalm-div color="transparent" :id="$banner->id" :name="$banner->name" :title="$banner->title" :editable=true :editables="['Titel']" />
 
+    @if(auth()->user()?->isAdmin())
+        <a href="{{ route('admin.users.export') }}" class="mx-auto inline-flex items-center gap-2 rounded-lg bg-zijpalm-700 px-4 py-3 font-bold text-white hover:bg-zijpalm-600">
+            <flux:icon name="arrow-down-tray" class="size-5"/>
+            Ledenlijst exporteren
+        </a>
+    @endif
+
     <x-zijpalm-div color="zijpalm" :id="$info->id" :name="$info->name" :title="$info->title" :text="$info->textHTML" :editable=true :editables="['Titel', 'Tekst']" />
     <x-zijpalm-div color="light" :id="$contributions->id" :name="$contributions->name" :title="$contributions->title" :text="$contributions->textHTML" :editable=true :editables="['Titel', 'Tekst']" />
 

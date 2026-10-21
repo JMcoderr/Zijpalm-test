@@ -45,6 +45,10 @@ it('shows the editing button immediately after adding participants and hides it 
         ->get(route('activity.show', $this->activity))
         ->assertOk()
         ->assertSeeInOrder(['Deelnemer toevoegen', 'Aanmeldingen bewerken', 'Verstuur herinnering'])
+        ->assertSee('grid grid-cols-1 lg:grid-cols-2 gap-5 w-full items-start', false)
+        ->assertSee('data-activity-image', false)->assertSee('relative aspect-video w-full shrink-0 overflow-hidden', false)
+        ->assertSee('data-activity-details', false)
+        ->assertSee('mb-2 flex flex-wrap items-center justify-between gap-2', false)
         ->assertSee('id="edit-applications-form"', false)
         ->assertSee('Wijzigingen opslaan')
         ->assertSee('In afwachting van betaling');

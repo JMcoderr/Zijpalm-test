@@ -9,8 +9,8 @@
         <x-zijpalm-button label="Producten" :href="route('product.index')" type="redirect"/>
         <x-zijpalm-button label="Activiteiten" :href="route('product.activities')" type="redirect"/>
         @if(auth()->user()?->isAdmin())
-            <x-zijpalm-button label="Toevoegen" :href="route('product.create', ['type' => $type])" type="redirect"/>
-            <x-zijpalm-button label="Bestellingen bekijken" :href="route('admin.orders', ['type' => $type])" type="redirect"/>
+            <x-zijpalm-button label="Toevoegen" :href="route('product.create', $type === 'activity' ? ['type' => 'activity'] : [])" type="redirect"/>
+            <x-zijpalm-button :label="$type === 'activity' ? 'Deelnemers bekijken' : 'Bestellingen bekijken'" :href="$type === 'activity' ? route('admin.activities') : route('admin.orders', ['type' => $type])" type="redirect"/>
         @endif
     </div>
 </x-zijpalm-div>

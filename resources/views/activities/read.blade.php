@@ -11,56 +11,63 @@
                         $watch('addParticipantModal', v => document.body.classList.toggle('overflow-hidden', v));
                         $watch('editApplicationsModal', v => document.body.classList.toggle('overflow-hidden', v));
                         $watch('announcementMailModal', v => document.body.classList.toggle('overflow-hidden', v));">
-                <x-zijpalm-div title="{{$activity->title}}" color="transparent" :editable="false"/>
+                <x-zijpalm-div title="{{$activity->title}}" color="transparent" :editable="false" class="max-w-full! [&>p]:wrap-anywhere"/>
         {{-- Show buttons if a user is logged in --}}
             @if(auth()->user())
 
         {{-- Action buttons --}}
-            <div class="flex flex-row flex-wrap gap-4 justify-center items-stretch mt-2 w-full">
+            <div class="flex flex-row flex-wrap gap-4 justify-center items-center mt-2 w-full">
                 {{-- Sign up button (always left) --}}
                 @if(!$activity->isCancelled() && $activity->type !== \App\ActivityType::Weekly && !$activity->userApplied() && $activity->period->registration)
-                    <x-zijpalm-button :label="$activity->participants->capacity === 0 ? 'Meld je aan voor de reservelijst' : 'Meld je aan!'" type="action" variant="obvious" x-on:click="signupModal = true" class="h-full"/>
+                    <x-zijpalm-button :label="$activity->participants->capacity === 0 ? 'Meld je aan voor de reservelijst' : 'Meld je aan!'" type="action" variant="obvious" x-on:click="signupModal = true"/>
                 @endif
                 {{-- Unsubscribe button if applicable --}}
                 @if(!$activity->isCancelled() && $activity->type !== \App\ActivityType::Weekly && $activity->userApplied() && $activity->period->cancellation)
-                    <x-zijpalm-button label="Afmelden" variant="obvious" x-on:click.prevent="$el.nextElementSibling.submit()" class="h-full"/>
+                    <x-zijpalm-button label="Afmelden" variant="obvious" x-on:click.prevent="$el.nextElementSibling.submit()"/>
                     <form method="POST" action="{{route('application.destroy', $activity->userApplied())}}" class="hidden"> @csrf @method('DELETE')</form>
                 @endif
 
                 {{-- Admin buttons --}}
                 @if(auth()->user()?->isAdmin())
-                    @if($activity->end?->isPast() && $activity->hasReport())
-                        <x-zijpalm-button :href="route('report.show', $activity->report)" label="Bekijk verslag" variant="obvious" class="h-full"/>
-                    @elseif($activity->end?->isPast() && !$activity->hasReport())
-                        <x-zijpalm-button :href="route('report.create', $activity)" label="Creëer verslag" variant="obvious" class="h-full"/>
-                    @endif
-                    <x-zijpalm-button :href="route('activity.edit', $activity)" label="Bewerk activiteit" variant="obvious" type="redirect" class="h-full"/>
-                    @if($activity->type === \App\ActivityType::Archived)
-                        <form id="activity-restore" method="POST" action="{{route('activity.restore', $activity)}}" onsubmit="return confirm('Weet je zeker dat je deze activiteit terug wilt zetten naar de normale activiteiten?')" class="h-full">
+                    @if($shopProduct)
+                        <form id="activity-shop-registration" class="max-w-full" method="POST" action="{{ route('product.useShopRegistration', $shopProduct) }}">
                             @csrf
-                            <x-zijpalm-button type="submit" form="activity-restore" label="Terug naar activiteiten" variant="obvious" class="h-full"/>
+                            <x-zijpalm-button type="submit" form="activity-shop-registration" label="Nieuw aanmeldproces gebruiken" variant="obvious" class="max-w-full whitespace-normal!" />
+                        </form>
+                        <x-zijpalm-button :href="route('product.activities')" label="Terug naar Shop/Overig" type="redirect" variant="obvious" />
+                    @endif
+                    @if($activity->end?->isPast() && $activity->hasReport())
+                        <x-zijpalm-button :href="route('report.show', $activity->report)" label="Bekijk verslag" variant="obvious"/>
+                    @elseif($activity->end?->isPast() && !$activity->hasReport())
+                        <x-zijpalm-button :href="route('report.create', $activity)" label="Creëer verslag" variant="obvious"/>
+                    @endif
+                    <x-zijpalm-button :href="route('activity.edit', $activity)" label="Bewerk activiteit" variant="obvious" type="redirect"/>
+                    @if($activity->type === \App\ActivityType::Archived)
+                        <form id="activity-restore" method="POST" action="{{route('activity.restore', $activity)}}" onsubmit="return confirm('Weet je zeker dat je deze activiteit terug wilt zetten naar de normale activiteiten?')">
+                            @csrf
+                            <x-zijpalm-button type="submit" form="activity-restore" label="Terug naar activiteiten" variant="obvious"/>
                         </form>
                     @elseif($activity->type !== \App\ActivityType::Cancelled)
-                        <form id="activity-mark-late" method="POST" action="{{route('activity.markLate', $activity)}}" onsubmit="return confirm('Weet je zeker dat je deze activiteit handmatig op Te laat wilt zetten?')" class="h-full">
+                        <form id="activity-mark-late" method="POST" action="{{route('activity.markLate', $activity)}}" onsubmit="return confirm('Weet je zeker dat je deze activiteit handmatig op Te laat wilt zetten?')">
                             @csrf
-                            <x-zijpalm-button type="submit" form="activity-mark-late" label="Te laat zetten" variant="obvious" class="h-full"/>
+                            <x-zijpalm-button type="submit" form="activity-mark-late" label="Te laat zetten" variant="obvious"/>
                         </form>
                     @endif
-                    <x-zijpalm-button label="Verstuur aankondiging" type="action" x-on:click="announcementMailModal = true" variant="obvious" class="h-full"/>
+                    <x-zijpalm-button label="Verstuur aankondiging" type="action" x-on:click="announcementMailModal = true" variant="obvious"/>
                     <x-zijpalm-modal text="Activiteit aankondiging" livewire include="activity-announcement-mail" modal="announcementMailModal" :variables="['activity' => $activity, 'errors' => $errors->announcementMail->all()]"/>
-                    <form id="activity-copy" method="POST" action="{{route('activity.copy', $activity)}}" onsubmit="return confirm('Je staat op het punt de activiteit {{$activity->title}} te kopiëren. Doorgaan?')" class="h-full">
+                    <form id="activity-copy" method="POST" action="{{route('activity.copy', $activity)}}" onsubmit="return confirm('Je staat op het punt de activiteit {{$activity->title}} te kopiëren. Doorgaan?')">
                         @csrf
-                        <x-zijpalm-button type="submit" form="activity-copy" label="Kopieer activiteit" variant="obvious" class="h-full"/>
+                        <x-zijpalm-button type="submit" form="activity-copy" label="Kopieer activiteit" variant="obvious"/>
                     </form>
-                    <form id="activity-destroy" method="POST" action="{{route('activity.destroy', $activity)}}" onsubmit="return confirm('Je staat op het punt de activiteit {{$activity->title}} te annuleren. Alle ingeschreven leden krijgen hun inschrijvingskosten teruggestort.')" class="h-full">
+                    <form id="activity-destroy" method="POST" action="{{route('activity.destroy', $activity)}}" onsubmit="return confirm('Je staat op het punt de activiteit {{$activity->title}} te annuleren. Alle ingeschreven leden krijgen hun inschrijvingskosten teruggestort.')">
                         @csrf
                         @method('delete')
-                        <x-zijpalm-button type="submit" form="activity-destroy" label="Annuleer activiteit" variant="obvious" class="h-full"/>
+                        <x-zijpalm-button type="submit" form="activity-destroy" label="Annuleer activiteit" variant="obvious"/>
                     </form>
-                    <form id="activity-permanentDelete" method="POST" action="{{route('activity.permanentDelete', $activity)}}" onsubmit="return confirm('Je staat op het punt de activiteit {{$activity->title}} permanent te verwijderen. Betaalde inschrijfgelden worden niet teruggestort. Deze actie kan niet ongedaan worden gemaakt.')" class="h-full">
+                    <form id="activity-permanentDelete" method="POST" action="{{route('activity.permanentDelete', $activity)}}" onsubmit="return confirm('Je staat op het punt de activiteit {{$activity->title}} permanent te verwijderen. Betaalde inschrijfgelden worden niet teruggestort. Deze actie kan niet ongedaan worden gemaakt.')">
                         @csrf
                         @method('delete')
-                        <x-zijpalm-button type="submit" form="activity-permanentDelete" label="Permanent verwijderen" variant="obvious" class="h-full"/>
+                        <x-zijpalm-button type="submit" form="activity-permanentDelete" label="Permanent verwijderen" variant="obvious"/>
                     </form>
                 @endif
             </div>
@@ -73,20 +80,19 @@
         @endif
 
         {{-- General Activity Info & Participation List (Admin/User) --}}
-        <div class="flex flex-wrap flex-col lg:flex-row gap-5 flex-1">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 w-full items-start">
 
             {{-- General Activity information and image --}}
-            <x-zijpalm-div :editable="false" width="w-full lg:w-1/2" padding="p-0" class="flex flex-1 self-stretch overflow-hidden min-h-fit md:h-[40rem]">
-                <div class="flex flex-col md:flex-row lg:flex-col flex-1">
+            <x-zijpalm-div :editable="false" width="w-full" padding="p-0" class="flex min-w-0 self-stretch overflow-hidden">
+                <div class="flex min-w-0 flex-col flex-1">
 
                     {{-- Activity Image --}}
-                    {{-- Don't remove the min-h-0. --}}
-                    <div class="flex flex-col min-h-0 flex-1 sm:min-w-1/2">
-                        <img src="{{$activity->image}}" class="size-full object-cover flex-1">
+                    <div data-activity-image class="relative aspect-video w-full shrink-0 overflow-hidden">
+                        <img src="{{$activity->image}}" alt="{{ $activity->title }}" class="absolute inset-0 size-full object-cover">
                     </div>
 
                     {{-- Activity details --}}
-                    <div class="flex flex-col justify-evenly gap-2 p-2 lg:flex-row lg:flex-wrap">
+                    <div data-activity-details class="flex shrink-0 flex-col justify-evenly gap-2 bg-zijpalm-600 p-2 lg:flex-row lg:flex-wrap">
                         {{-- Organiser(s) and location --}}
                         <div class="flex flex-col lg:flex-1 self-stretch">
                             {{-- Title --}}
@@ -227,10 +233,12 @@
                     $reserveParticipantCount = $reserves->sum('participants');
                 @endphp
                 {{-- Registrations --}}
-                <x-zijpalm-div :editable="false" color="light" 
-                    title="Aanmeldingen ({{ $registeredParticipantCount }}{{$activity->maxParticipants ? '/' . $activity->maxParticipants : ''}}{{ $reserveParticipantCount > 0 ? ', ' . $reserveParticipantCount . ' ' . ($reserveParticipantCount === 1 ? 'reserve' : 'reserves') : '' }})"
-                    width="w-full lg:max-w-1/2" class="flex flex-col flex-1 self-stretch max-h-[40rem] md:h-[40rem]">
-                    <div class="absolute top-2 right-2 flex items-center gap-2">
+                <x-zijpalm-div :editable="false" color="light" width="w-full" class="flex min-w-0 flex-col self-stretch max-h-[40rem] md:h-[40rem]">
+                    <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
+                        <h2 class="min-w-0 flex-1 text-left text-xl font-bold sm:text-2xl">
+                            Aanmeldingen ({{ $registeredParticipantCount }}{{$activity->maxParticipants ? '/' . $activity->maxParticipants : ''}}{{ $reserveParticipantCount > 0 ? ', ' . $reserveParticipantCount . ' ' . ($reserveParticipantCount === 1 ? 'reserve' : 'reserves') : '' }})
+                        </h2>
+                        <div class="flex shrink-0 items-center gap-2">
                         {{-- Admins may add any member by hand, paid or not --}}
                         <flux:tooltip content="Deelnemer toevoegen">
                             <flux:button x-on:click="addParticipantModal = true" variant="primary" class="bg-linear-to-t from-zijpalm-700 to-zijpalm-500 inset-shadow-400 border-none size-8! hover:scale-110 hover:brightness-110 duration-300 rounded-xl! group">
@@ -256,6 +264,7 @@
                                 </flux:button>
                             </flux:tooltip>
                         @endif
+                        </div>
                     </div>
 
                     <x-zijpalm-modal title="Aanmeldingen bewerken" text="{{$activity->title}}" modal="editApplicationsModal">
@@ -425,7 +434,7 @@
                         <div class="opacity-50"> Er zijn nog geen aanmeldingen voor deze activiteit </div>
                     @else
                         {{-- List of registered users --}}
-                        <div name="List" class="flex flex-col gap-y-1 overflow-auto px-2">
+                        <div name="List" class="flex min-w-0 flex-col gap-y-1 overflow-auto px-2">
 
                             {{-- List header --}}
                             <div class="flex font-bold">
@@ -470,6 +479,9 @@
                                     </div>
 
                                     {{-- Guest data --}}
+                                    @if($application->shop_unit_price !== null && $application->participants > 1)
+                                        <p class="px-2 text-sm">{{ $application->participants }} deelnemers; extra namen niet opgegeven.</p>
+                                    @endif
                                     @foreach($application->guests as $guest)
                                         <div class="flex items-center gap-x-1">
                                             <div class="flex flex-1 min-w-0 px-2 gap-x-2 rounded-full overflow-clip bg-linear-to-t from-zinc-300 to-zinc-200 inset-shadow-zinc-50 border-b border-[rgba(0,0,0,0.15)]">
@@ -487,6 +499,7 @@
                     @endif
                 </x-zijpalm-div>
             @endif
+        </div>
 
             {{-- Activity Description + Cost overview (admin) --}}
             @if(auth()->user()?->isAdmin())
@@ -516,8 +529,12 @@
 
                 <div class="flex flex-col lg:flex-row gap-5 w-full">
                     <x-zijpalm-div title="Beschrijving" :editable="false" width="w-full lg:w-2/3" class="">
-                        <div class="bg-[rgba(0,0,0,0.15)] rounded-md flex flex-col p-2 text-left space-y-3 whitespace-pre-line">
-                            {!!$activity->descriptionHTML!!}
+                        <div @class(['bg-[rgba(0,0,0,0.15)] rounded-md p-2 text-left', 'flex flex-col space-y-3 whitespace-pre-line' => !$shopProduct])>
+                            @if($shopProduct)
+                                <x-shop-description :product="$shopProduct" />
+                            @else
+                                {!!$activity->descriptionHTML!!}
+                            @endif
                         </div>
                     </x-zijpalm-div>
 
@@ -644,10 +661,13 @@
             @else
                 {{-- Activity Description --}}
                 <x-zijpalm-div title="Beschrijving" :editable="false" width="w-full" class="">
-                    <div class="bg-[rgba(0,0,0,0.15)] rounded-md flex flex-col p-2 text-left space-y-3 whitespace-pre-line">
-                        {!!$activity->descriptionHTML!!}
+                    <div @class(['bg-[rgba(0,0,0,0.15)] rounded-md p-2 text-left', 'flex flex-col space-y-3 whitespace-pre-line' => !$shopProduct])>
+                        @if($shopProduct)
+                            <x-shop-description :product="$shopProduct" />
+                        @else
+                            {!!$activity->descriptionHTML!!}
+                        @endif
                     </div>
                 </x-zijpalm-div>
             @endif
-        </div>
 </x-page-wrapper>

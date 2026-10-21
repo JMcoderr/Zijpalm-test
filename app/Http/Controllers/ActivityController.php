@@ -38,12 +38,13 @@ class ActivityController extends Controller
 
         // Get ongoing activities that aren't cancelled, sorted by starting date/time
         $activities = Activity::where('end', '>', now())
+            ->whereDoesntHave('shopProduct')
             ->whereNotIn('type', [ActivityType::Weekly, ActivityType::Cancelled, ActivityType::Archived])
             ->get()
             ->sortBy('start');
 
         // Get all recurring activities, since they are treated separately
-        $recurringActivities = Activity::where('type', ActivityType::Weekly)->get()->sortBy('title');
+        $recurringActivities = Activity::where('type', ActivityType::Weekly)->whereDoesntHave('shopProduct')->get()->sortBy('title');
 
         // Get activities that are past the end date/time, from the last year only, with the latest ones on top, excluding weekly or cancelled activities
         $archivedActivities = Activity::where(function ($query) {
@@ -54,6 +55,7 @@ class ActivityController extends Controller
                             ->whereNotIn('type', [ActivityType::Weekly, ActivityType::Cancelled, ActivityType::Archived]);
                     });
             })
+            ->whereDoesntHave('shopProduct')
             ->get()
             ->sortByDesc('end');
 
@@ -482,6 +484,13 @@ class ActivityController extends Controller
      */
     public function show(Activity $activity)
     {
+        $shopProduct = $activity->shopProduct;
+        abort_if($shopProduct?->hidden && !auth()->user()?->isAdmin(), 404);
+
+        if ($shopProduct && !$shopProduct->normal_registration && !auth()->user()?->isAdmin()) {
+            return redirect()->route('product.show', $shopProduct);
+        }
+
         // Store the activity's applications inside of a variable, uses a sortBy callback to prioritise applications in order of the ApplicationStatus Enum
         $applicationRelations = [
             'user' => fn($q) => $q->withTrashed(),
@@ -510,7 +519,7 @@ class ActivityController extends Controller
                 ->get();
         }
 
-        return view('activities.read', compact('activity', 'applications', 'reserves', 'pending', 'assignableUsers'));
+        return view('activities.read', compact('activity', 'applications', 'reserves', 'pending', 'assignableUsers', 'shopProduct'));
     }
 
     /**
@@ -564,6 +573,16 @@ class ActivityController extends Controller
         }
 
         $copy->load('questions.selectOptions');
+
+        if ($activity->shopProduct) {
+            $productCopy = $activity->shopProduct->replicate(['activity_id', 'normal_registration']);
+            $productCopy->fill([
+                'name' => $copy->title,
+                'activity_id' => $copy->id,
+                'normal_registration' => true,
+                'hidden' => true,
+            ])->save();
+        }
 
         return redirect()->route('activity.edit', $copy)
             ->with('success', "Activiteit '{$activity->title}' is gekopieerd. Je kunt nu de kopie bewerken.");
@@ -682,6 +701,20 @@ class ActivityController extends Controller
             $activity->update(['imagePath' => $filePath]);
         }
 
+        $activity->shopProduct?->update([
+            'name' => $activity->title,
+            'description' => $activity->description,
+            'imagePath' => $activity->imagePath,
+            'pickupLocation' => $activity->location,
+            'price' => $activity->price,
+            'guest_price' => null,
+            'max_participants' => $activity->maxParticipants,
+            'registration_starts_at' => $activity->registrationStart,
+            'registration_ends_at' => $activity->registrationEnd,
+            'activity_starts_at' => $activity->start,
+            'activity_ends_at' => $activity->end,
+        ]);
+
         return redirect()->route('activity.show', $activity)
             ->with('success', 'De activiteit is succesvol bijgewerkt!');
     }
@@ -703,6 +736,11 @@ class ActivityController extends Controller
     }
 
     public function permanentDelete(Activity $activity){
+        if ($activity->shopProduct && ($activity->applications()->exists() || $activity->shopProduct->orders()->exists())) {
+            return back()->with('error', 'Deze shopactiviteit heeft inschrijvingen of bestellingen. Annuleer de activiteit om de deelnemers en betaalgegevens te behouden.');
+        }
+
+        $activity->shopProduct?->delete();
         $activity->delete();
 
         return redirect()->route('activity.index')->with('success',"Activiteit '$activity->title' succesvol permanent verwijderd!");

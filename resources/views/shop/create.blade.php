@@ -50,9 +50,11 @@
 						<x-input-field type="text" label="Locatie / ophaalpunt" id="pickupLocation" :value="old('pickupLocation')"/>
 					</x-input-group>
 
-					<x-input-group class="items-stretch">
-						<label for="description" class="font-bold">Beschrijving <span class="text-red-500">*</span></label>
-						<textarea id="description" name="description" class="w-full min-h-44 rounded-sm shadow-sm px-2 py-1 focus:outline-0 bg-zinc-100 text-black" rows="8" required>{{ old('description') }}</textarea>
+					<x-input-group class="items-stretch [&_[data-editor-holder]]:h-auto [&_[data-editor-holder]]:min-h-48" height="h-auto">
+						<div data-image-preview="imagePath" data-initial-url="" class="mb-2 overflow-hidden rounded-lg border border-zinc-300 bg-white" hidden>
+							<img alt="Voorvertoning afbeelding" class="max-h-96 w-full object-contain">
+						</div>
+						<x-input-field label="Beschrijving" id="description" type="editor" height="h-auto" required/>
 					</x-input-group>
 				</x-input-group>
 

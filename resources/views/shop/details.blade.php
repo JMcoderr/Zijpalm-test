@@ -15,7 +15,9 @@
     </header>
     <div class="space-y-5 p-5 sm:p-6">
         @if($imageUrl)
-            <img src="{{ $imageUrl }}" alt="{{ $product->name }}" class="aspect-video w-full rounded-xl bg-white/10 object-cover">
+            <a href="{{ $imageUrl }}" target="_blank" rel="noopener" aria-label="{{ $product->name }}: volledige afbeelding bekijken">
+                <img src="{{ $imageUrl }}" alt="{{ $product->name }}" class="h-auto max-h-[36rem] w-full rounded-lg bg-white/10 object-contain">
+            </a>
         @else
             <div class="flex aspect-video flex-col items-center justify-center gap-3 rounded-xl bg-black/10 text-zijpalm-100">
                 <flux:icon name="photo" class="size-10"/>
@@ -24,7 +26,7 @@
         @endif
         <div class="rounded-xl bg-black/10 p-4">
             <h3 class="mb-2 text-base font-bold">{{ $isActivity ? 'Wat kun je verwachten?' : 'Beschrijving' }}</h3>
-            <p class="whitespace-pre-line text-sm leading-relaxed text-zinc-100 wrap-anywhere">{{ $product->description }}</p>
+            <x-shop-description :product="$product" />
         </div>
         <dl class="grid grid-cols-2 gap-3">
             <div class="rounded-xl bg-black/10 p-4">

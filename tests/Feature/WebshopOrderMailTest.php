@@ -122,3 +122,41 @@ it('does not put a pickup promise in an activity-only confirmation and retains m
         ->and(substr_count($html, 'Totaalbedrag:'))->toBe(1)
         ->and($html)->toContain('Voor het ophalen van je bestelling');
 });
+
+it('updates linked shop participants on webhooks without duplicate activity emails', function (string $status) {
+    Mail::fake();
+    $this->product->update([
+        'product_type' => 'activity', 'hidden' => false, 'stock' => null, 'guest_price' => null,
+        'pickupLocation' => 'Stadhuis', 'activity_starts_at' => now()->addWeek(), 'max_participants' => 5,
+    ]);
+    $this->actingAs(User::factory()->admin()->create())
+        ->post(route('product.convertToActivity', $this->product))->assertSessionHas('success');
+    $application = $this->product->fresh()->activity->applications()->sole();
+
+    $remote = Mockery::mock();
+    $remote->status = $status;
+    $remote->paidAt = $status === 'paid' ? now()->toIso8601String() : null;
+    $remote->metadata = (object) ['newMember' => false];
+    $remote->shouldReceive('isPaid')->andReturn($status === 'paid');
+    $endpoint = Mockery::mock();
+    $endpoint->shouldReceive('get')->with('tr_notification')->andReturn($remote);
+    $client = Mockery::mock(MollieApiClient::class);
+    $client->payments = $endpoint;
+    Mollie::shouldReceive('api')->andReturn($client);
+    if ($status === 'failed') {
+        Content::firstOrCreate(['name' => 'email-betaling-mislukt'], ['type' => 'email', 'title' => 'Betaling', 'text' => '']);
+    }
+
+    $this->post(route('payment.webhook'), ['id' => 'tr_notification'])->assertOk();
+    $this->post(route('payment.webhook'), ['id' => 'tr_notification'])->assertOk();
+    expect($application->fresh()->status)->toBe(match ($status) {
+        'paid' => \App\ApplicationStatus::Active,
+        'failed' => \App\ApplicationStatus::Cancelled,
+        default => \App\ApplicationStatus::Pending,
+    });
+    Mail::assertNotSent(\App\Mail\ActivityApplied::class);
+    if ($status === 'paid') {
+        expect($application->fresh()->calculateTotalPaid())->toBe(31.0);
+        Mail::assertSentCount(2);
+    }
+})->with(['authorized', 'paid', 'failed']);

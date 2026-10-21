@@ -90,7 +90,7 @@
         'overflow-hidden',
         'justify-center',
         'flex-3/5',
-        'bg-white',
+        'bg-zinc-300',
     ];
 
     // Info classes (non-image half)
@@ -156,7 +156,7 @@
 
         {{-- Card Image --}}
         <div @class($imageDivClasses)>
-            <img src="{{$image}}" loading="lazy" @class([($image === Storage::url('/images/logo.png') ? 'p-5 object-fit' : 'size-full object-cover')])>
+            <img src="{{$image}}" alt="{{ $title }}" loading="lazy" @class([($image === Storage::url('/images/logo.png') ? 'p-5 object-fit' : 'size-full object-cover')])>
         </div>
 
         {{-- Details, startdate/time & location --}}

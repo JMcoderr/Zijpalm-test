@@ -72,6 +72,11 @@ class Activity extends Model
         return $this->hasMany(Application::class);
     }
 
+    public function shopProduct()
+    {
+        return $this->hasOne(Product::class);
+    }
+
     // Relationship: activity has one report
     public function report()
     {

@@ -1,6 +1,7 @@
 @php
     $isActivity = $product->isActivityProduct();
     $unitPrice = auth()->check() ? (float) $product->price : $product->displayGuestPrice();
+    $isFree = $unitPrice == 0;
     $maxQuantity = min(50, $availableQuantity ?? 50);
     $quantityValue = old('quantity', 1);
     $quantityValue = is_scalar($quantityValue) ? (string) $quantityValue : '1';
@@ -8,6 +9,10 @@
     $unavailableMessage = null;
     if ($product->hidden) {
         $unavailableMessage = 'Dit item is nog niet gepubliceerd.';
+    } elseif ($product->activity?->isCancelled()) {
+        $unavailableMessage = 'Deze activiteit is geannuleerd.';
+    } elseif ($product->activity_id && auth()->check() && $product->activity->userApplied()) {
+        $unavailableMessage = 'Je staat al op de deelnemerslijst voor deze activiteit.';
     } elseif ($availableQuantity === 0) {
         $unavailableMessage = $isActivity ? 'Deze activiteit zit vol. Aanmelden is niet meer mogelijk.' : 'Dit product is uitverkocht.';
     } elseif ($isActivity && $product->registration_starts_at && now()->startOfDay()->lt($product->registration_starts_at)) {
@@ -16,6 +21,8 @@
         $unavailableMessage = 'De aanmeldperiode voor deze activiteit is gesloten.';
     } elseif (!auth()->check() && !$product->allow_guest_checkout) {
         $unavailableMessage = $isActivity ? 'Alleen leden kunnen zich aanmelden. Log eerst in.' : 'Alleen leden kunnen dit product bestellen. Log eerst in.';
+    } elseif (!auth()->check() && $product->requiresActivityForm()) {
+        $unavailableMessage = 'Log in om het volledige aanmeldformulier in te vullen.';
     }
 @endphp
 
@@ -36,7 +43,7 @@
                 1. {{ $isActivity ? 'Deelnemers kiezen' : 'Aantal kiezen' }}
             </li>
             <li class="rounded-lg border border-white/20 bg-black/10 px-4 py-3 font-medium">
-                2. Veilig betalen
+                2. {{ $isFree ? 'Bevestigen' : 'Veilig betalen' }}
             </li>
         </ol>
     </header>
@@ -44,6 +51,8 @@
     <div class="p-5 sm:p-6">
         @if($unavailableMessage)
             <p class="rounded-xl bg-black/10 p-4 text-sm leading-relaxed text-zinc-100" role="status">{{ $unavailableMessage }}</p>
+        @elseif($product->requiresActivityForm())
+            <livewire:application-form :activity="$product->activity" :errors="$errors->signupActivity->all()" />
         @else
             <form id="product-purchase-form" method="POST" action="{{ route('product.purchase', $product) }}"
                   x-data="{
@@ -97,7 +106,6 @@
                 </div>
                 <p id="quantity-limit" class="mt-3 text-xs leading-relaxed text-zijpalm-100">
                     {{ $availableQuantity === null ? 'Onbeperkt beschikbaar' : ($isActivity ? $availableQuantity . ' plaatsen beschikbaar' : $availableQuantity . ' stuks op voorraad') }}
-                    &middot; Maximaal {{ $maxQuantity }} {{ $isActivity ? 'deelnemers per aanmelding' : 'stuks per bestelling' }}.
                 </p>
                 <p id="quantity-error" class="mt-2 rounded-lg bg-red-100 px-3 py-2 text-sm text-red-800" x-show="!validQuantity" x-cloak role="alert">
                     Vul een heel aantal in tussen 1 en {{ $maxQuantity }}.
@@ -141,14 +149,16 @@
                     </div>
                     <output id="checkout-total" for="quantity" aria-live="polite" aria-atomic="true" x-text="formatTotal()" class="text-right text-2xl font-extrabold text-zinc-100">{{ $initialQuantityValid ? formatPrice($unitPrice * (int) $quantityValue) : 'Kies een geldig aantal' }}</output>
                 </div>
-                <p class="mt-3 text-sm leading-relaxed text-zijpalm-100">{{ $isActivity ? 'Je aanmelding wordt bevestigd zodra de betaling is ontvangen.' : 'Voor het ophalen van je bestelling nemen we contact met je op.' }}</p>
+                <p class="mt-3 text-sm leading-relaxed text-zijpalm-100">{{ $isActivity ? ($isFree ? 'Je aanmelding wordt direct bevestigd.' : 'Je aanmelding wordt bevestigd zodra de betaling is ontvangen.') : 'Voor het ophalen van je bestelling nemen we contact met je op.' }}</p>
                 <button type="submit" x-bind:disabled="!validQuantity"
                         class="mt-4 flex min-h-13 w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-linear-to-t from-zijpalm-700 to-zijpalm-500 inset-shadow-sm inset-shadow-zijpalm-300 px-4 py-3 font-bold text-zinc-100 shadow-md transition-[filter] hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zijpalm-100">
-                    <flux:icon name="lock-closed" class="size-5 shrink-0"/>
-                    {{ $isActivity ? 'Aanmelden en betalen' : 'Bestellen en betalen' }}
+                    <flux:icon :name="$isFree ? 'check-circle' : 'lock-closed'" class="size-5 shrink-0"/>
+                    {{ $isActivity ? ($isFree ? 'Aanmelden' : 'Aanmelden en betalen') : ($isFree ? 'Bestellen' : 'Bestellen en betalen') }}
                     <flux:icon name="arrow-right" class="size-5 shrink-0"/>
                 </button>
-                <p class="mt-2 text-center text-xs text-zijpalm-100">Je betaalt veilig via Mollie.</p>
+                @unless($isFree)
+                    <p class="mt-2 text-center text-xs text-zijpalm-100">Je betaalt veilig via Mollie.</p>
+                @endunless
             </form>
         @endif
         <a href="{{ $isActivity ? route('product.activities') : route('product.index') }}"

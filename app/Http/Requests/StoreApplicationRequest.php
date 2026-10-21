@@ -32,6 +32,7 @@ class StoreApplicationRequest extends FormRequest
             'email' => ['required', 'email', 'max:255'],
 
             // Guests, if any field is filled, require all, except adult checkbox
+            'guests' => ['sometimes', 'array', 'max:' . max(0, (int) $this->route('activity')->maxGuests)],
             'guests.*' => [new GuestRequest],
             'guests.*.firstName' => ['nullable', 'string', 'max:255'],
             'guests.*.lastName' => ['nullable', 'string', 'max:255'],
@@ -61,6 +62,7 @@ class StoreApplicationRequest extends FormRequest
             'email.max' => 'Het e-mailadres mag maximaal 255 tekens bevatten.',
 
             // Guests
+            'guests.max' => 'Er zijn meer introducees opgegeven dan toegestaan voor deze activiteit.',
             // First Name
             'guests.*.firstName.max' => 'De voornaam van elke gast mag maximaal 255 tekens bevatten.',
 

@@ -43,4 +43,3 @@ Zonder SSH kun je geen `php artisan migrate --force` en `php artisan optimize:cl
 Veilige alternatieven:
 - Gebruik een command-runner in het hostingpaneel (als beschikbaar).
 - Laat migrations uitvoeren via SSH door iemand met toegang.
-

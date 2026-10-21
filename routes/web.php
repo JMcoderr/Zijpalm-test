@@ -190,6 +190,8 @@ Route::prefix('shop')->name('product.')->controller(ProductController::class)->g
             Route::get('{product}/bewerken', 'edit')->name('edit');
             Route::put('{product}', 'update')->name('update');
             Route::post('{product}/kopieren', 'copy')->name('copy');
+            Route::post('{product}/omzetten-naar-activiteit', 'convertToActivity')->name('convertToActivity');
+            Route::post('{product}/nieuw-aanmeldproces', 'useShopRegistration')->name('useShopRegistration');
 
             // Delete
             Route::delete('{product}', 'destroy')->name('destroy');

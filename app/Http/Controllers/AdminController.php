@@ -201,7 +201,7 @@ class AdminController extends Controller
 
         $row = 2;
         foreach ($users as $user) {
-            $phone = formatPhoneNumber($user->phone);
+            $phone = filled($user->phone) ? formatPhoneNumber($user->phone) : '';
 
             $sheet->fromArray([
                 $user->firstName,

@@ -6,6 +6,33 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
+it('confirms free items without contacting Mollie and reserves their capacity', function (string $type) {
+    \Illuminate\Support\Facades\Mail::fake();
+    config(['mail.bestuur.address' => 'board@example.com']);
+    foreach (['email-bestelling-betaald', 'email-bestuur-nieuwe-bestelling'] as $name) {
+        \App\Models\Content::create(['name' => $name, 'type' => 'email', 'title' => 'Bevestiging', 'text' => '']);
+    }
+    \Mollie\Laravel\Facades\Mollie::shouldReceive('api')->never();
+    $this->actingAs(User::factory()->create());
+    $product = Product::factory()->create([
+        'product_type' => $type, 'price' => 0, 'hidden' => false, 'stock' => 3,
+    ]);
+
+    $this->get(route('product.show', $product))->assertOk()
+        ->assertSee('2. Bevestigen')->assertDontSee('Je betaalt veilig via Mollie.')
+        ->assertDontSee('Maximaal 3 deelnemers per aanmelding');
+    $this->post(route('product.purchase', $product), ['quantity' => 2])
+        ->assertRedirect(route('product.show', $product))->assertSessionHas('success');
+
+    $order = \App\Models\Order::webshop()->sole();
+    expect($order->payment->status)->toBe(\App\PaymentStatus::paid)
+        ->and((float) $order->payment->price)->toBe(0.0)
+        ->and($order->products->sole()->pivot->quantity)->toBe(2)
+        ->and($product->fresh()->stock)->toBe(1);
+    \Illuminate\Support\Facades\Mail::assertSent(\App\Mail\OrderPaid::class, fn ($mail) => $mail->hasTo('board@example.com'));
+    \Illuminate\Support\Facades\Mail::assertSent(\App\Mail\BoardNewOrder::class);
+})->with(['product', 'activity']);
+
 it('shows a compact checkout with the correct product or activity wording and price', function (bool $activity, bool $guest) {
     $product = Product::factory()->create([
         'name' => $activity ? 'Dagje uit' : 'Badhanddoek',
@@ -90,10 +117,13 @@ it('renders separate numbered steps and accessible quantity buttons without chan
         ->not->toContain('data-step-number')->not->toContain('rounded-full');
 });
 
-it('versions the built stylesheet by its contents so new uploads do not reuse stale CSS', function () {
+it('versions built styles and scripts so new uploads do not reuse stale editor code', function () {
     $expected = asset('build/css.css') . '?v=' . hash_file('sha256', public_path('build/css.css'));
     expect(\Illuminate\Support\Facades\Vite::asset('resources/css/app.css'))->toBe($expected);
-    expect(\Illuminate\Support\Facades\Vite::asset('resources/js/app.js'))->toBe(asset('build/app.js'));
+    foreach (['app' => 'resources/js/app.js', 'editorjs' => 'resources/js/editor/editorjs.js', 'displayUploadedFileName' => 'resources/js/forms/display-uploaded-file-name.js'] as $bundle => $entry) {
+        expect(\Illuminate\Support\Facades\Vite::asset($entry))
+            ->toBe(asset('build/' . $bundle . '.js') . '?v=' . hash_file('sha256', public_path('build/' . $bundle . '.js')));
+    }
 });
 
 it('preserves invalid quantities for correction instead of silently changing them to another amount', function () {

@@ -2,7 +2,7 @@
 @vite('resources/js/forms/display-uploaded-file-name.js')
 
 <x-page-wrapper page="Product Bewerken">
-	<x-zijpalm-div color="transparent" :title="'Bewerk product: ' . $product->name" :editable="false"/>
+	<x-zijpalm-div color="transparent" :title="'Bewerk product: ' . $product->name" :editable="false" class="max-w-full! [&>p]:wrap-anywhere"/>
 
 	@if($errors->any())
 		<x-zijpalm-div color="light" title="Foutmelding(en)" :editable="false" width="min-w-min" error id="error-messages" onclick="this.remove()">
@@ -45,14 +45,11 @@
 						<x-input-field type="text" label="Locatie / ophaalpunt" id="pickupLocation" :value="old('pickupLocation', $product->pickupLocation)"/>
 					</x-input-group>
 
-					<x-input-group class="items-stretch" title="Beschrijving en afbeelding">
-						@if($currentImageUrl)
-							<div class="rounded-lg border border-zinc-300 bg-white overflow-hidden mb-2">
-								<img src="{{ $currentImageUrl }}" alt="{{ $product->name }}" class="h-52 w-full object-cover" loading="lazy">
-							</div>
-						@endif
-						<label for="description" class="font-bold">Beschrijving <span class="text-red-500">*</span></label>
-						<textarea id="description" name="description" class="w-full min-h-44 rounded-sm shadow-sm px-2 py-1 focus:outline-0 bg-zinc-100 text-black" rows="8" required>{{ old('description', $product->description) }}</textarea>
+					<x-input-group class="items-stretch [&_[data-editor-holder]]:h-auto [&_[data-editor-holder]]:min-h-48" height="h-auto" title="Beschrijving en afbeelding">
+						<div data-image-preview="imagePath" data-initial-url="{{ $currentImageUrl ?? '' }}" class="rounded-lg border border-zinc-300 bg-white overflow-hidden mb-2" @if(!$currentImageUrl) hidden @endif>
+							<img @if($currentImageUrl) src="{{ $currentImageUrl }}" @endif alt="{{ $product->name }}" class="max-h-96 w-full object-contain">
+						</div>
+						<x-input-field label="Beschrijving" id="description" type="editor" height="h-auto" :value="$product->descriptionForEditor()" required/>
 					</x-input-group>
 				</x-input-group>
 

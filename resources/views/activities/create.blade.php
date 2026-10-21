@@ -53,9 +53,12 @@
                         <x-input-field type="text" label="WhatsApp Groep Link" id="whatsappUrl" information="whatsapp-info"/>
                     </x-input-group>
                     {{-- TO DO: Replace with Text Editor instead of Textarea --}}
-                    <x-input-group class="items-stretch">
+                    <x-input-group class="items-stretch [&_[data-editor-holder]]:h-auto [&_[data-editor-holder]]:min-h-48" height="h-auto" title="Beschrijving en afbeelding">
+                        <div data-image-preview="image-upload" data-initial-url="" class="mb-2 overflow-hidden rounded-lg border border-zinc-300 bg-white" hidden>
+                            <img alt="Voorvertoning activiteitafbeelding" class="max-h-96 w-full object-contain">
+                        </div>
                         {{-- May god forgive me for adding such awful breakpoints, it was the only way to keep my sanity, but my pride is obliterated --}}
-                        <x-input-field label="Beschrijving" id="description" type="editor" class="" required/>
+                        <x-input-field label="Beschrijving" id="description" type="editor" height="h-auto" required/>
                     </x-input-group>
                 </x-input-group>
 

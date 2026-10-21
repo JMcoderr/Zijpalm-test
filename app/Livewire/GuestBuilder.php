@@ -33,6 +33,7 @@ class GuestBuilder extends Component{
         // Initialize guest rows (for old input values after validation errors).
         $guests = $guests ?? [];
         $this->guests = collect($guests)->map(fn($item, $key) => array_merge(['id' => $key], $item))->all();
+        $this->guestCount = count($this->guests);
     }
 
     // Add a guest
@@ -43,7 +44,7 @@ class GuestBuilder extends Component{
 
         // Only allow adding guests when total participants stay below activity capacity.
 //        if($this->activity->participants += count($this->guests) + 1 < $this->activity->maxParticipants){
-        if(count($this->activity->participants->all) + count($this->guests) + 1 < $this->activity->maxParticipants){
+        if (!$this->activity->maxParticipants || count($this->guests) + 1 < $this->activity->participants->capacity) {
 
             // Also respect the per-activity guest limit.
             if(count($this->guests) < $this->activity->maxGuests){

@@ -26,13 +26,13 @@ class AppServiceProvider extends ServiceProvider
     {
         Vite::createAssetPathsUsing(function (string $path, ?bool $secure): string {
             $url = asset($path, $secure);
-            if (!str_ends_with($path, '.css')) {
+            if (!str_ends_with($path, '.css') && !str_ends_with($path, '.js')) {
                 return $url;
             }
 
             $hash = hash_file('sha256', public_path($path));
             if ($hash === false) {
-                throw new \RuntimeException('Unable to version stylesheet: ' . $path);
+                throw new \RuntimeException('Unable to version asset: ' . $path);
             }
 
             return $url . '?v=' . $hash;

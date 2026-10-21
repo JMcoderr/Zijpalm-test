@@ -3,13 +3,31 @@ window.displayUploadedFileName = displayUploadedFileName;
 
 // Function takes an input (what provides the file) and target (what should change its contents)
 function displayUploadedFileName(input){
-    // Find the text element that should show the chosen file name.
     const target = document.getElementById(input.id + '-file-name');
+    const file = input.files?.[0];
+    if (target) {
+        target.textContent = file?.name ?? 'Geen bestand gekozen';
+        target.classList.toggle('font-semibold', !!file);
+    }
 
-    // Replace old text colour, and make the font a little more obvious
-    target.classList.replace('text-zinc-500', 'text-zijpalm-300');
-    target.classList.add('font-semibold')
+    const preview = document.querySelector(`[data-image-preview="${input.id}"]`);
+    if (!preview) {
+        return;
+    }
+    if (preview.dataset.objectUrl) {
+        URL.revokeObjectURL(preview.dataset.objectUrl);
+        delete preview.dataset.objectUrl;
+    }
 
-    // Target the target, set its inner HTML to the input file's name (files is always an array)
-    target.innerHTML = input.files[0].name;
+    const image = preview.querySelector('img');
+    const url = file && file.type.startsWith('image/') ? URL.createObjectURL(file) : preview.dataset.initialUrl;
+    if (file && file.type.startsWith('image/')) {
+        preview.dataset.objectUrl = url;
+    }
+    if (url) {
+        image.src = url;
+    } else {
+        image.removeAttribute('src');
+    }
+    preview.hidden = !url;
 }

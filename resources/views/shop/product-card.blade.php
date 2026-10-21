@@ -7,7 +7,7 @@
 <div class="flex flex-col max-w-[24rem] w-[90dvw] duration-400">
     <x-zijpalm-div :editable="false" color="light" width="w-full" padding="p-0" class="h-full flex flex-col overflow-hidden">
         <div class="rounded-t-xl overflow-hidden bg-white">
-            <img src="{{ $imageUrl }}" loading="lazy" alt="{{ $product->name }}" class="w-full h-52 object-cover">
+            <img src="{{ $imageUrl }}" loading="lazy" alt="{{ $product->name }}" class="w-full h-52 object-contain">
         </div>
         <div class="flex flex-col gap-2 p-3 flex-1">
             <span class="text-xl font-bold">{{ $product->name }}</span>

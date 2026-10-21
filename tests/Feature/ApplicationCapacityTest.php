@@ -26,6 +26,37 @@ beforeEach(function () {
     ]);
 });
 
+it('allows an introducee at an unlimited free activity and confirms both participants without Mollie', function () {
+    Mail::fake();
+    Mollie::shouldReceive('api')->never();
+    $activity = Activity::factory()->create([
+        'maxParticipants' => null, 'maxGuests' => 1, 'price' => 0,
+        'type' => \App\ActivityType::OneDay,
+    ]);
+    $user = User::factory()->create();
+    $this->actingAs($user)->get(route('activity.show', $activity))->assertOk()->assertSee('Introducees');
+    \Livewire\Livewire::test(\App\Livewire\GuestBuilder::class, ['activity' => $activity])
+        ->call('addGuest')->assertCount('guests', 1)->call('addGuest')->assertCount('guests', 1);
+    $this->post(route('application.store', $activity), [
+        'email' => $user->email, 'phone' => '0612345678',
+        'guests' => [['firstName' => 'Test', 'lastName' => 'Introducee', 'phone' => '0687654321', 'email' => 'intro@example.com']],
+    ])->assertSessionHasNoErrors()->assertSessionHas('success');
+    $application = $activity->applications()->sole();
+    expect($application->status)->toBe(ApplicationStatus::Active)->and($application->participants)->toBe(2)
+        ->and($application->guests()->sole()->email)->toBe('intro@example.com')
+        ->and($application->payments()->count())->toBe(0);
+});
+
+it('rejects introducees above the configured activity limit', function () {
+    $activity = Activity::factory()->create(['maxGuests' => 0]);
+    $user = User::factory()->create();
+    $this->actingAs($user)->post(route('application.store', $activity), [
+        'email' => $user->email, 'phone' => '0612345678',
+        'guests' => [['firstName' => 'Test', 'lastName' => 'Introducee', 'phone' => '0687654321', 'email' => 'intro@example.com']],
+    ])->assertSessionHasErrors('guests', null, 'signupActivity');
+    expect($activity->applications()->count())->toBe(0);
+});
+
 it('puts signups on the reserve list when existing guests fill the activity and skips Mollie', function () {
     Mail::fake();
     Mollie::shouldReceive('api')->never();

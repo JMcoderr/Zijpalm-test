@@ -28,11 +28,14 @@ class Application extends Model
         'comment',
         'status',
         'participants',
+        'shop_order_id',
+        'shop_unit_price',
     ];
 
     protected $casts = [
         'status' => ApplicationStatus::class,
         'participants' => 'integer',
+        'shop_unit_price' => 'decimal:2',
     ];
 
     public function activity()
@@ -62,6 +65,20 @@ class Application extends Model
 
     // This function is called when the payment status changes
     public function handleNewStatus(Payment $payment) {
+        if ($this->shop_order_id) {
+            if (in_array($payment->status, [PaymentStatus::open, PaymentStatus::pending, PaymentStatus::authorized], true)) {
+                return;
+            }
+
+            if ($this->status !== ApplicationStatus::Cancelled && $this->status !== ApplicationStatus::Reserve) {
+                $this->update(['status' => $payment->status === PaymentStatus::paid
+                    ? ApplicationStatus::Active : ApplicationStatus::Cancelled]);
+                $this->activity->updateApplications();
+            }
+
+            return;
+        }
+
         if ($this->status === ApplicationStatus::Reserve) {
             Log::info('[ApplicationModel] Payment updated while application remains on reserve list', [
                 'application_id' => $this->id,
@@ -117,6 +134,10 @@ class Application extends Model
 
     public function calculateBaseCost(): float
     {
+        if ($this->shop_unit_price !== null) {
+            return $this->participants * (float) $this->shop_unit_price;
+        }
+
         $activity = $this->activity;
 
         if (!$activity) {

@@ -35,7 +35,7 @@
 
         {{-- Guests --}}
         {{-- Show only if guests are allowed and if the current participants is below maxParticipants minus 1 (the user) --}}
-        @if($activity->maxGuests > 0 && $activity->participants->all->count() <= ($activity->maxParticipants - 1))
+        @if($activity->maxGuests > 0 && (!$activity->maxParticipants || $activity->participants->capacity > 1))
             <x-input-group id="guests" title="Introducees">
                 <livewire:guest-builder :$activity :guests="old('guests')"/>
             </x-input-group>

@@ -184,8 +184,12 @@ class PaymentController extends Controller
             }
 
             $lockedPayment->save();
+            $shopApplication = $lockedPayment->application?->shop_order_id ? $lockedPayment->application : null;
+            $shopApplication?->handleNewStatus($lockedPayment);
             $lockedPayment->orders()->each(fn ($order) => $order->handleNewStatus($lockedPayment));
-            $lockedPayment->application()->each(fn ($application) => $application->handleNewStatus($lockedPayment));
+            if (!$shopApplication) {
+                $lockedPayment->application()->each(fn ($application) => $application->handleNewStatus($lockedPayment));
+            }
         });
 
         // Log the webhook so it is easier to debug when Mollie sends something unexpected.

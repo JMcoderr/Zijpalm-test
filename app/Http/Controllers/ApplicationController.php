@@ -48,6 +48,29 @@ class ApplicationController extends Controller
      */
     public function store(StoreApplicationRequest $request, Activity $activity)
     {
+        if ($activity->shopProduct) {
+            return DB::transaction(function () use ($request, $activity) {
+                $product = $activity->shopProduct()->lockForUpdate()->firstOrFail();
+                abort_if($product->hidden, 404);
+                if (!$product->normal_registration && !$product->requiresActivityForm()) {
+                    return redirect()->route('product.show', $product)
+                        ->with('error', 'Het aanmeldproces is gewijzigd. Meld je aan via dit formulier.');
+                }
+
+                $activity = Activity::whereKey($activity->id)->lockForUpdate()->firstOrFail();
+                if ($activity->isCancelled() || !$activity->period->registration) {
+                    return redirect()->route('activity.show', $activity)->with('error', 'Aanmelden is op dit moment niet mogelijk.');
+                }
+
+                return $this->storeApplication($request, $activity);
+            });
+        }
+
+        return $this->storeApplication($request, $activity);
+    }
+
+    private function storeApplication(StoreApplicationRequest $request, Activity $activity)
+    {
         // Send the user back if they've already applied, shouldn't be possible, but just in case
         if($activity->userApplied()){
             return redirect()->back()->with('error', 'U heeft zich al ingeschreven voor deze activiteit.');
@@ -437,7 +460,7 @@ class ApplicationController extends Controller
         // Refund the payment(s)
         $application->payments()->each(function(Payment $payment) {
             // If the payment has not been refunded, refund it
-            if(!$payment->refunded && $payment->status == PaymentStatus::paid){
+            if(!$payment->refunded && $payment->status == PaymentStatus::paid && $payment->refundableAmount > 0){
                 $payment->refund();
             }
         });

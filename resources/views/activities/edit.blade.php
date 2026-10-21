@@ -46,7 +46,10 @@
                         <x-input-field type="number" label="Aantal gratis organisatoren" id="free_organizer_count" name="free_organizer_count" min="0" value="{{ old('free_organizer_count', $activity->free_organizer_count) }}"/>
                         <x-input-field type="text" label="WhatsApp Groep Link" id="whatsappUrl" name="whatsappUrl" value="{{ old('whatsappUrl', $activity->whatsappUrl) }}"/>
                     </x-input-group>
-                    <x-input-group class="items-stretch">
+                    <x-input-group class="items-stretch [&_[data-editor-holder]]:h-auto [&_[data-editor-holder]]:min-h-48" height="h-auto" title="Beschrijving en afbeelding">
+                        <div data-image-preview="image-upload" data-initial-url="{{ $activity->imagePath ? $activity->image : '' }}" class="mb-2 overflow-hidden rounded-lg border border-zinc-300 bg-white" @if(!$activity->imagePath) hidden @endif>
+                            <img @if($activity->imagePath) src="{{ $activity->image }}" @endif alt="Voorvertoning activiteitafbeelding" class="max-h-96 w-full object-contain">
+                        </div>
                         @php
                             $descriptionValue = old('description', $activity->description ?? '');
                             $decodedDescription = is_string($descriptionValue)
@@ -68,7 +71,7 @@
                                 $descriptionValue = json_encode($decodedDescription, JSON_UNESCAPED_UNICODE);
                             }
                         @endphp
-                        <x-input-field label="Beschrijving" id="description" name="description" type="editor" :value="$descriptionValue" required/>
+                        <x-input-field label="Beschrijving" id="description" name="description" type="editor" height="h-auto" :value="$descriptionValue" required/>
                     </x-input-group>
                 </x-input-group>
 
