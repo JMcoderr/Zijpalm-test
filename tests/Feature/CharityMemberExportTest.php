@@ -7,7 +7,7 @@ use PhpOffice\PhpSpreadsheet\IOFactory;
 
 uses(RefreshDatabase::class);
 
-it('offers the member export on charity only to admins and downloads an Excel list', function () {
+it('keeps the member export off charity and lets admins download an Excel list', function () {
     foreach (['banner', 'info', 'bijdragen', 'deelnemers', 'contact'] as $block) {
         Content::forceCreate([
             'name' => 'lief-en-leed-' . $block, 'type' => 'text', 'title' => 'Lief en leed', 'text' => '',
@@ -19,8 +19,8 @@ it('offers the member export on charity only to admins and downloads an Excel li
     $this->actingAs($member)->get(route('information.charity'))->assertOk()->assertDontSee('Ledenlijst exporteren');
     $this->get(route('admin.users.export'))->assertRedirect(route('home'));
     $this->actingAs(User::factory()->admin()->create());
-    $this->get(route('information.charity'))->assertOk()->assertSee('Ledenlijst exporteren')
-        ->assertSee(route('admin.users.export'));
+    $this->get(route('information.charity'))->assertOk()->assertDontSee('Ledenlijst exporteren')
+        ->assertDontSee(route('admin.users.export'));
 
     $response = $this->get(route('admin.users.export'))->assertOk();
     $path = $response->baseResponse->getFile()->getPathname();
