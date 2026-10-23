@@ -64,7 +64,7 @@ class Application extends Model
     }
 
     // This function is called when the payment status changes
-    public function handleNewStatus(Payment $payment) {
+    public function handleNewStatus(Payment $payment, ?PaymentStatus $previousPaymentStatus = null) {
         if ($this->shop_order_id) {
             if (in_array($payment->status, [PaymentStatus::open, PaymentStatus::pending, PaymentStatus::authorized], true)) {
                 return;
@@ -89,12 +89,68 @@ class Application extends Model
             return;
         }
 
-        // Set application status to active and send confirmation email to the user on succesful payment
-        if($payment->status === PaymentStatus::paid && $this->status === ApplicationStatus::Pending) {
-            $this->status = ApplicationStatus::Active;
-            Mail::to(config('mail.bestuur.address'), config('mail.bestuur.name'))->send(new ActivityApplied($this->activity, $this->user));
-        } else if($payment->status === PaymentStatus::paid && $this->status === ApplicationStatus::Cancelled) { // DON'T TOUCH, Added to catch an edge case where payment_failed emails got triggered from a unknown webhook trigger.
-            Log::debug("[ApplicationModel] handleNewStatus: Mollie Webhook received, application status was cancelled while payment status was paid");
+        if (in_array($payment->status, [PaymentStatus::open, PaymentStatus::pending, PaymentStatus::authorized], true)) {
+            return;
+        }
+
+        // A paid application can already be active when an organizer is bringing a paying guest.
+        if ($payment->status === PaymentStatus::paid && in_array($this->status, [ApplicationStatus::Pending, ApplicationStatus::Active], true)) {
+            if ($previousPaymentStatus !== PaymentStatus::paid) {
+                $existingRegistration = $this->otherCurrentRegistration();
+
+                if ($existingRegistration) {
+                    $this->update(['status' => ApplicationStatus::Cancelled]);
+                    $this->activity->updateApplications();
+                    Log::warning('[ApplicationModel] A paid duplicate application was cancelled; review its payment for a refund.', [
+                        'application_id' => $this->id,
+                        'payment_id' => $payment->id,
+                        'existing_application_id' => $existingRegistration->id,
+                    ]);
+
+                    return;
+                }
+
+                $this->status = ApplicationStatus::Active;
+                Mail::to(config('mail.bestuur.address'), config('mail.bestuur.name'))->send(new ActivityApplied($this->activity, $this->user));
+            }
+        } else if($payment->status === PaymentStatus::paid && $this->status === ApplicationStatus::Cancelled) {
+            if (in_array($previousPaymentStatus, [PaymentStatus::failed, PaymentStatus::canceled, PaymentStatus::expired], true)) {
+                $existingRegistration = $this->otherCurrentRegistration();
+                if ($existingRegistration) {
+                    Log::warning('[ApplicationModel] A late-paid duplicate application was left cancelled; review its payment for a refund.', [
+                        'application_id' => $this->id,
+                        'payment_id' => $payment->id,
+                        'existing_application_id' => $existingRegistration->id,
+                    ]);
+
+                    return;
+                }
+
+                $activity = $this->activity;
+                $capacity = $activity->participants->capacity;
+                $status = $capacity === null || $capacity >= $this->participants
+                    ? ApplicationStatus::Active
+                    : ApplicationStatus::Reserve;
+
+                $this->update(['status' => $status]);
+                $activity->updateApplications();
+
+                Log::warning('[ApplicationModel] Mollie marked a previously failed payment as paid; application was restored.', [
+                    'application_id' => $this->id,
+                    'payment_id' => $payment->id,
+                    'previous_payment_status' => $previousPaymentStatus->value,
+                    'application_status' => $status->value,
+                ]);
+
+                Mail::to(config('mail.bestuur.address'), config('mail.bestuur.name'))
+                    ->send(new ActivityApplied($activity, $this->user, $status === ApplicationStatus::Reserve));
+            } else {
+                Log::debug("[ApplicationModel] Mollie reported paid for a cancelled application without a prior failed payment status.", [
+                    'application_id' => $this->id,
+                    'payment_id' => $payment->id,
+                    'previous_payment_status' => $previousPaymentStatus?->value,
+                ]);
+            }
         } else { // If the payment failed, set the application status to cancelled and send a payment failed email
             Log::debug("[ApplicationModel] handleNewStatus: Mollie Webhook received for payment", [
                 'payment' => $payment,
@@ -108,6 +164,20 @@ class Application extends Model
         $this->activity->updateApplications();
 
         $this->save();
+    }
+
+    private function otherCurrentRegistration(): ?self
+    {
+        if (!$this->exists) {
+            return null;
+        }
+
+        return self::query()
+            ->where('activity_id', $this->activity_id)
+            ->where('user_id', $this->user_id)
+            ->where('id', '!=', $this->id)
+            ->whereIn('status', [ApplicationStatus::Active, ApplicationStatus::Reserve])
+            ->first();
     }
 
     public function isOrganizerApplication(): bool

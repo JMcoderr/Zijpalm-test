@@ -30,10 +30,6 @@
                 {{-- Admin buttons --}}
                 @if(auth()->user()?->isAdmin())
                     @if($shopProduct)
-                        <form id="activity-shop-registration" class="max-w-full" method="POST" action="{{ route('product.useShopRegistration', $shopProduct) }}">
-                            @csrf
-                            <x-zijpalm-button type="submit" form="activity-shop-registration" label="Nieuw aanmeldproces gebruiken" variant="obvious" class="max-w-full whitespace-normal!" />
-                        </form>
                         <x-zijpalm-button :href="route('product.activities')" label="Terug naar Shop/Overig" type="redirect" variant="obvious" />
                     @endif
                     @if($activity->end?->isPast() && $activity->hasReport())
@@ -47,7 +43,7 @@
                             @csrf
                             <x-zijpalm-button type="submit" form="activity-restore" label="Terug naar activiteiten" variant="obvious"/>
                         </form>
-                    @elseif($activity->type !== \App\ActivityType::Cancelled)
+                    @elseif(!$shopProduct && $activity->type !== \App\ActivityType::Cancelled)
                         <form id="activity-mark-late" method="POST" action="{{route('activity.markLate', $activity)}}" onsubmit="return confirm('Weet je zeker dat je deze activiteit handmatig op Te laat wilt zetten?')">
                             @csrf
                             <x-zijpalm-button type="submit" form="activity-mark-late" label="Te laat zetten" variant="obvious"/>
@@ -267,9 +263,9 @@
                         </div>
                     </div>
 
-                    <x-zijpalm-modal title="Aanmeldingen bewerken" text="{{$activity->title}}" modal="editApplicationsModal">
+                    <x-zijpalm-modal title="Aanmeldingen bewerken" text="{{$activity->title}}" modal="editApplicationsModal" width="w-[min(74rem,94vw)] max-w-[94vw]">
                         @if($errors->editApplications->any())
-                            <div role="alert" class="bg-red-100 border border-red-400 text-red-700 rounded-md p-3 text-left mb-3">
+                            <div role="alert" class="bg-red-50 border-l-4 border-red-600 text-red-900 rounded-md p-4 text-left mb-4 text-lg leading-7">
                                 <ul class="list-disc ps-5">
                                     @foreach($errors->editApplications->all() as $error)
                                         <li>{{ $error }}</li>
@@ -280,37 +276,134 @@
                         @if($applications->isEmpty())
                             <p class="text-lg text-left">Er zijn nog geen aanmeldingen om te bewerken.</p>
                         @else
-                            <form id="edit-applications-form" method="POST" action="{{ route('application.adminUpdateStatuses', $activity) }}" class="flex flex-col gap-4 text-left" x-data="{ search: '' }">
+                            <form id="edit-applications-form" method="POST" action="{{ route('application.adminUpdateStatuses', $activity) }}" class="flex flex-col gap-6 text-left" x-data="{ search: '' }">
                                 @csrf
                                 @method('PUT')
-                                <p class="text-base">Wijzig de status per aanmelding en klik op Opslaan. Eventuele gasten krijgen dezelfde status als het lid.</p>
-                                <p class="text-base bg-zinc-100 rounded-md p-3">Dit wijzigt alleen de deelnemerslijst: er worden geen e-mails verstuurd, betalingen aangemaakt of teruggestort. Bestaande betaallinks worden niet geannuleerd. Reserves worden bij deze correctie niet automatisch doorgeschoven. Gebruik de prullenbak in de deelnemerslijst voor afmelden met eventuele terugbetaling.</p>
-                                <label for="edit-applications-search" class="font-bold">Zoek op naam of e-mailadres</label>
-                                <input id="edit-applications-search" type="search" x-model="search" placeholder="Zoek een deelnemer..." class="bg-zinc-100 rounded-md shadow-sm px-3 h-11 text-lg focus:outline-0 focus:ring-2 focus:ring-zijpalm-400">
-                                <div class="max-h-96 overflow-y-auto flex flex-col gap-2">
+                                <p class="text-lg leading-7">Pas gegevens of status aan en voeg eventueel introducees toe. Klik daarna op Opslaan.</p>
+                                <div class="rounded-md border-l-4 border-zijpalm-500 bg-zijpalm-50 p-4 text-lg leading-7">
+                                    Dit past alleen de deelnemerslijst aan. Er worden geen e-mails verstuurd en betalingen of betaallinks veranderen niet. Reserves schuiven niet automatisch door.
+                                </div>
+                                <div class="flex flex-col gap-2">
+                                    <label for="edit-applications-search" class="text-lg font-bold">Zoek een lid of introducee</label>
+                                    <input id="edit-applications-search" type="search" x-model="search" placeholder="Typ een naam of e-mailadres" class="w-full rounded-md border border-zinc-400 bg-white px-4 h-12 text-lg focus:outline-0 focus:ring-2 focus:ring-zijpalm-500">
+                                </div>
+                                <div class="max-h-[65dvh] overflow-y-auto flex flex-col gap-4 pr-2">
                                     @foreach($applications->values() as $index => $application)
                                         @php
                                             $editStatus = old("applications.{$index}.id") == $application->id
                                                 ? old("applications.{$index}.status", $application->status->value)
                                                 : $application->status->value;
+                                            $searchText = implode(' ', array_filter([
+                                                $application->user?->name,
+                                                $application->email,
+                                                ...$application->guests->flatMap(fn ($guest) => [$guest->name, $guest->email])->all(),
+                                            ]));
                                         @endphp
-                                        <div class="flex flex-col md:flex-row md:items-center gap-2 rounded-md bg-zinc-100 p-3" data-search="{{ mb_strtolower(($application->user?->name ?? '') . ' ' . $application->email) }}" x-show="$el.dataset.search.includes(search.trim().toLowerCase())">
-                                            <div class="flex-1 min-w-0">
-                                                <label for="edit-application-{{ $application->id }}" class="block font-bold">{{ $application->user?->name ?? 'Onbekend lid' }}</label>
-                                                <span class="block text-base break-all">{{ $application->email }}</span>
-                                                <span class="block text-sm">{{ $application->participants }} {{ $application->participants === 1 ? 'persoon' : 'personen (inclusief gasten)' }}</span>
-                                            </div>
+                                        <div class="flex flex-col gap-5 rounded-md border border-zinc-300 border-t-4 border-t-zijpalm-500 bg-white p-5 shadow-sm" data-search="{{ mb_strtolower($searchText) }}" x-show="$el.dataset.search.includes(search.trim().toLowerCase())" x-data="{ newGuests: [] }">
                                             <input type="hidden" name="applications[{{ $index }}][id]" value="{{ $application->id }}">
                                             <input type="hidden" name="applications[{{ $index }}][previous_status]" value="{{ $application->status->value }}">
-                                            <select id="edit-application-{{ $application->id }}" name="applications[{{ $index }}][status]" required class="bg-white rounded-md border border-zinc-300 px-3 h-11 text-base">
-                                                <option value="active" @selected($editStatus === 'active')>Aangemeld</option>
-                                                <option value="reserve" @selected($editStatus === 'reserve')>Reserve</option>
-                                                <option value="pending" @selected($editStatus === 'pending')>In afwachting van betaling</option>
-                                            </select>
+                                            <div class="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_18rem] items-end gap-4 border-b border-zinc-200 pb-4">
+                                                <div>
+                                                    <span class="block text-sm font-bold uppercase text-zinc-600">Lid</span>
+                                                    <h3 class="text-2xl font-bold leading-8">{{ $application->user?->name ?? 'Onbekend lid' }}</h3>
+                                                    <span class="block text-base text-zinc-700">{{ $application->participants }} {{ $application->participants === 1 ? 'persoon' : 'personen' }} op deze aanmelding</span>
+                                                </div>
+                                                <div class="flex flex-col gap-2">
+                                                    <label for="edit-application-{{ $application->id }}" class="text-lg font-bold">Status</label>
+                                                    <select id="edit-application-{{ $application->id }}" name="applications[{{ $index }}][status]" required class="w-full rounded-md border border-zinc-400 bg-white px-3 h-12 text-lg focus:outline-0 focus:ring-2 focus:ring-zijpalm-500">
+                                                        <option value="active" @selected($editStatus === 'active')>Aangemeld</option>
+                                                        <option value="reserve" @selected($editStatus === 'reserve')>Reserve</option>
+                                                        <option value="pending" @selected($editStatus === 'pending')>In afwachting van betaling</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div class="flex flex-col gap-2">
+                                                    <label class="text-lg font-semibold" for="edit-application-email-{{ $application->id }}">E-mailadres lid</label>
+                                                    <input id="edit-application-email-{{ $application->id }}" type="email" name="applications[{{ $index }}][email]" value="{{ $application->email }}" required class="w-full rounded-md border border-zinc-400 bg-white px-3 h-12 text-lg focus:outline-0 focus:ring-2 focus:ring-zijpalm-500">
+                                                </div>
+                                                <div class="flex flex-col gap-2">
+                                                    <label class="text-lg font-semibold" for="edit-application-phone-{{ $application->id }}">Telefoonnummer lid</label>
+                                                    <input id="edit-application-phone-{{ $application->id }}" type="tel" name="applications[{{ $index }}][phone]" value="{{ $application->phone }}" class="w-full rounded-md border border-zinc-400 bg-white px-3 h-12 text-lg focus:outline-0 focus:ring-2 focus:ring-zijpalm-500">
+                                                </div>
+                                                <div class="flex flex-col gap-2 md:col-span-2">
+                                                    <label class="text-lg font-semibold" for="edit-application-comment-{{ $application->id }}">Opmerking</label>
+                                                    <input id="edit-application-comment-{{ $application->id }}" type="text" name="applications[{{ $index }}][comment]" value="{{ $application->comment }}" maxlength="500" class="w-full rounded-md border border-zinc-400 bg-white px-3 h-12 text-lg focus:outline-0 focus:ring-2 focus:ring-zijpalm-500">
+                                                </div>
+                                            </div>
+
+                                            <div class="flex flex-col gap-4 border-t border-zinc-200 pt-4">
+                                                <div>
+                                                    <h4 class="text-xl font-bold">Introducees ({{ $application->guests->count() + count(old("applications.{$index}.new_guests", [])) }})</h4>
+                                                    <p class="text-base text-zinc-700">Vul de naam in. Contactgegevens zijn optioneel.</p>
+                                                </div>
+                                            @foreach($application->guests as $guestIndex => $guest)
+                                                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 border-b border-zinc-200 pb-4 last:border-0 last:pb-0">
+                                                    <input type="hidden" name="applications[{{ $index }}][guests][{{ $guestIndex }}][id]" value="{{ $guest->id }}">
+                                                    <div class="flex flex-col gap-1">
+                                                        <label class="text-lg font-semibold" for="guest-first-name-{{ $guest->id }}">Voornaam</label>
+                                                        <input id="guest-first-name-{{ $guest->id }}" type="text" name="applications[{{ $index }}][guests][{{ $guestIndex }}][firstName]" value="{{ $guest->firstName }}" required class="w-full rounded-md border border-zinc-400 bg-white px-3 h-12 text-lg focus:outline-0 focus:ring-2 focus:ring-zijpalm-500">
+                                                    </div>
+                                                    <div class="flex flex-col gap-1">
+                                                        <label class="text-lg font-semibold" for="guest-last-name-{{ $guest->id }}">Achternaam</label>
+                                                        <input id="guest-last-name-{{ $guest->id }}" type="text" name="applications[{{ $index }}][guests][{{ $guestIndex }}][lastName]" value="{{ $guest->lastName }}" required class="w-full rounded-md border border-zinc-400 bg-white px-3 h-12 text-lg focus:outline-0 focus:ring-2 focus:ring-zijpalm-500">
+                                                    </div>
+                                                    <div class="flex flex-col gap-1">
+                                                        <label class="text-lg font-semibold" for="guest-email-{{ $guest->id }}">E-mailadres</label>
+                                                        <input id="guest-email-{{ $guest->id }}" type="email" name="applications[{{ $index }}][guests][{{ $guestIndex }}][email]" value="{{ $guest->email }}" class="w-full rounded-md border border-zinc-400 bg-white px-3 h-12 text-lg focus:outline-0 focus:ring-2 focus:ring-zijpalm-500">
+                                                    </div>
+                                                    <div class="flex flex-col gap-1">
+                                                        <label class="text-lg font-semibold" for="guest-phone-{{ $guest->id }}">Telefoonnummer</label>
+                                                        <input id="guest-phone-{{ $guest->id }}" type="tel" name="applications[{{ $index }}][guests][{{ $guestIndex }}][phone]" value="{{ $guest->phone }}" class="w-full rounded-md border border-zinc-400 bg-white px-3 h-12 text-lg focus:outline-0 focus:ring-2 focus:ring-zijpalm-500">
+                                                    </div>
+                                                    <label class="flex min-h-12 items-center gap-3 text-lg sm:col-span-2 xl:col-span-4">
+                                                        <input type="checkbox" name="applications[{{ $index }}][guests][{{ $guestIndex }}][adult]" value="1" @checked($guest->adult) class="size-5 accent-zijpalm-600">
+                                                        Volwassen introducee
+                                                    </label>
+                                                </div>
+                                            @endforeach
+                                            @if($application->guests->isEmpty())
+                                                <p class="text-base text-zinc-700">Er zijn nog geen introducees toegevoegd.</p>
+                                            @endif
+
+                                            <template x-for="(guest, guestIndex) in newGuests" :key="guest.key">
+                                                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 border-b border-zinc-200 pb-4">
+                                                    <div class="flex flex-col gap-1">
+                                                        <label class="text-lg font-semibold">Voornaam</label>
+                                                        <input type="text" x-bind:name="'applications[{{ $index }}][new_guests][' + guestIndex + '][firstName]'" required class="w-full rounded-md border border-zinc-400 bg-white px-3 h-12 text-lg focus:outline-0 focus:ring-2 focus:ring-zijpalm-500">
+                                                    </div>
+                                                    <div class="flex flex-col gap-1">
+                                                        <label class="text-lg font-semibold">Achternaam</label>
+                                                        <input type="text" x-bind:name="'applications[{{ $index }}][new_guests][' + guestIndex + '][lastName]'" required class="w-full rounded-md border border-zinc-400 bg-white px-3 h-12 text-lg focus:outline-0 focus:ring-2 focus:ring-zijpalm-500">
+                                                    </div>
+                                                    <div class="flex flex-col gap-1">
+                                                        <label class="text-lg font-semibold">E-mailadres</label>
+                                                        <input type="email" x-bind:name="'applications[{{ $index }}][new_guests][' + guestIndex + '][email]'" class="w-full rounded-md border border-zinc-400 bg-white px-3 h-12 text-lg focus:outline-0 focus:ring-2 focus:ring-zijpalm-500">
+                                                    </div>
+                                                    <div class="flex flex-col gap-1">
+                                                        <label class="text-lg font-semibold">Telefoonnummer</label>
+                                                        <input type="tel" x-bind:name="'applications[{{ $index }}][new_guests][' + guestIndex + '][phone]'" class="w-full rounded-md border border-zinc-400 bg-white px-3 h-12 text-lg focus:outline-0 focus:ring-2 focus:ring-zijpalm-500">
+                                                    </div>
+                                                    <label class="flex min-h-12 items-center gap-3 text-lg sm:col-span-2 xl:col-span-4">
+                                                        <input type="checkbox" x-bind:name="'applications[{{ $index }}][new_guests][' + guestIndex + '][adult]'" value="1" class="size-5 accent-zijpalm-600">
+                                                        Volwassen introducee
+                                                    </label>
+                                                    <div class="xl:col-span-4">
+                                                    <button type="button" x-on:click="newGuests.splice(guestIndex, 1)" class="text-left text-sm text-red-700 underline">Verwijder dit invoerveld</button>
+                                                    </div>
+                                                </div>
+                                            </template>
+                                            <button type="button" x-on:click="newGuests.push({ key: Date.now() + Math.random() })" class="inline-flex min-h-12 self-start items-center gap-2 rounded-md border-2 border-zijpalm-600 bg-white px-4 py-2 text-lg font-bold text-zijpalm-800 hover:bg-zijpalm-50 focus:outline-0 focus:ring-2 focus:ring-zijpalm-500">
+                                                <flux:icon name="user-plus" class="size-5"/>
+                                                Introducee toevoegen
+                                            </button>
+                                            </div>
                                         </div>
                                     @endforeach
                                 </div>
-                                <x-zijpalm-button type="submit" form="edit-applications-form" label="Wijzigingen opslaan" variant="obvious" center="horizontal"/>
+                                <div class="sticky bottom-0 -mx-1 flex justify-end border-t border-zinc-200 bg-white/95 px-1 pt-4 backdrop-blur">
+                                    <x-zijpalm-button type="submit" form="edit-applications-form" label="Wijzigingen opslaan" variant="obvious" center="horizontal" class="min-h-12 text-lg"/>
+                                </div>
                             </form>
                         @endif
                     </x-zijpalm-modal>
@@ -529,7 +622,7 @@
 
                 <div class="flex flex-col lg:flex-row gap-5 w-full">
                     <x-zijpalm-div title="Beschrijving" :editable="false" width="w-full lg:w-2/3" class="">
-                        <div @class(['bg-[rgba(0,0,0,0.15)] rounded-md p-2 text-left', 'flex flex-col space-y-3 whitespace-pre-line' => !$shopProduct])>
+                        <div @class(['bg-[rgba(0,0,0,0.15)] rounded-md p-2 text-left', 'activity-description flex flex-col space-y-3 whitespace-pre-line' => !$shopProduct])>
                             @if($shopProduct)
                                 <x-shop-description :product="$shopProduct" />
                             @else
@@ -661,7 +754,7 @@
             @else
                 {{-- Activity Description --}}
                 <x-zijpalm-div title="Beschrijving" :editable="false" width="w-full" class="">
-                    <div @class(['bg-[rgba(0,0,0,0.15)] rounded-md p-2 text-left', 'flex flex-col space-y-3 whitespace-pre-line' => !$shopProduct])>
+                    <div @class(['bg-[rgba(0,0,0,0.15)] rounded-md p-2 text-left', 'activity-description flex flex-col space-y-3 whitespace-pre-line' => !$shopProduct])>
                         @if($shopProduct)
                             <x-shop-description :product="$shopProduct" />
                         @else

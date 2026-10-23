@@ -34,6 +34,25 @@
 
                 <x-input-field id="title" type="text" label="Titel" value="{{$content->title}}" />
 
+                @if ($content->report)
+                    @php
+                        $reportType = old('report-type', $content->report->year !== null ? 'year' : 'activity');
+                    @endphp
+                    <div x-data="{ reportType: {{ \Illuminate\Support\Js::from($reportType) }} }">
+                        <x-input-field id="report-type" type="select" label="Soort verslag">
+                            <select id="report-type" name="report-type" x-model="reportType" required class="font-normal rounded-sm shadow-sm px-1 focus:outline-0 h-7 text-start w-full bg-zinc-100 text-black">
+                                <option value="activity" @selected($reportType === 'activity')>Normaal verslag</option>
+                                <option value="year" @selected($reportType === 'year')>Jaarverslag</option>
+                            </select>
+                        </x-input-field>
+                        <div x-show="reportType === 'year'" x-cloak>
+                            <x-input-field id="report-year" type="number" label="Jaartal">
+                                <input id="report-year" name="report-year" type="number" min="1000" max="9999" step="1" value="{{ old('report-year', $content->report->year ?? now()->year) }}" x-bind:disabled="reportType !== 'year'" x-bind:required="reportType === 'year'" class="font-normal rounded-sm shadow-sm px-1 focus:outline-0 h-7 text-start w-full bg-zinc-100 text-black">
+                            </x-input-field>
+                        </div>
+                    </div>
+                @endif
+
                 {{-- Show editor when the content has text OR when this is an email template (even if empty) --}}
                 @if (isset($content->text) || (isset($content->name) && Str::startsWith($content->name, 'email-')))
                     {{-- If the content is a member or file show a simple text input, otherwise prefer the editor.

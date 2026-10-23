@@ -60,6 +60,43 @@ it('shows the editing button immediately after adding participants and hides it 
         ->assertDontSee('aria-label="Aanmeldingen bewerken"', false);
 });
 
+it('removes a reserve whose account is missing without failing after cancellation', function () {
+    Content::create([
+        'type' => 'email', 'name' => 'email-activiteit-afgemeld',
+        'title' => 'Afmelding', 'text' => 'Je bent afgemeld.',
+    ]);
+    $this->application->update(['status' => ApplicationStatus::Reserve]);
+    $this->application->user->delete();
+
+    $this->actingAs($this->admin)
+        ->from(route('activity.show', $this->activity))
+        ->delete(route('application.destroy', $this->application))
+        ->assertRedirect(route('activity.show', $this->activity))
+        ->assertSessionHas('success');
+
+    expect($this->application->fresh()->status)->toBe(ApplicationStatus::Cancelled);
+    Mail::assertSent(\App\Mail\ApplicationCancelled::class, function ($mail) {
+        $body = json_decode($mail->content()->with['jsonBody'], true, flags: JSON_THROW_ON_ERROR);
+
+        return $body['email'] === $this->application->user()->withTrashed()->first()->email;
+    });
+});
+
+it('renders cancellation mail using the registration email when no account exists', function () {
+    Content::create([
+        'type' => 'email', 'name' => 'email-activiteit-afgemeld',
+        'title' => 'Afmelding', 'text' => 'Je bent afgemeld.',
+    ]);
+    $this->application->user_id = null;
+    $mail = new \App\Mail\ApplicationCancelled($this->application);
+    $body = json_decode($mail->content()->with['jsonBody'], true, flags: JSON_THROW_ON_ERROR);
+
+    expect($mail->user)->toBeNull()
+        ->and($body['email'])->toBe($this->application->email)
+        ->and($body['emails'])->toBe([$this->application->email])
+        ->and($body['body'])->toContain('Je bent afgemeld.');
+});
+
 it('corrects five registrations to reserve at once without immediately promoting them or altering payments', function () {
     Mollie::shouldReceive('api')->never();
 
@@ -88,6 +125,7 @@ it('corrects five registrations to reserve at once without immediately promoting
     $createdAt = $this->application->created_at;
 
     $this->actingAs($this->admin)
+        ->from(route('activity.show', $this->activity))
         ->put(route('application.adminUpdateStatuses', $this->activity), [
             'applications' => $applications->map(fn ($application) => [
                 'id' => $application->id,
@@ -135,6 +173,102 @@ it('allows all three editable statuses without marking payments as paid', functi
         ->and($payment->fresh()->paidAt)->toBeNull();
     Mail::assertNothingSent();
 })->with(['active', 'reserve', 'pending']);
+
+it('edits application contact details and adds named introducees to the participant list', function () {
+    $this->application->update(['participants' => 2]);
+    $guest = $this->application->guests()->create([
+        'firstName' => 'Oude',
+        'lastName' => 'Introducee',
+        'email' => 'old-guest@example.com',
+        'phone' => '0611111111',
+        'adult' => true,
+    ]);
+
+    $this->actingAs($this->admin)
+        ->put(route('application.adminUpdateStatuses', $this->activity), [
+            'applications' => [[
+                'id' => $this->application->id,
+                'status' => 'active',
+                'previous_status' => 'active',
+                'email' => 'updated-member@example.com',
+                'phone' => '0622222222',
+                'comment' => 'Komt met twee introducees.',
+                'guests' => [[
+                    'id' => $guest->id,
+                    'firstName' => 'Nieuwe',
+                    'lastName' => 'Naam',
+                    'email' => 'updated-guest@example.com',
+                    'phone' => '0633333333',
+                    'adult' => '1',
+                ]],
+                'new_guests' => [[
+                    'firstName' => 'Extra',
+                    'lastName' => 'Gast',
+                    'email' => 'extra-guest@example.com',
+                    'phone' => '0644444444',
+                    'adult' => '1',
+                ], [
+                    'firstName' => 'Naam',
+                    'lastName' => 'Onbekend',
+                ]],
+            ]],
+        ])
+        ->assertRedirect(route('activity.show', $this->activity))
+        ->assertSessionHas('success');
+
+    expect($this->application->fresh()->email)->toBe('updated-member@example.com')
+        ->and($this->application->fresh()->phone)->toBe('0622222222')
+        ->and($this->application->fresh()->comment)->toBe('Komt met twee introducees.')
+        ->and($this->application->fresh()->participants)->toBe(4)
+        ->and($guest->fresh()->name)->toBe('Nieuwe Naam')
+        ->and($this->application->guests()->count())->toBe(3)
+        ->and($this->application->guests()->where('firstName', 'Naam')->value('email'))->toBe('');
+
+    $this->get(route('activity.show', $this->activity))
+        ->assertOk()
+        ->assertSee('Nieuwe Naam')
+        ->assertSee('updated-guest@example.com')
+        ->assertSee('Extra Gast')
+        ->assertSee('extra-guest@example.com')
+        ->assertSee('Naam Onbekend');
+});
+
+it('does not allow an admin to edit an introducee from another application', function () {
+    $otherApplication = Application::factory()->create([
+        'activity_id' => $this->activity->id,
+        'user_id' => User::factory()->create()->id,
+        'status' => ApplicationStatus::Active,
+    ]);
+    $otherGuest = $otherApplication->guests()->create([
+        'firstName' => 'Andere',
+        'lastName' => 'Gast',
+        'email' => 'other-guest@example.com',
+        'phone' => '0612345678',
+        'adult' => true,
+    ]);
+
+    $this->actingAs($this->admin)
+        ->from(route('activity.show', $this->activity))
+        ->put(route('application.adminUpdateStatuses', $this->activity), [
+            'applications' => [[
+                'id' => $this->application->id,
+                'status' => 'active',
+                'previous_status' => 'active',
+                'guests' => [[
+                    'id' => $otherGuest->id,
+                    'firstName' => 'Gewijzigd',
+                    'lastName' => 'Onterecht',
+                    'email' => 'changed@example.com',
+                    'phone' => '0699999999',
+                ]],
+            ]],
+        ])
+        ->assertRedirect(route('activity.show', $this->activity))
+        ->assertSessionHasErrorsIn('editApplications', 'applications');
+
+    expect($otherGuest->fresh()->name)->toBe('Andere Gast')
+        ->and($otherGuest->fresh()->email)->toBe('other-guest@example.com');
+});
 
 it('rejects invalid statuses and empty submissions without changing registrations', function (array $entries) {
     $entries = array_map(fn ($entry) => ['id' => $this->application->id, 'previous_status' => 'active'] + $entry, $entries);

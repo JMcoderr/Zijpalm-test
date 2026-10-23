@@ -336,6 +336,22 @@ class ApplicationController extends Controller
                 ApplicationStatus::Pending->value,
                 ApplicationStatus::Reserve->value,
             ])],
+            'applications.*.email' => ['sometimes', 'nullable', 'email', 'max:255'],
+            'applications.*.phone' => ['sometimes', 'nullable', 'string', 'max:50'],
+            'applications.*.comment' => ['sometimes', 'nullable', 'string', 'max:500'],
+            'applications.*.guests' => ['sometimes', 'array'],
+            'applications.*.guests.*.id' => ['required', 'integer', 'distinct'],
+            'applications.*.guests.*.firstName' => ['required', 'string', 'max:255'],
+            'applications.*.guests.*.lastName' => ['required', 'string', 'max:255'],
+            'applications.*.guests.*.email' => ['nullable', 'email', 'max:255'],
+            'applications.*.guests.*.phone' => ['nullable', 'string', 'max:50'],
+            'applications.*.guests.*.adult' => ['sometimes', 'boolean'],
+            'applications.*.new_guests' => ['sometimes', 'array', 'max:49'],
+            'applications.*.new_guests.*.firstName' => ['required', 'string', 'max:255'],
+            'applications.*.new_guests.*.lastName' => ['required', 'string', 'max:255'],
+            'applications.*.new_guests.*.email' => ['nullable', 'email', 'max:255'],
+            'applications.*.new_guests.*.phone' => ['nullable', 'string', 'max:50'],
+            'applications.*.new_guests.*.adult' => ['sometimes', 'boolean'],
         ], [
             'applications.required' => 'Er zijn geen aanmeldingen om te wijzigen.',
             'applications.*.id.exists' => 'Een aanmelding is niet meer beschikbaar voor deze activiteit. Vernieuw de pagina.',
@@ -344,6 +360,10 @@ class ApplicationController extends Controller
             'applications.*.status.in' => 'Kies Aangemeld, Reserve of In afwachting van betaling.',
             'applications.*.previous_status.required' => 'De oorspronkelijke status ontbreekt. Vernieuw de pagina.',
             'applications.*.previous_status.in' => 'De oorspronkelijke status is ongeldig. Vernieuw de pagina.',
+            'applications.*.email.email' => 'Vul een geldig e-mailadres voor het lid in.',
+            'applications.*.guests.*.id.distinct' => 'Een introducee mag maar eenmaal worden gewijzigd.',
+            'applications.*.guests.*.email.email' => 'Vul een geldig e-mailadres voor de introducee in.',
+            'applications.*.new_guests.*.email.email' => 'Vul een geldig e-mailadres voor de nieuwe introducee in.',
         ]);
 
         $changedCount = DB::transaction(function () use ($data, $activity) {
@@ -370,11 +390,18 @@ class ApplicationController extends Controller
                     ])->errorBag('editApplications');
                 }
 
+                $applicationChanged = false;
+                $previousStatus = $application->status;
                 $status = ApplicationStatus::from($entry['status']);
 
+                foreach (['email', 'phone', 'comment'] as $field) {
+                    if (array_key_exists($field, $entry)) {
+                        $application->{$field} = $entry[$field] ?? '';
+                    }
+                }
+
                 if ($application->status !== $status) {
-                    $previousStatus = $application->status;
-                    $application->update(['status' => $status]);
+                    $application->status = $status;
                     Log::info('[ApplicationController] Admin corrected application status', [
                         'admin_id' => auth()->id(),
                         'activity_id' => $activity->id,
@@ -382,6 +409,64 @@ class ApplicationController extends Controller
                         'previous_status' => $previousStatus->value,
                         'status' => $status->value,
                     ]);
+                    $applicationChanged = true;
+                }
+
+                foreach ($entry['guests'] ?? [] as $guestEntry) {
+                    $guest = $application->guests()->whereKey($guestEntry['id'])->first();
+
+                    if (!$guest) {
+                        throw ValidationException::withMessages([
+                            'applications' => 'Een introducee hoort niet bij deze aanmelding. Vernieuw de pagina.',
+                        ])->errorBag('editApplications');
+                    }
+
+                    $guest->fill([
+                        'firstName' => $guestEntry['firstName'],
+                        'lastName' => $guestEntry['lastName'],
+                        'email' => $guestEntry['email'] ?? '',
+                        'phone' => $guestEntry['phone'] ?? '',
+                        'adult' => (bool) ($guestEntry['adult'] ?? false),
+                    ]);
+
+                    if ($guest->isDirty()) {
+                        $guest->save();
+                        $applicationChanged = true;
+                    }
+                }
+
+                foreach ($entry['new_guests'] ?? [] as $newGuest) {
+                    $application->guests()->create([
+                        'firstName' => $newGuest['firstName'],
+                        'lastName' => $newGuest['lastName'],
+                        'email' => $newGuest['email'] ?? '',
+                        'phone' => $newGuest['phone'] ?? '',
+                        'adult' => (bool) ($newGuest['adult'] ?? false),
+                    ]);
+                    $applicationChanged = true;
+                }
+
+                if (!empty($entry['new_guests'])) {
+                    $requiredParticipants = max((int) $application->participants, 1 + $application->guests()->count());
+
+                    if ($requiredParticipants > 50) {
+                        throw ValidationException::withMessages([
+                            'applications' => 'Een aanmelding kan maximaal 50 personen bevatten.',
+                        ])->errorBag('editApplications');
+                    }
+
+                    if ($requiredParticipants !== $application->participants) {
+                        $application->participants = $requiredParticipants;
+                        $applicationChanged = true;
+                    }
+                }
+
+                if ($application->isDirty()) {
+                    $application->save();
+                    $applicationChanged = true;
+                }
+
+                if ($applicationChanged) {
                     $changedCount++;
                 }
             }

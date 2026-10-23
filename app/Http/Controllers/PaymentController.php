@@ -177,6 +177,7 @@ class PaymentController extends Controller
                 return;
             }
 
+            $previousStatus = $lockedPayment->status;
             $lockedPayment->status = $latestStatus;
 
             if ($payment->isPaid() && !$lockedPayment->paidAt) {
@@ -188,7 +189,7 @@ class PaymentController extends Controller
             $shopApplication?->handleNewStatus($lockedPayment);
             $lockedPayment->orders()->each(fn ($order) => $order->handleNewStatus($lockedPayment));
             if (!$shopApplication) {
-                $lockedPayment->application()->each(fn ($application) => $application->handleNewStatus($lockedPayment));
+                $lockedPayment->application()->each(fn ($application) => $application->handleNewStatus($lockedPayment, $previousStatus));
             }
         });
 

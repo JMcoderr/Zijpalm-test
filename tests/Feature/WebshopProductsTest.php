@@ -150,6 +150,9 @@ it('keeps normal activities out of the shop activity list', function () {
         ->assertSee('data-editor-holder="description-editor"', false);
     $this->get(route('product.activities'))->assertOk()->assertSee(route('product.create', ['type' => 'activity']))
         ->assertSee('Deelnemers bekijken');
+    $this->get(route('activity.show', $activity))->assertOk()
+        ->assertSee('id="activity-mark-late"', false)
+        ->assertDontSee('Nieuw aanmeldproces gebruiken');
 });
 
 it('opens the normal activity screen without deleting the linked shop activity', function () {
@@ -165,7 +168,11 @@ it('opens the normal activity screen without deleting the linked shop activity',
         ->and($activity->imagePath)->toBe('products/spelletjes.jpg')
         ->and(Product::find($product->id))->not->toBeNull();
     $this->get(route('activity.show', $activity))->assertOk()->assertSee('Introducees')
-        ->assertSee('Nieuw aanmeldproces gebruiken');
+        ->assertSee('Terug naar Shop/Overig')
+        ->assertDontSee('Nieuw aanmeldproces gebruiken')
+        ->assertDontSee('Te laat zetten')
+        ->assertDontSee('id="activity-shop-registration"', false)
+        ->assertDontSee('id="activity-mark-late"', false);
 });
 
 it('keeps the same shop description when switching to the new signup process', function () {

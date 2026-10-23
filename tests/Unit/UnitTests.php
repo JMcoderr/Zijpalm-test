@@ -75,7 +75,9 @@ it('checks the payment status helper', function (string $paymentState, Applicati
     Mail::fake();
 
     $activity = \Mockery::mock(Activity::class);
-    $activity->shouldReceive('updateApplications')->once();
+    $activity->shouldReceive('updateApplications')->times(
+        in_array($paymentState, ['open', 'pending', 'authorized'], true) ? 0 : 1,
+    );
 
     $user = new User();
     $user->id = 1;
@@ -83,7 +85,9 @@ it('checks the payment status helper', function (string $paymentState, Applicati
     $user->email = 'test@example.com';
 
     $application = \Mockery::mock(Application::class)->makePartial();
-    $application->shouldReceive('save')->once()->andReturnTrue();
+    $application->shouldReceive('save')->times(
+        in_array($paymentState, ['open', 'pending', 'authorized'], true) ? 0 : 1,
+    )->andReturnTrue();
     $application->status = $startStatus;
     $application->setRelation('activity', $activity);
     $application->setRelation('user', $user);
@@ -109,5 +113,10 @@ it('checks the payment status helper', function (string $paymentState, Applicati
     Mail::assertNothingSent();
 })->with([
     ['paid', ApplicationStatus::Pending, ApplicationStatus::Active, ActivityApplied::class],
+    ['open', ApplicationStatus::Pending, ApplicationStatus::Pending, null],
+    ['pending', ApplicationStatus::Pending, ApplicationStatus::Pending, null],
+    ['authorized', ApplicationStatus::Pending, ApplicationStatus::Pending, null],
     ['failed', ApplicationStatus::Pending, ApplicationStatus::Cancelled, PaymentFailed::class],
+    ['canceled', ApplicationStatus::Pending, ApplicationStatus::Cancelled, PaymentFailed::class],
+    ['expired', ApplicationStatus::Pending, ApplicationStatus::Cancelled, PaymentFailed::class],
 ]);

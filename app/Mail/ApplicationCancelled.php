@@ -23,7 +23,7 @@ class ApplicationCancelled extends Mailable
     public Application $application;
     public Activity $activity;
     public float $refundedAmount;
-    public User $user;
+    public ?User $user;
     public ContentModel $content;
 
 
@@ -35,7 +35,7 @@ class ApplicationCancelled extends Mailable
         // Store the data for this mail so the view can use it later.
         $this->application = $application;
         $this->activity = $application->activity;
-        $this->user = $application->user;
+        $this->user = $application->user()->withTrashed()->first();
 
         // Get the dynamic content for the email and cache it for 1 hour
         $this->content = ContentModel::where('name', 'email-activiteit-afgemeld')->first();
@@ -72,8 +72,8 @@ class ApplicationCancelled extends Mailable
         ])->render();
 
         $jsonBody = json_encode([
-            'email' => $this->user->email,
-            'emails' => $this->user->registeredEmails(),
+            'email' => $this->user?->email ?? $this->application->email,
+            'emails' => $this->user?->registeredEmails() ?? array_values(array_filter([$this->application->email])),
             'subject' => $this->content->title . ' ' . $this->activity->title . ' #Z',
             'body' => prepareMailHtml($renderedContent),
         ], JSON_PRETTY_PRINT | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);

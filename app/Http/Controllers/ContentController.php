@@ -9,6 +9,7 @@ use App\Http\Requests\StoreContentRequest;
 use App\Http\Requests\UpdateContentRequest;
 use App\Models\Content;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class ContentController extends Controller
@@ -154,13 +155,23 @@ class ContentController extends Controller
         // If no new file was uploaded, keep the old file path.
         $filePath = $filePath ?? $content->filePath;
 
-        // Update the content record with the new values.
-        $content->update([
-            'filePath' => $filePath,
-            'title' => $request->title,
-            'text' => $text,
-            'name' => $name ?? $content->name,
-        ]);
+        // Keep the report category and content changes together.
+        DB::transaction(function () use ($content, $request, $filePath, $text, $name) {
+            $content->update([
+                'filePath' => $filePath,
+                'title' => $request->title,
+                'text' => $text,
+                'name' => $name ?? $content->name,
+            ]);
+
+            if ($content->report && $request->has('report-type')) {
+                $content->report->update([
+                    'year' => $request->validated('report-type') === 'year'
+                        ? $request->validated('report-year')
+                        : null,
+                ]);
+            }
+        });
 
         // Clear the cache because this content may be reused on other pages.
         Cache::forget($old_name);

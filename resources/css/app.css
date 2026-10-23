@@ -114,6 +114,22 @@ select:focus[data-flux-control] {
     @apply outline-hidden ring-2 ring-accent ring-offset-2 ring-offset-accent-foreground;
 }
 
+.activity-description :is(ul, ol) {
+    white-space: normal;
+}
+
+.activity-description > :is(ul, ol) {
+    margin-block-end: 0 !important;
+}
+
+.activity-description > :is(ul, ol) + :is(ul, ol) {
+    margin-block-start: 0 !important;
+}
+
+.activity-description :is(ul, ol) li {
+    margin-block-end: 0 !important;
+}
+
 /* \[:where(&)\]:size-4 {
     @apply size-4;
 } */
