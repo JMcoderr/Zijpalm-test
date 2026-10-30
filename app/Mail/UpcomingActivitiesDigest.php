@@ -18,17 +18,19 @@ class UpcomingActivitiesDigest extends Mailable
     public Collection $emails;
     public Collection $activities;
     public Collection $runningActivities;
+    public Collection $products;
     public array $validatedData;
     public ?ContentModel $content;
 
     /**
      * Create a new message instance.
      */
-    public function __construct(Collection $emails, Collection $activities, Collection $runningActivities, array $validatedData = [])
+    public function __construct(Collection $emails, Collection $activities, Collection $runningActivities, array $validatedData = [], ?Collection $products = null)
     {
         $this->emails = $emails;
         $this->activities = $activities;
         $this->runningActivities = $runningActivities;
+        $this->products = $products ?? collect();
         // Cast batch_size and delay to integers when provided so downstream code
         // and JSON consumers receive integers instead of strings.
         $this->validatedData = $validatedData;
@@ -92,6 +94,7 @@ class UpcomingActivitiesDigest extends Mailable
                 'introHtml' => $introHtml,
                 'activities' => $upcomingActivities,
                 'runningActivities' => $this->runningActivities,
+                'products' => $this->products,
                 'batch_size' => $this->validatedData['batch_size'],
                 'delay' => $this->validatedData['delay'],
             ])->render();
@@ -127,6 +130,17 @@ class UpcomingActivitiesDigest extends Mailable
                     }
 
                     $renderedContent .= '<br>zijpalm.nl/activiteiten/' . e((string) $activity->id) . '</li>';
+                }
+
+                $renderedContent .= '</ul>';
+            }
+
+            if ($this->products->isNotEmpty()) {
+                $renderedContent .= '<p><strong>Shop / Overig:</strong></p><ul>';
+
+                foreach ($this->products as $product) {
+                    $renderedContent .= '<li><strong>' . e($product->name) . '</strong><br>';
+                    $renderedContent .= 'zijpalm.nl/shop/' . e((string) $product->id) . '</li>';
                 }
 
                 $renderedContent .= '</ul>';

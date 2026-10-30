@@ -82,7 +82,8 @@ class ApplicationForm extends Component{
         $activeFreeOrganizers = $this->activity->applications
             ->where('status', \App\ApplicationStatus::Active)
             ->filter(function($app) {
-                return str_contains($this->activity->organizer, $app->user->name);
+                $name = $app->user?->name;
+                return filled($name) && str_contains((string) $this->activity->organizer, $name);
             })->count();
         $canRegisterFree = $isOrganizer && ($activeFreeOrganizers < $this->activity->free_organizer_count);
 

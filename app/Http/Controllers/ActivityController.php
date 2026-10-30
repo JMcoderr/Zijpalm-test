@@ -334,7 +334,14 @@ class ActivityController extends Controller
             'delay' => 'required|integer|between:' . config('mail.power_automate.delay.min') . ',' . config('mail.power_automate.delay.max'),
             'activity_ids' => 'nullable|array',
             'activity_ids.*' => 'integer|exists:activities,id',
+            'product_ids' => 'nullable|array',
+            'product_ids.*' => 'integer|exists:products,id',
+            'selection_submitted' => 'sometimes|boolean',
         ]);
+
+        if ($request->boolean('selection_submitted') && empty($validated['activity_ids']) && empty($validated['product_ids'])) {
+            return back()->withErrors(['activity_ids' => 'Selecteer ten minste één activiteit of product.'])->withInput();
+        }
 
         // Persist digest settings so user input is remembered across modal opens
         try {
@@ -350,6 +357,7 @@ class ActivityController extends Controller
             '--batch_size' => (int) $validated['batch_size'],
             '--delay' => (int) $validated['delay'],
             '--activity_ids' => array_values(array_unique(array_map('intval', $validated['activity_ids'] ?? []))),
+            '--product_ids' => array_values(array_unique(array_map('intval', $validated['product_ids'] ?? []))),
         ]);
 
         if ($exitCode !== 0) {

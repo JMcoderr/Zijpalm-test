@@ -92,7 +92,8 @@ class ApplicationController extends Controller
         $activeFreeOrganizers = $activity->applications
             ->where('status', ApplicationStatus::Active)
             ->filter(function($app) use ($activity) {
-                return str_contains($activity->organizer, $app->user->name);
+                $name = $app->user?->name;
+                return filled($name) && str_contains((string) $activity->organizer, $name);
             })->count();
 
         // Determine if this user can register for free

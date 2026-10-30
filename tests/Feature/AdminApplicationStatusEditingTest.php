@@ -46,7 +46,8 @@ it('shows the editing button immediately after adding participants and hides it 
         ->assertOk()
         ->assertSeeInOrder(['Deelnemer toevoegen', 'Aanmeldingen bewerken', 'Verstuur herinnering'])
         ->assertSee('grid grid-cols-1 lg:grid-cols-2 gap-5 w-full items-start', false)
-        ->assertSee('data-activity-image', false)->assertSee('relative aspect-video w-full shrink-0 overflow-hidden', false)
+        ->assertSee('data-activity-image', false)->assertSee('relative aspect-video w-full shrink-0 overflow-hidden bg-white', false)
+        ->assertSee('absolute inset-0 size-full object-contain object-center', false)
         ->assertSee('data-activity-details', false)
         ->assertSee('mb-2 flex flex-wrap items-center justify-between gap-2', false)
         ->assertSee('id="edit-applications-form"', false)
@@ -58,6 +59,21 @@ it('shows the editing button immediately after adding participants and hides it 
         ->assertOk()
         ->assertDontSee('id="edit-applications-form"', false)
         ->assertDontSee('aria-label="Aanmeldingen bewerken"', false);
+});
+
+it('shows complete activity card photos in a white widescreen frame', function () {
+    $html = \Illuminate\Support\Facades\Blade::render(
+        '<x-zijpalm-card :content="$activity" type="activity" />',
+        ['activity' => $this->activity],
+    );
+
+    expect($html)->toContain('data-activity-card-image')
+        ->toContain('relative aspect-video w-full shrink-0 bg-white')
+        ->toContain('absolute inset-0 size-full object-contain object-center')
+        ->toContain('self-start')
+        ->not->toContain('object-cover')
+        ->not->toContain('aspect-5/6')
+        ->not->toContain('sm:flex-2/5');
 });
 
 it('removes a reserve whose account is missing without failing after cancellation', function () {

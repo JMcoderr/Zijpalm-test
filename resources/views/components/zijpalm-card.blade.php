@@ -70,7 +70,7 @@
         'flex',
         'flex-col',
         'sm:flex-1',
-        'aspect-5/6',
+        ...($type === 'activity' ? ['self-start'] : ['aspect-5/6']),
         'max-w-[24rem]',
         'w-[90dvw]',
         'sm:max-w-6/12',
@@ -89,8 +89,9 @@
         'border-[rgba(0,0,0,0.15)]',
         'overflow-hidden',
         'justify-center',
-        'flex-3/5',
-        'bg-zinc-300',
+        ...($type === 'activity'
+            ? ['relative', 'aspect-video', 'w-full', 'shrink-0', 'bg-white']
+            : ['flex-3/5', 'bg-zinc-300']),
     ];
 
     // Info classes (non-image half)
@@ -103,7 +104,7 @@
 
     // Make sure activity images display at reasonable proportions
     if($type === 'activity'){
-        array_push($infoClasses, 'sm:flex-2/5');
+        array_push($infoClasses, 'shrink-0');
     }
 
     // Classes for the title
@@ -155,8 +156,12 @@
         @endif
 
         {{-- Card Image --}}
-        <div @class($imageDivClasses)>
-            <img src="{{$image}}" alt="{{ $title }}" loading="lazy" @class([($image === Storage::url('/images/logo.png') ? 'p-5 object-fit' : 'size-full object-cover')])>
+        <div @if($type === 'activity') data-activity-card-image @endif @class($imageDivClasses)>
+            <img src="{{$image}}" alt="{{ $title }}" loading="lazy" @class([
+                'absolute inset-0 size-full object-contain object-center' => $type === 'activity',
+                'p-5 object-fit' => $type !== 'activity' && $image === Storage::url('/images/logo.png'),
+                'size-full object-cover' => $type !== 'activity' && $image !== Storage::url('/images/logo.png'),
+            ])>
         </div>
 
         {{-- Details, startdate/time & location --}}

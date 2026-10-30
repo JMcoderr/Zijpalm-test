@@ -2,11 +2,13 @@
 <div>
     @php
         $digestActivities = \App\Models\Activity::query()
+            ->whereDoesntHave('shopProduct')
             ->where('end', '>', now())
             ->whereNotIn('type', [\App\ActivityType::Weekly, \App\ActivityType::Cancelled])
             ->get()
             ->sortBy('start')
             ->values();
+        $digestProducts = \App\Models\Product::query()->forDigest()->orderBy('name')->get();
     @endphp
     <div class="flex flex-col">
         {{-- Show errors, if any --}}
@@ -37,11 +39,12 @@
         @endif
 
         <p class="mb-4 text-gray-900">
-            Met deze actie verstuurt u direct een mail met alle toekomstige activiteiten naar de ingestelde ontvangers.
+            Met deze actie verstuurt u een mail met de geselecteerde activiteiten en producten naar de ingestelde ontvangers.
         </p>
 
         <form id="upcoming-activities-digest-form" method="POST" action="{{ route('activity.sendUpcomingActivitiesDigest') }}">
             @csrf
+            <input type="hidden" name="selection_submitted" value="1">
             <x-input-group grid grid="grid grid-cols-1 grid-rows-[auto] auto-rows-auto">
                 <x-input-group grid="grid grid-cols-1">
                         <x-input-field id="batch_size" name="batch_size" label="Hoeveelheid ontvangers in de BCC per mail" type="number"
@@ -57,23 +60,51 @@
                         <p>Geschatte duur: <span id="upcoming-digest-estimate">-</span></p>
                     </div>
 
-                    <div class="mt-4">
-                        <p class="font-semibold text-gray-900 mb-2">Welke activiteiten wilt u opnemen in de mail?</p>
-                        <p class="text-sm text-gray-700 mb-2">Laat alles aangevinkt om alle activiteiten mee te sturen.</p>
-                        <div class="max-h-56 overflow-y-auto border border-gray-300 rounded p-2 bg-zinc-50">
-                            @forelse($digestActivities as $activity)
-                                <label class="flex items-start gap-2 py-1">
-                                    <input type="checkbox" name="activity_ids[]" value="{{ $activity->id }}" checked>
-                                    <span class="text-sm text-gray-900">
-                                        <strong>{{ $activity->title }}</strong>
-                                        <span class="text-gray-700">({{ formatDate($activity->start) }})</span>
-                                    </span>
-                                </label>
-                            @empty
-                                <p class="text-sm text-gray-700">Geen aankomende activiteiten gevonden.</p>
-                            @endforelse
+                    <section data-digest-selection class="mt-5 min-w-0 text-left" aria-labelledby="digest-selection-heading">
+                        <h3 id="digest-selection-heading" class="mb-3 text-base font-semibold text-zijpalm-700">Selectie voor de mail</h3>
+                        <div class="grid min-w-0 grid-cols-1 gap-4 md:grid-cols-2">
+                            <fieldset data-digest-group="activities" class="min-w-0 overflow-hidden rounded-md border border-zinc-300 bg-zinc-50" aria-labelledby="digest-activities-heading">
+                                <div class="flex items-center justify-between gap-3 border-b border-zinc-300 bg-zinc-100 px-3 py-2.5">
+                                    <span id="digest-activities-heading" class="text-sm font-semibold text-zijpalm-700">Activiteiten</span>
+                                    <span class="text-xs tabular-nums text-zinc-600">{{ $digestActivities->count() }}</span>
+                                </div>
+                                <div class="max-h-72 overflow-y-auto overscroll-contain">
+                                    @forelse($digestActivities as $activity)
+                                        <label class="flex min-h-12 cursor-pointer items-start gap-3 border-b border-zinc-200 px-3 py-3 last:border-b-0 hover:bg-zijpalm-50 focus-within:bg-zijpalm-50">
+                                            <input type="checkbox" name="activity_ids[]" value="{{ $activity->id }}" @checked(!old('selection_submitted') || in_array($activity->id, old('activity_ids', []))) class="mt-1 size-4 shrink-0 cursor-pointer accent-zijpalm-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zijpalm-500">
+                                            <span class="min-w-0 flex-1">
+                                                <span class="block text-sm font-medium leading-5 text-zinc-900 [overflow-wrap:anywhere]">{{ $activity->title }}</span>
+                                                <span class="mt-0.5 block text-xs leading-5 text-zinc-600">{{ formatDate($activity->start) }}</span>
+                                            </span>
+                                        </label>
+                                    @empty
+                                        <p class="px-3 py-4 text-sm text-zinc-600">Geen aankomende activiteiten gevonden.</p>
+                                    @endforelse
+                                </div>
+                            </fieldset>
+                            <fieldset data-digest-group="products" class="min-w-0 overflow-hidden rounded-md border border-zinc-300 bg-zinc-50" aria-labelledby="digest-products-heading">
+                                <div class="flex items-center justify-between gap-3 border-b border-zinc-300 bg-zinc-100 px-3 py-2.5">
+                                    <span id="digest-products-heading" class="text-sm font-semibold text-zijpalm-700">Shop / Overig</span>
+                                    <span class="text-xs tabular-nums text-zinc-600">{{ $digestProducts->count() }}</span>
+                                </div>
+                                <div class="max-h-72 overflow-y-auto overscroll-contain">
+                                    @forelse($digestProducts as $product)
+                                        <label class="flex min-h-12 cursor-pointer items-start gap-3 border-b border-zinc-200 px-3 py-3 last:border-b-0 hover:bg-zijpalm-50 focus-within:bg-zijpalm-50">
+                                            <input type="checkbox" name="product_ids[]" value="{{ $product->id }}" @checked(!old('selection_submitted') || in_array($product->id, old('product_ids', []))) class="mt-1 size-4 shrink-0 cursor-pointer accent-zijpalm-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zijpalm-500">
+                                            <span class="min-w-0 flex-1">
+                                                <span class="block text-sm font-medium leading-5 text-zinc-900 [overflow-wrap:anywhere]">{{ $product->name }}</span>
+                                                @if($product->activity_starts_at)
+                                                    <span class="mt-0.5 block text-xs leading-5 text-zinc-600">{{ formatDate($product->activity_starts_at) }}</span>
+                                                @endif
+                                            </span>
+                                        </label>
+                                    @empty
+                                        <p class="px-3 py-4 text-sm text-zinc-600">Geen producten beschikbaar.</p>
+                                    @endforelse
+                                </div>
+                            </fieldset>
                         </div>
-                    </div>
+                    </section>
 
                     <x-zijpalm-button form="upcoming-activities-digest-form" type="submit" label="Mail toekomstige activiteiten versturen"
                                       center="horizontal" class="mt-2"/>

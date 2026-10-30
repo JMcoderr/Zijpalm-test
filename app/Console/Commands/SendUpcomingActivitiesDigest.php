@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\ActivityType;
 use App\Mail\UpcomingActivitiesDigest;
 use App\Models\Activity;
+use App\Models\Product;
 use App\Models\User;
 use App\UserNotifications;
 use Illuminate\Console\Command;
@@ -21,7 +22,7 @@ class SendUpcomingActivitiesDigest extends Command
      *
      * @var string
      */
-    protected $signature = 'app:send-upcoming-activities-digest {--batch_size=} {--delay=} {--activity_ids=*}';
+    protected $signature = 'app:send-upcoming-activities-digest {--batch_size=} {--delay=} {--activity_ids=*} {--product_ids=*}';
 
     /**
      * The console command description.
@@ -41,8 +42,15 @@ class SendUpcomingActivitiesDigest extends Command
             ->unique()
             ->values();
 
+        $selectedProductIds = collect((array) $this->option('product_ids'))
+            ->filter(fn ($id) => $id !== null && $id !== '')
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+
         // Only include regular upcoming activities (no weekly, no archived, no cancelled).
         $activities = Activity::query()
+            ->whereDoesntHave('shopProduct')
             ->whereNotNull('start')
             ->where('start', '>', now())
             ->where('end', '>', now())
@@ -52,6 +60,7 @@ class SendUpcomingActivitiesDigest extends Command
             ->values();
 
         $runningActivitiesQuery = Activity::query()
+            ->whereDoesntHave('shopProduct')
             ->whereNotNull('start')
             ->whereNotNull('end')
             ->where('start', '<=', now())
@@ -59,16 +68,20 @@ class SendUpcomingActivitiesDigest extends Command
             ->whereNotIn('type', [ActivityType::Cancelled, ActivityType::Archived])
             ->orderBy('start');
 
-        if ($selectedActivityIds->isNotEmpty()) {
+        $productsQuery = Product::query()->forDigest()->orderBy('name');
+
+        if ($selectedActivityIds->isNotEmpty() || $selectedProductIds->isNotEmpty()) {
             $selectedIds = $selectedActivityIds->all();
             $activities = $activities->whereIn('id', $selectedIds)->values();
             $runningActivitiesQuery->whereIn('id', $selectedIds);
+            $productsQuery->whereIn('id', $selectedProductIds->all());
         }
 
         $runningActivities = $runningActivitiesQuery->get();
+        $products = $productsQuery->get();
 
-        if ($activities->isEmpty() && $runningActivities->isEmpty()) {
-            $this->info('Geen activiteiten gevonden voor de huidige selectie.');
+        if ($activities->isEmpty() && $runningActivities->isEmpty() && $products->isEmpty()) {
+            $this->info('Geen activiteiten of producten gevonden voor de huidige selectie.');
             return self::SUCCESS;
         }
 
@@ -103,12 +116,13 @@ class SendUpcomingActivitiesDigest extends Command
                 ->send(new UpcomingActivitiesDigest($emails, $activities, $runningActivities, [
                     'batch_size' => $batchSize,
                     'delay' => $delay,
-                ]));
+                ], $products));
         } catch (Throwable $exception) {
             Log::error('[SendUpcomingActivitiesDigest] Mail send failed', [
                 'error' => $exception->getMessage(),
                 'activities' => $activities->count(),
                 'running_activities' => $runningActivities->count(),
+                'products' => $products->count(),
                 'emails' => $emails->count(),
             ]);
 
@@ -117,7 +131,7 @@ class SendUpcomingActivitiesDigest extends Command
         }
 
         $totalActivities = $activities->count() + $runningActivities->count();
-        $this->info("Mail verzonden voor {$totalActivities} activiteiten naar {$emails->count()} ontvangers.");
+        $this->info("Mail verzonden voor {$totalActivities} activiteiten en {$products->count()} producten naar {$emails->count()} ontvangers.");
 
         return self::SUCCESS;
     }

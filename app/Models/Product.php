@@ -220,6 +220,21 @@ class Product extends Model
         return $admin ? $query : $query->where('hidden', false);
     }
 
+    public function scopeForDigest(Builder $query): Builder
+    {
+        return $query->visibleTo(false)
+            ->where(function (Builder $query) {
+                $query->whereNull('activity_ends_at')->orWhere('activity_ends_at', '>=', now());
+            })
+            ->where(function (Builder $query) {
+                $query->whereNotNull('activity_ends_at')
+                    ->orWhereNull('activity_starts_at')
+                    ->orWhereDate('activity_starts_at', '>=', today());
+            })
+            ->whereDoesntHave('activity', fn (Builder $query) => $query
+                ->whereIn('type', [\App\ActivityType::Cancelled, \App\ActivityType::Archived]));
+    }
+
     public function scopeOfType(Builder $query, string $type): Builder
     {
         return $query->where(function (Builder $query) use ($type) {

@@ -83,8 +83,8 @@
                 <div class="flex min-w-0 flex-col flex-1">
 
                     {{-- Activity Image --}}
-                    <div data-activity-image class="relative aspect-video w-full shrink-0 overflow-hidden">
-                        <img src="{{$activity->image}}" alt="{{ $activity->title }}" class="absolute inset-0 size-full object-cover">
+                    <div data-activity-image class="relative aspect-video w-full shrink-0 overflow-hidden bg-white">
+                        <img src="{{$activity->image}}" alt="{{ $activity->title }}" class="absolute inset-0 size-full object-contain object-center">
                     </div>
 
                     {{-- Activity details --}}

@@ -7,6 +7,7 @@ use App\Models\Content;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
+use Mollie\Api\MollieApiClient;
 use Mollie\Laravel\Facades\Mollie;
 
 uses(RefreshDatabase::class);
@@ -56,6 +57,96 @@ it('rejects introducees above the configured activity limit', function () {
     ])->assertSessionHasErrors('guests', null, 'signupActivity');
     expect($activity->applications()->count())->toBe(0);
 });
+
+it('recalculates signup costs with a deleted participant account', function (bool $isOrganizer) {
+    $deletedUser = User::factory()->create(['firstName' => 'Former', 'lastName' => 'Organizer']);
+    $user = User::factory()->create(['firstName' => 'Current', 'lastName' => 'Member']);
+    $activity = Activity::factory()->create([
+        'type' => \App\ActivityType::OneDay,
+        'maxParticipants' => null,
+        'maxGuests' => 1,
+        'price' => 25,
+        'organizer' => $deletedUser->name . ($isOrganizer ? ', ' . $user->name : ''),
+        'free_organizer_count' => 1,
+    ]);
+    Application::factory()->create([
+        'activity_id' => $activity->id,
+        'user_id' => $deletedUser->id,
+        'status' => ApplicationStatus::Active,
+    ]);
+    $deletedUser->delete();
+
+    $this->actingAs($user);
+    \Livewire\Livewire::test(\App\Livewire\ApplicationForm::class, ['activity' => $activity->fresh()])
+        ->assertSet('costs.base', $isOrganizer ? 0 : 25)
+        ->dispatch('guestsUpdated', 1)
+        ->assertSet('participants', 2)
+        ->assertSet('costs.base', $isOrganizer ? 25 : 50)
+        ->assertSet('costs.total', $isOrganizer ? 25 : 50);
+})->with(['regular member' => false, 'free organizer' => true]);
+
+it('reaches checkout despite a deleted participant account', function (bool $isOrganizer, bool $withGuest, bool $afterCancellation) {
+    Mail::fake();
+    $deletedUser = User::factory()->create(['firstName' => 'Former', 'lastName' => 'Organizer']);
+    $user = User::factory()->create(['firstName' => 'Current', 'lastName' => 'Member']);
+    $activity = Activity::factory()->create([
+        'type' => \App\ActivityType::OneDay,
+        'maxParticipants' => null,
+        'maxGuests' => 1,
+        'price' => 25,
+        'organizer' => $deletedUser->name . ($isOrganizer ? ', ' . $user->name : ''),
+        'free_organizer_count' => 1,
+    ]);
+    $existingApplication = Application::factory()->create([
+        'activity_id' => $activity->id,
+        'user_id' => $deletedUser->id,
+        'status' => ApplicationStatus::Active,
+    ]);
+    $deletedUser->delete();
+    $cancelledApplication = $afterCancellation ? Application::factory()->create([
+        'activity_id' => $activity->id,
+        'user_id' => $user->id,
+        'status' => ApplicationStatus::Cancelled,
+    ]) : null;
+    $participants = $withGuest ? 2 : 1;
+    $price = ($participants - ($isOrganizer ? 1 : 0)) * 25;
+    $endpoint = Mockery::mock();
+    $endpoint->shouldReceive('create')->once()->with(Mockery::on(
+        fn ($data) => $data['amount'] === ['currency' => 'EUR', 'value' => number_format($price, 2, '.', '')]
+    ))->andReturn((object) ['id' => 'tr_signup_regression']);
+    $endpoint->shouldReceive('get')->once()->with('tr_signup_regression')->andReturn((object) [
+        '_links' => (object) ['checkout' => (object) ['href' => 'https://example.com/checkout']],
+    ]);
+    $client = Mockery::mock(MollieApiClient::class);
+    $client->payments = $endpoint;
+    Mollie::shouldReceive('api')->twice()->andReturn($client);
+
+    $this->actingAs($user)->post(route('application.store', $activity), [
+        'email' => $user->email,
+        'phone' => '0612345678',
+        'guests' => $withGuest ? [[
+            'firstName' => 'Test', 'lastName' => 'Introducee',
+            'phone' => '0687654321', 'email' => 'intro@example.com',
+        ]] : [],
+    ])->assertSessionHasNoErrors()->assertStatus(303)->assertRedirect('https://example.com/checkout');
+
+    $application = $activity->applications()->where('user_id', $user->id)
+        ->where('status', '!=', ApplicationStatus::Cancelled)->sole();
+    expect($application->participants)->toBe($participants)
+        ->and($application->guests()->count())->toBe($withGuest ? 1 : 0)
+        ->and($application->payments()->sole()->price)->toBe(number_format($price, 2, '.', ''))
+        ->and($application->payments()->sole()->status)->toBe(\App\PaymentStatus::pending)
+        ->and($existingApplication->fresh()->status)->toBe(ApplicationStatus::Active);
+    if ($cancelledApplication) {
+        expect($cancelledApplication->fresh()->status)->toBe(ApplicationStatus::Cancelled);
+    }
+    Mail::assertNothingSent();
+})->with([
+    'member with introducee' => [false, true, false],
+    'organizer with introducee' => [true, true, false],
+    'member alone' => [false, false, false],
+    'registration after cancellation' => [false, false, true],
+]);
 
 it('puts signups on the reserve list when existing guests fill the activity and skips Mollie', function () {
     Mail::fake();
