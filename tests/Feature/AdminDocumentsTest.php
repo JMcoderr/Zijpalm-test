@@ -23,6 +23,7 @@ it('stores admin documents privately and downloads them with the original name',
     $document = Document::sole();
     expect($document->category)->toBe('word')
         ->and($document->original_name)->toBe('Notulen.docx')
+        ->and($document->folder_path)->toBe('')
         ->and($document->user_id)->toBe($this->admin->id)
         ->and($document->path)->not->toBe('Notulen.docx');
     Storage::disk('admin_documents')->assertExists($document->path);
@@ -32,15 +33,81 @@ it('stores admin documents privately and downloads them with the original name',
         ->assertHeader('X-Content-Type-Options', 'nosniff');
 });
 
-it('shows separate document lists and an admin navigation link next to charity', function () {
+it('shows a folder-based document explorer and an admin navigation link next to charity', function () {
     $this->actingAs($this->admin)->get(route('admin.documents.index'))->assertOk()
         ->assertSeeInOrder(['Lief &amp; Leed', 'Bestanden'], false)
-        ->assertSee('data-document-category="word"', false)
-        ->assertSee('data-document-category="excel"', false)
-        ->assertSee('Nog geen Word-bestanden')
-        ->assertSee('Nog geen Excel-bestanden')
+        ->assertSee('data-document-explorer', false)
+        ->assertSee('Alle bestanden')
         ->assertSee('name="files[]"', false)
-        ->assertSee('Bestanden toevoegen');
+        ->assertSee('webkitdirectory', false)
+        ->assertSee('.pdf')
+        ->assertSee('Bestanden of map uploaden')
+        ->assertSee('Uploaden');
+});
+
+it('stores PDF uploads in their folder hierarchy and browses nested folders', function () {
+    $pdfPath = tempnam(sys_get_temp_dir(), 'document-test');
+    file_put_contents($pdfPath, "%PDF-1.4\n1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj\n2 0 obj << /Type /Pages /Kids [] /Count 0 >> endobj\ntrailer << /Root 1 0 R >>\n%%EOF");
+
+    try {
+        $file = new UploadedFile($pdfPath, 'Offerte woning.pdf', null, null, true);
+
+        $this->actingAs($this->admin)->post(route('admin.documents.store'), [
+            'files' => [$file],
+            'relative_paths' => ['Offertes/2026/Offerte woning.pdf'],
+            'current_folder' => '',
+        ])->assertSessionHasNoErrors()->assertRedirect(route('admin.documents.index'));
+
+        $document = Document::sole();
+        expect($document->category)->toBe('pdf')
+            ->and($document->original_name)->toBe('Offerte woning.pdf')
+            ->and($document->folder_path)->toBe('Offertes/2026');
+
+        $this->get(route('admin.documents.index'))->assertOk()->assertSee('Offertes')->assertDontSee('Offerte woning.pdf');
+        $this->get(route('admin.documents.index', ['folder' => 'Offertes']))->assertOk()->assertSee('2026')->assertDontSee('Offerte woning.pdf');
+        $this->get(route('admin.documents.index', ['folder' => 'Offertes/2026']))->assertOk()->assertSee('Offerte woning.pdf');
+        $this->get(route('admin.documents.download', $document))->assertOk()->assertDownload('Offerte woning.pdf');
+
+        $this->post(route('admin.documents.store'), [
+            'files' => [UploadedFile::fake()->create('Aanvulling.pdf', 16, 'application/pdf')],
+            'relative_paths' => ['Aanvulling.pdf'],
+            'current_folder' => 'Offertes/2026',
+        ])->assertSessionHasNoErrors()->assertRedirect(route('admin.documents.index', ['folder' => 'Offertes/2026']));
+
+        $addition = Document::where('original_name', 'Aanvulling.pdf')->sole();
+        expect($addition->folder_path)->toBe('Offertes/2026');
+        $this->delete(route('admin.documents.destroy', ['document' => $addition, 'folder' => 'Offertes/2026']))
+            ->assertRedirect(route('admin.documents.index', ['folder' => 'Offertes/2026']));
+    } finally {
+        unlink($pdfPath);
+    }
+});
+
+it('rejects unsafe folder paths and mismatched folder upload metadata', function (string $relativePath) {
+    $this->actingAs($this->admin)->from(route('admin.documents.index'))->post(route('admin.documents.store'), [
+        'files' => [UploadedFile::fake()->create('Offerte.pdf', 16, 'application/pdf')],
+        'relative_paths' => [$relativePath],
+    ])->assertRedirect(route('admin.documents.index'))->assertSessionHasErrors();
+
+    expect(Document::count())->toBe(0)
+        ->and(Storage::disk('admin_documents')->allFiles())->toBe([]);
+})->with([
+    '../Offerte.pdf',
+    'Offertes/../../Offerte.pdf',
+    'C:/Offerte.pdf',
+    'Offertes/Andere naam.pdf',
+]);
+
+it('rejects an unsafe destination folder and unknown folder URLs', function () {
+    $this->actingAs($this->admin)->from(route('admin.documents.index'))->post(route('admin.documents.store'), [
+        'files' => [UploadedFile::fake()->create('Offerte.pdf', 16, 'application/pdf')],
+        'current_folder' => '../buiten-de-bibliotheek',
+    ])->assertRedirect(route('admin.documents.index'))->assertSessionHasErrors('current_folder');
+
+    $this->get(route('admin.documents.index', ['folder' => 'Onbekende-map']))->assertNotFound();
+    $this->get(route('admin.documents.index') . '?folder%5B%5D=Onbekend')->assertNotFound();
+    expect(Document::count())->toBe(0)
+        ->and(Storage::disk('admin_documents')->allFiles())->toBe([]);
 });
 
 it('denies members and guests all document routes and hides the navigation link', function () {
@@ -112,8 +179,8 @@ it('accepts actual Excel and Word contents in a single batch', function () {
 
 it('rejects invalid files without keeping any part of the batch', function (string $scenario) {
     $invalidFile = match ($scenario) {
-        'pdf' => UploadedFile::fake()->create('Verslag.pdf', 16, 'application/pdf'),
         'disguised' => new UploadedFile(__FILE__, 'Bestand.docx', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', null, true),
+        'disguised-pdf' => new UploadedFile(__FILE__, 'Bestand.pdf', 'application/pdf', null, true),
         'oversized' => UploadedFile::fake()->create('Te groot.docx', 20481, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'),
         'extension' => UploadedFile::fake()->create('Bestand.exe', 16, 'application/msword'),
     };
@@ -124,11 +191,11 @@ it('rejects invalid files without keeping any part of the batch', function (stri
 
     expect(Document::count())->toBe(0)
         ->and(Storage::disk('admin_documents')->allFiles())->toBe([]);
-})->with(['pdf', 'disguised', 'oversized', 'extension']);
+})->with(['disguised', 'disguised-pdf', 'oversized', 'extension']);
 
-it('requires a file and rejects batches larger than ten', function () {
+it('requires a file and rejects batches larger than one hundred', function () {
     $this->actingAs($this->admin)->post(route('admin.documents.store'), [])->assertSessionHasErrors('files');
-    $files = array_map(fn ($index) => UploadedFile::fake()->create('Bestand-' . $index . '.doc', 1, 'application/msword'), range(1, 11));
+    $files = array_map(fn ($index) => UploadedFile::fake()->create('Bestand-' . $index . '.doc', 1, 'application/msword'), range(1, 101));
     $this->post(route('admin.documents.store'), ['files' => $files])->assertSessionHasErrors('files');
 
     expect(Document::count())->toBe(0);
