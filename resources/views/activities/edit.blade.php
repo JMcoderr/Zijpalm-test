@@ -40,6 +40,7 @@
                         <x-input-field type="file" label="Afbeelding" id="image-upload" name="image-upload" action="displayUploadedFileName(this)" accept="image/*"/>
                         <x-input-field type="text" label="Locatie" id="location" name="location" value="{{ old('location', $activity->location) }}" required/>
                         <x-input-field type="text" label="Organisator(en)" id="organizer" name="organizer" value="{{ old('organizer', $activity->organizer) }}" required/>
+                        <x-activity-organizers :users="$organizerUsers" :selected="$activity->organizer_user_ids ?? []" />
                         <x-input-field type="number" label="Max. Deelnemers" id="maxParticipants" name="maxParticipants" value="{{ old('maxParticipants', $activity->maxParticipants) }}"/>
                         <x-input-field type="number" label="Aantal Intro's (p.p.)" id="maxGuests" name="maxGuests" value="{{ old('maxGuests', $activity->maxGuests) }}"/>
                         <x-input-field type="price" label="Prijs" id="price" name="price" value="{{ old('price', $activity->price) }}" placeholder="Laat leeg voor gratis"/>

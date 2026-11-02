@@ -45,6 +45,7 @@
                         <x-input-field type="file" label="Afbeelding" id="image-upload" action="displayUploadedFileName(this)" accept="image/*" required/>
                         <x-input-field type="text" label="Locatie" id="location" required/>
                         <x-input-field type="text" label="Organisator(en)" id="organizer" value="{{auth()->user()?->name}}" required/>
+                        <x-activity-organizers :users="$organizerUsers" />
                         <x-input-field type="number" label="Max. Deelnemers" id="maxParticipants"/>
                         <x-input-field type="number" label="Aantal Intro's (p.p.)" id="maxGuests"/>
                         {{-- Price is optional: leave empty for free activities --}}

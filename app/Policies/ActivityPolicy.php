@@ -10,6 +10,12 @@ use Illuminate\Auth\Access\Response;
 
 class ActivityPolicy
 {
+    public function viewParticipants(User $user, Activity $activity): bool
+    {
+        return $user->isAdmin() || collect($activity->organizer_user_ids)
+            ->contains(fn ($id) => (string) $id === (string) $user->getKey());
+    }
+
     /**
      * Determine whether the user can view any models.
      */

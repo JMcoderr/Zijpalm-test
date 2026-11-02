@@ -40,6 +40,19 @@ beforeEach(function () {
     ]);
 });
 
+it('allows participant access only for admins and explicitly assigned organizer accounts', function () {
+    $organizer = User::factory()->create();
+    $member = User::factory()->create();
+    $this->activity->forceFill([
+        'organizer' => $member->name,
+        'organizer_user_ids' => [(string) $organizer->id],
+    ]);
+
+    expect(\Illuminate\Support\Facades\Gate::forUser($organizer)->allows('viewParticipants', $this->activity))->toBeTrue()
+        ->and(\Illuminate\Support\Facades\Gate::forUser($member)->allows('viewParticipants', $this->activity))->toBeFalse()
+        ->and(\Illuminate\Support\Facades\Gate::forUser($this->admin)->allows('viewParticipants', $this->activity))->toBeTrue();
+});
+
 it('shows the editing button immediately after adding participants and hides it from members', function () {
     $this->actingAs($this->admin)
         ->get(route('activity.show', $this->activity))
@@ -70,7 +83,9 @@ it('shows complete activity card photos in a white widescreen frame', function (
     expect($html)->toContain('data-activity-card-image')
         ->toContain('relative aspect-video w-full shrink-0 bg-white')
         ->toContain('absolute inset-0 size-full object-contain object-center')
-        ->toContain('self-start')
+        ->toContain('self-stretch')
+        ->toContain('pb-2 px-3 flex-1')
+        ->toContain('text-center flex-1')
         ->not->toContain('object-cover')
         ->not->toContain('aspect-5/6')
         ->not->toContain('sm:flex-2/5');

@@ -21,6 +21,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
@@ -374,7 +375,10 @@ class ActivityController extends Controller
      */
     public function create()
     {
-        return view('activities.create');
+        $organizerUsers = User::notSoftDeleted()->where('type', '!=', UserType::System)
+            ->orderBy('firstName')->orderBy('lastName')->get();
+
+        return view('activities.create', compact('organizerUsers'));
     }
 
     /**
@@ -439,6 +443,7 @@ class ActivityController extends Controller
                 ? decodeEditorData($data['personalConfirmation'])
                 : null,
             'organizer' => $data['organizer'],
+            'organizer_user_ids' => $request->validated('organizer_user_ids', []),
             'maxParticipants' => $data['maxParticipants'],
             'maxGuests' => $data['maxGuests'],
             'price' => formatPriceForDb($data['price'] ?? 0),
@@ -504,8 +509,10 @@ class ActivityController extends Controller
             'user' => fn($q) => $q->withTrashed(),
             'guests',
             'answers.question.selectOptions',
-            'payments',
         ];
+        if (auth()->user()?->isAdmin()) {
+            $applicationRelations[] = 'payments';
+        }
         $applications = $activity->applications()->with($applicationRelations)->whereNotIn('status', [ApplicationStatus::Cancelled])->get()->sortBy(fn($app) => array_search(ApplicationStatus::from($app->status->value), ApplicationStatus::cases()));
         $reserves = $activity->applications()->with($applicationRelations)->where('status', ApplicationStatus::Reserve)->get();
         $pending = $activity->applications()->with($applicationRelations)->where('status', ApplicationStatus::Pending)->get();
@@ -527,7 +534,20 @@ class ActivityController extends Controller
                 ->get();
         }
 
-        return view('activities.read', compact('activity', 'applications', 'reserves', 'pending', 'assignableUsers', 'shopProduct'));
+        $participantApplications = !auth()->user()?->isAdmin() && Gate::allows('viewParticipants', $activity)
+            ? $activity->participantApplications()->get()
+            : collect();
+
+        return view('activities.read', compact('activity', 'applications', 'reserves', 'pending', 'assignableUsers', 'shopProduct', 'participantApplications'));
+    }
+
+    public function downloadParticipants(Activity $activity)
+    {
+        Gate::authorize('viewParticipants', $activity);
+
+        $excelFile = $activity->createApplicationsExcelFile();
+
+        return response()->download($excelFile['filePath'], $excelFile['fileName'])->deleteFileAfterSend(true);
     }
 
     /**
@@ -537,7 +557,10 @@ class ActivityController extends Controller
         // Show the edit form with the current activity data
         $activity->load('questions.selectOptions');
 
-        return view('activities.edit', compact('activity'));
+        $organizerUsers = User::notSoftDeleted()->where('type', '!=', UserType::System)
+            ->orderBy('firstName')->orderBy('lastName')->get();
+
+        return view('activities.edit', compact('activity', 'organizerUsers'));
     }
 
     /**
@@ -663,6 +686,7 @@ class ActivityController extends Controller
                 ? decodeEditorData($data['personalConfirmation'])
                 : null,
             'organizer' => $data['organizer'] ?? $activity->organizer,
+            'organizer_user_ids' => $request->validated('organizer_user_ids', $request->boolean('organizer_user_ids_present') ? [] : ($activity->organizer_user_ids ?? [])),
             'maxParticipants' => $data['maxParticipants'] ?? $activity->maxParticipants,
             'maxGuests' => $data['maxGuests'] ?? $activity->maxGuests,
             'price' => isset($data['price']) ? formatPriceForDb($data['price']) : $activity->price,

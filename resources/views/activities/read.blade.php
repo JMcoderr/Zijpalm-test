@@ -591,6 +591,63 @@
                         </div>
                     @endif
                 </x-zijpalm-div>
+            @elseif(!auth()->user()?->isAdmin() && auth()->user()?->can('viewParticipants', $activity))
+                @php
+                    $participantCount = $participantApplications->where('status', App\ApplicationStatus::Active)->sum('participants');
+                    $participantReserveCount = $participantApplications->where('status', App\ApplicationStatus::Reserve)->sum('participants');
+                @endphp
+                <x-zijpalm-div :editable="false" color="light" width="w-full" class="flex min-w-0 flex-col self-stretch max-h-[40rem] md:h-[40rem]" data-participant-list>
+                    <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
+                        <h2 class="min-w-0 flex-1 text-left text-xl font-bold sm:text-2xl">
+                            Aanmeldingen ({{ $participantCount }}{{$activity->maxParticipants ? '/' . $activity->maxParticipants : ''}}{{ $participantReserveCount > 0 ? ', ' . $participantReserveCount . ' ' . ($participantReserveCount === 1 ? 'reserve' : 'reserves') : '' }})
+                        </h2>
+                        <flux:tooltip content="Download deelnemerslijst">
+                            <flux:button :href="route('activity.participants.download', $activity)" aria-label="Download deelnemerslijst" variant="primary" class="bg-linear-to-t from-zijpalm-700 to-zijpalm-500 inset-shadow-400 border-none size-8! hover:scale-110 hover:brightness-110 duration-300 rounded-xl! group">
+                                <flux:icon name="arrow-down-tray" class="text-zinc-100 size-7! stroke-2 group-hover:scale-105 duration-600 p-0.5"/>
+                            </flux:button>
+                        </flux:tooltip>
+                    </div>
+                    @if($participantApplications->isEmpty())
+                        <div class="opacity-50">Er zijn nog geen aanmeldingen voor deze activiteit</div>
+                    @else
+                        <div name="List" class="flex min-w-0 flex-col gap-y-1 overflow-auto px-2">
+                            <div class="flex font-bold">
+                                <span class="flex-1">Datum</span>
+                                <span class="flex-1">Naam</span>
+                                <span class="flex-1">Telefoon</span>
+                                <span class="flex-1 hidden md:flex">Mail</span>
+                            </div>
+                            <flux:separator/>
+                            @foreach([App\ApplicationStatus::Active, App\ApplicationStatus::Reserve] as $groupStatus)
+                                @if($groupStatus === App\ApplicationStatus::Reserve && $participantReserveCount > 0)
+                                    <flux:separator/>
+                                    <div class="flex font-bold self-center">Reserves ({{ $participantReserveCount }})</div>
+                                @endif
+                                @foreach($participantApplications->where('status', $groupStatus) as $participantApplication)
+                                    <div @class(['bg-[rgba(0,0,0,0.05)] p-1 rounded-xl flex flex-col gap-y-1', 'opacity-50' => $groupStatus === App\ApplicationStatus::Reserve])>
+                                        <div class="flex min-w-0 px-2 gap-x-2 rounded-full overflow-clip bg-linear-to-t from-zijpalm-500 to-zijpalm-300 inset-shadow-zijpalm-200 text-zinc-100">
+                                            <span class="flex-1 truncate">{{ $participantApplication->created_at?->format('d/m/Y') }}</span>
+                                            <span class="flex-1 truncate" title="{{ $participantApplication->user?->name }}">{{ $participantApplication->user?->name ?? 'Onbekend lid' }}</span>
+                                            <span class="flex-1 truncate">{{ formatPhoneNumber($participantApplication->phone ?: $participantApplication->user?->phone) }}</span>
+                                            <span class="flex-1 hidden md:flex truncate" title="{{ $participantApplication->email }}">{{ $participantApplication->email ?: $participantApplication->user?->email }}</span>
+                                        </div>
+                                        @if($participantApplication->participants > $participantApplication->guests->count() + 1)
+                                            <p class="px-2 text-sm">{{ $participantApplication->participants }} deelnemers; extra namen niet opgegeven.</p>
+                                        @endif
+                                        @foreach($participantApplication->guests as $participantGuest)
+                                            <div class="flex min-w-0 px-2 gap-x-2 rounded-full overflow-clip bg-linear-to-t from-zinc-300 to-zinc-200 inset-shadow-zinc-50 border-b border-[rgba(0,0,0,0.15)]">
+                                                <span class="flex-1 truncate">{{ $participantApplication->created_at?->format('d/m/Y') }}</span>
+                                                <span class="flex-1 truncate" title="{{ $participantGuest->name }}">{{ $participantGuest->name }}</span>
+                                                <span class="flex-1 truncate">{{ formatPhoneNumber($participantGuest->phone) }}</span>
+                                                <span class="flex-1 hidden md:flex truncate" title="{{ $participantGuest->email }}">{{ $participantGuest->email }}</span>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                @endforeach
+                            @endforeach
+                        </div>
+                    @endif
+                </x-zijpalm-div>
             @endif
         </div>
 

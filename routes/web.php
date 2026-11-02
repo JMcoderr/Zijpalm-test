@@ -91,6 +91,7 @@ Route::prefix('activiteiten')->name('activity.')->controller(ActivityController:
         Route::post('suggestie', 'processSuggestion')->name('processSuggestion');
 
         // Read
+        Route::get('{activity}/deelnemers/download', 'downloadParticipants')->middleware('auth')->name('participants.download');
         Route::get('{activity}', 'show')->name('show');
     }
 );

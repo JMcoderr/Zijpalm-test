@@ -522,6 +522,7 @@ class ApplicationController extends Controller
     public function destroy(Application $application, bool $adminOverride = false)
     {
         $isAdmin = (bool) auth()->user()?->isAdmin();
+        abort_unless($isAdmin || $application->user_id === auth()->id(), 403);
 
         // Allow admins to bypass the cancellation period check.
         // Regular participants can only cancel if a cancellation date is set and we are still within that period.

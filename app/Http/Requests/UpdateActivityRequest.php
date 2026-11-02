@@ -34,6 +34,9 @@ class UpdateActivityRequest extends FormRequest
             'image-upload' => ['nullable', 'image'], // Optional for updates
             'location' => ['nullable', 'string', 'max:255'],
             'organizer' => ['nullable', 'string', 'max:255'],
+            'organizer_user_ids_present' => ['sometimes', 'boolean'],
+            'organizer_user_ids' => ['sometimes', 'array'],
+            'organizer_user_ids.*' => ['required', 'integer', 'distinct', Rule::exists('users', 'id')->where(fn ($query) => $query->whereNull('deleted_at')->orWhere('deleted_at', '>', now()))],
             'maxParticipants' => ['nullable', 'integer', 'min:1'],
             'maxGuests' => ['nullable', 'integer', 'min:0'],
             'price' => ['nullable', 'regex:/^\d+([.,]\d{2})?$/'],

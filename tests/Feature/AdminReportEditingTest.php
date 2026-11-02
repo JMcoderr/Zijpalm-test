@@ -23,7 +23,9 @@ beforeEach(function () {
     $this->report = Report::create(['content_id' => $this->content->id, 'year' => 2026]);
 });
 
-it('shows the report type and current year in the existing edit form', function () {
+it('shows visible report type choices and the current year in the existing edit form', function (?int $year, string $selectedType) {
+    $this->report->update(['year' => $year]);
+
     $response = $this->actingAs($this->admin)
         ->get(route('content.edit', $this->content))
         ->assertOk()
@@ -31,18 +33,39 @@ it('shows the report type and current year in the existing edit form', function 
         ->assertSee('Jaarverslag')
         ->assertSee('name="report-type"', false)
         ->assertSee('name="report-year"', false)
-        ->assertSee('value="2026"', false);
+        ->assertSee('value="' . ($year ?? now()->year) . '"', false);
 
     $document = new DOMDocument();
     $document->loadHTML($response->getContent(), LIBXML_NOERROR | LIBXML_NOWARNING);
 
+    expect($document->getElementById('report-type-wrapper')->getElementsByTagName('legend')->item(0)->getAttribute('class'))
+        ->toContain('text-start');
+
+    $choices = $document->getElementById('report-type')->getElementsByTagName('input');
+    expect($choices)->toHaveCount(2)
+        ->and($document->getElementById('report-type')->getElementsByTagName('select'))->toHaveCount(0);
+
+    foreach (['activity' => 'Normaal verslag', 'year' => 'Jaarverslag'] as $value => $label) {
+        $choice = $document->getElementById('report-type-' . $value);
+        expect($choice->getAttribute('type'))->toBe('radio')
+            ->and($choice->getAttribute('name'))->toBe('report-type')
+            ->and($choice->getAttribute('value'))->toBe($value)
+            ->and($choice->getAttribute('x-model'))->toBe('reportType')
+            ->and($choice->hasAttribute('checked'))->toBe($value === $selectedType)
+            ->and(trim($choice->parentNode->textContent))->toBe($label);
+    }
+
+    expect($document->getElementById('report-year')->getAttribute('class'))
+        ->toBe($document->getElementById('title')->getAttribute('class'));
+
     foreach (['report-type', 'report-year'] as $field) {
-        expect($document->getElementById($field)->getAttribute('class'))
-            ->toBe($document->getElementById('title')->getAttribute('class'))
-            ->and($document->getElementById($field . '-wrapper')->getAttribute('class'))
+        expect($document->getElementById($field . '-wrapper')->getAttribute('class'))
             ->toBe($document->getElementById('title-wrapper')->getAttribute('class'));
     }
-});
+})->with([
+    'normal report' => [null, 'activity'],
+    'annual report' => [2026, 'year'],
+]);
 
 it('moves an annual report to normal reports without replacing its pdf', function () {
     $this->actingAs($this->admin)

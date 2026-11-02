@@ -35,6 +35,7 @@ class Activity extends Model
         'personal_confirmation_enabled',
         'personal_confirmation',
         'organizer',
+        'organizer_user_ids',
         'maxParticipants',
         'maxGuests',
         'price',
@@ -55,6 +56,7 @@ class Activity extends Model
     // How to cast fields
     protected $casts = [
         'type' => ActivityType::class,
+        'organizer_user_ids' => 'array',
         'start' => 'datetime',
         'end' => 'datetime',
         'registrationStart' => 'datetime',
@@ -405,6 +407,18 @@ class Activity extends Model
         return Activity::where('type', $type)->get()->sortBy('start');
     }
 
+
+    public function participantApplications()
+    {
+        return $this->applications()
+            ->select(['id', 'activity_id', 'user_id', 'email', 'phone', 'participants', 'status', 'created_at'])
+            ->with([
+                'user' => fn ($query) => $query->withTrashed()->select(['id', 'firstName', 'lastName', 'email', 'phone']),
+                'guests:id,application_id,firstName,lastName,email,phone',
+            ])
+            ->whereIn('status', [ApplicationStatus::Active, ApplicationStatus::Reserve])
+            ->orderBy('created_at')->orderBy('id');
+    }
 
     /**
      * Generates an Excel file containing the applications for the current activity.

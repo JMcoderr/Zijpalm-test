@@ -70,7 +70,7 @@
         'flex',
         'flex-col',
         'sm:flex-1',
-        ...($type === 'activity' ? ['self-start'] : ['aspect-5/6']),
+        ...($type === 'activity' ? ['self-stretch'] : ['aspect-5/6']),
         'max-w-[24rem]',
         'w-[90dvw]',
         'sm:max-w-6/12',
@@ -104,7 +104,7 @@
 
     // Make sure activity images display at reasonable proportions
     if($type === 'activity'){
-        array_push($infoClasses, 'shrink-0');
+        array_push($infoClasses, 'flex-1');
     }
 
     // Classes for the title
@@ -129,6 +129,10 @@
         'break-words',
         'text-center',
     ];
+
+    if($type === 'activity'){
+        array_push($detailClasses, 'flex-1');
+    }
 
     // Classes for text
     $textClasses = [

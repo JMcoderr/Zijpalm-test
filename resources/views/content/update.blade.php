@@ -39,12 +39,19 @@
                         $reportType = old('report-type', $content->report->year !== null ? 'year' : 'activity');
                     @endphp
                     <div x-data="{ reportType: {{ \Illuminate\Support\Js::from($reportType) }} }">
-                        <x-input-field id="report-type" type="select" label="Soort verslag">
-                            <select id="report-type" name="report-type" x-model="reportType" required class="font-normal rounded-sm shadow-sm px-1 focus:outline-0 h-7 text-start w-full bg-zinc-100 text-black">
-                                <option value="activity" @selected($reportType === 'activity')>Normaal verslag</option>
-                                <option value="year" @selected($reportType === 'year')>Jaarverslag</option>
-                            </select>
-                        </x-input-field>
+                        <fieldset id="report-type-wrapper" class="font-bold flex flex-col h-full w-full mx-auto p-2 cols-span-1">
+                            <legend class="float-left w-full text-start">Soort verslag</legend>
+                            <div id="report-type" class="font-normal rounded-sm shadow-sm px-1 min-h-7 text-start w-full bg-zinc-100 text-black flex flex-wrap items-center gap-x-4 gap-y-1">
+                                <label class="inline-flex items-center gap-2 whitespace-nowrap">
+                                    <input id="report-type-activity" type="radio" name="report-type" value="activity" x-model="reportType" @checked($reportType === 'activity') required class="size-4">
+                                    <span>Normaal verslag</span>
+                                </label>
+                                <label class="inline-flex items-center gap-2 whitespace-nowrap">
+                                    <input id="report-type-year" type="radio" name="report-type" value="year" x-model="reportType" @checked($reportType === 'year') required class="size-4">
+                                    <span>Jaarverslag</span>
+                                </label>
+                            </div>
+                        </fieldset>
                         <div x-show="reportType === 'year'" x-cloak>
                             <x-input-field id="report-year" type="number" label="Jaartal">
                                 <input id="report-year" name="report-year" type="number" min="1000" max="9999" step="1" value="{{ old('report-year', $content->report->year ?? now()->year) }}" x-bind:disabled="reportType !== 'year'" x-bind:required="reportType === 'year'" class="font-normal rounded-sm shadow-sm px-1 focus:outline-0 h-7 text-start w-full bg-zinc-100 text-black">
