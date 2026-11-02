@@ -44,35 +44,35 @@ Veilige alternatieven:
 - Gebruik een command-runner in het hostingpaneel (als beschikbaar).
 - Laat migrations uitvoeren via SSH door iemand met toegang.
 
-## Medeorganisatoren: Alleen Deelnemers Inzien
+## Bestanden: Prive Word- En Excelbibliotheek
 
 Upload voor deze wijziging:
-- `app/Http/Controllers/ActivityController.php`
-- `app/Http/Controllers/ApplicationController.php`
-- `app/Http/Requests/StoreActivityRequest.php`
-- `app/Http/Requests/UpdateActivityRequest.php`
-- `app/Models/Activity.php`
-- `app/Policies/ActivityPolicy.php`
+- `app/Http/Controllers/DocumentController.php`
+- `app/Http/Requests/StoreDocumentsRequest.php`
+- `app/Models/Document.php`
+- `config/filesystems.php`
 - `routes/web.php`
-- `resources/views/activities/create.blade.php`
-- `resources/views/activities/edit.blade.php`
-- `resources/views/activities/read.blade.php`
-- `resources/views/components/activity-organizers.blade.php`
-- `database/migrations/2026_11_02_120000_add_organizer_user_ids_to_activities_table.php`
+- `resources/views/components/layouts/app/header.blade.php`
+- `resources/views/admin/documents.blade.php`
+- `database/migrations/2026_11_02_130000_create_documents_table.php`
 - `public/build/css.css`
 
-Voer daarna `php artisan migrate --force` en `php artisan optimize:clear` uit.
-Er is geen wijziging aan `.env` nodig. Upload geen tests of logbestanden.
+Voer `php artisan migrate --force` en `php artisan optimize:clear` uit.
+De map `storage/app/private/admin-documents` wordt bij de eerste upload aangemaakt en moet schrijfbaar zijn.
+Bestanden staan niet op de publieke storage-schijf; maak hiervoor geen extra publieke symlink.
+Neem zowel de documents-tabel als deze privemap op in de backups. Overschrijf of verwijder de map niet bij updates.
+Er zijn geen nieuwe Composer-pakketten of `.env`-instellingen nodig.
 
-Een admin selecteert bij een activiteit de accounts onder **Medeorganisatoren**.
-Namen in het bestaande tekstveld **Organisator(en)** verlenen bewust geen toegang.
-Ook voor bestaande activiteiten moeten de accounts eenmalig geselecteerd worden.
-Een lege selectie trekt bestaande rechten in.
+Alleen admins zien **Bestanden**, direct naast **Lief & Leed**, en mogen de pagina, downloads en verwijderacties gebruiken.
+Ondersteund: DOC, DOCX, XLS en XLSX; maximaal 10 bestanden tegelijk en 20 MB per bestand.
+Controleer de PHP-hostinglimieten: `upload_max_filesize` moet minimaal 20M zijn, `max_file_uploads` minimaal 10,
+en `post_max_size` moet boven de totale grootte van een uploadbatch liggen.
+Er is geen automatische import of synchronisatie met Teams/SharePoint. Download de bronbestanden en upload ze op deze pagina.
+Verwijder de bronbestanden pas nadat de nieuwe uploads en downloads gecontroleerd zijn.
 
-Controleer na de release met een geselecteerd niet-adminaccount:
-- De deelnemerslijst van de gekoppelde activiteit gebruikt dezelfde weergave als bij admins, met alleen de downloadknop.
-- De download is hetzelfde Excel-bestand als bij admins, inclusief betaalbedragen, antwoorden en interne opmerkingen.
-- Kostenoverzicht en betaalgegevens op de pagina, overige adminpagina's, wijzigen, verwijderen en herinneringen versturen zijn niet toegankelijk.
-- Een andere activiteit geeft geen toegang tot de lijst of download.
-- Na verwijderen van de accountselectie is de download direct niet meer toegankelijk.
-- Admins behouden hun bestaande overzicht en financiele export.
+Controleer na de release:
+- Upload een Word- en een Excel-bestand; beide verschijnen in hun eigen lijst.
+- Zoek op bestandsnaam of uploader en download met behoud van de oorspronkelijke bestandsnaam.
+- Verwijder een testbestand en controleer dat alleen dat bestand verdwijnt.
+- Een PDF, vermomd bestand, bestand groter dan 20 MB of batch groter dan 10 wordt geweigerd.
+- Een normaal lid en een uitgelogde bezoeker kunnen de pagina, download en verwijderactie ook niet via een directe URL bereiken.

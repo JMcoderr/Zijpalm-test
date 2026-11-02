@@ -21,15 +21,15 @@
     </head>
     <body class="min-h-screen bg-white" x-data="{ loginModalOpen: false }">
         <flux:header container class="bg-linear-to-t from-zinc-300 to-zinc-100 inset-shadow-zinc-50 relative min-h-16">
-            <flux:sidebar.toggle class="md:hidden" icon="bars-2" inset="right"/>
+            <flux:sidebar.toggle class="lg:hidden" icon="bars-2" inset="right"/>
 
-            <flux:spacer class="md:hidden"/>
+            <flux:spacer class="lg:hidden"/>
 
-            <a href="{{route('home')}}" class="min-w-max absolute left-1/2 -translate-x-1/2 md:translate-none md:relative md:left-0 md:me-3" wire:navigate>
+            <a href="{{route('home')}}" class="min-w-max absolute left-1/2 -translate-x-1/2 lg:translate-none lg:relative lg:left-0 lg:me-3" wire:navigate>
                 <x-app-logo/>
             </a>
 
-            <flux:navbar class="-mb-px max-md:hidden overflow-hidden">
+            <flux:navbar class="-mb-px max-lg:hidden overflow-hidden">
                 <flux:navbar.item :href="route('activity.index')" :current="request()->routeIs('activity.*')" wire:navigate>
                     {{__('Activiteiten')}}
                 </flux:navbar.item>
@@ -50,6 +50,11 @@
                 <flux:navbar.item :href="route('information.charity')" :current="request()->routeIs('information.charity')" wire:navigate>
                     {{__('Lief & Leed')}}
                 </flux:navbar.item>
+                @if(auth()->user()?->isAdmin())
+                    <flux:navbar.item :href="route('admin.documents.index')" :current="request()->routeIs('admin.documents.*')" wire:navigate>
+                        {{__('Bestanden')}}
+                    </flux:navbar.item>
+                @endif
             </flux:navbar>
 
             <flux:spacer/>
@@ -57,7 +62,7 @@
             {{-- Admin Panel shortcut --}}
             @auth
                 @if(auth()->user()?->is_admin)
-                    <div class="hidden md:block">
+                    <div class="hidden lg:block">
                         <flux:button square :href="route('admin.index')" variant="primary" icon="wrench-screwdriver" class="mx-1"/>
                     </div>
                 @endif
@@ -67,8 +72,8 @@
             <flux:dropdown>
                 @auth
                     <flux:button class="cursor-pointer flex space-between">
-                        <p class="hidden md:block"> {{auth()->user()->name}} </p>
-                        <p class="block md:hidden"> {{auth()->user()->initials()}} </p>
+                        <p class="hidden lg:block"> {{auth()->user()->name}} </p>
+                        <p class="block lg:hidden"> {{auth()->user()->initials()}} </p>
                         <flux:separator vertical class="m-1.5"/>
                         <flux:icon.chevron-down class="size-4"/>
                     </flux:button>
@@ -153,9 +158,14 @@
                 <flux:navlist.item :href="route('information.charity')" :current="request()->routeIs('information.charity')" icon="heart" iconColor="text-zijpalm-600" iconVariant="solid" iconSize="size-6">
                     <p> Lief & Leed </p>
                 </flux:navlist.item>
+                @if(auth()->user()?->isAdmin())
+                    <flux:navlist.item :href="route('admin.documents.index')" :current="request()->routeIs('admin.documents.*')" icon="folder" iconColor="text-zijpalm-600" iconVariant="solid" iconSize="size-6">
+                        <p> Bestanden </p>
+                    </flux:navlist.item>
+                @endif
 
                 {{-- Admin panel --}}
-                <flux:navlist.item :href="route('admin.index')" :current="request()->routeIs('admin.*')" icon="wrench-screwdriver" iconColor="text-black" iconVariant="solid" iconSize="size-6">
+                <flux:navlist.item :href="route('admin.index')" :current="request()->routeIs('admin.*') && !request()->routeIs('admin.documents.*')" icon="wrench-screwdriver" iconColor="text-black" iconVariant="solid" iconSize="size-6">
                     <p> Beheren </p>
                 </flux:navlist.item>
             </flux:navlist>

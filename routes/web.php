@@ -232,6 +232,12 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->controller(AdminC
         Route::get('bestellingen/{order}', 'showOrder')->name('orders.show');
         Route::delete('bestellingen/{order}', 'deletePendingOrder')->name('orders.destroy');
         Route::get('content', 'content')->name('content');
+        Route::middleware('auth')->prefix('bestanden')->name('documents.')->controller(\App\Http\Controllers\DocumentController::class)->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::post('/', 'store')->name('store');
+            Route::get('{document}/download', 'download')->name('download');
+            Route::delete('{document}', 'destroy')->name('destroy');
+        });
         Route::get('activiteiten', 'activities')->name('activities');
         Route::get('activiteiten/download/{activity}', 'downloadApplications')->name('activities.download');
         Route::get('informeer-leden', 'notifyAllMembers')->name('notifyAllMembers');

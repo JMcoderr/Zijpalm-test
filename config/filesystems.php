@@ -32,6 +32,14 @@ return [
 
     'disks' => [
 
+        'admin_documents' => [
+            'driver' => 'local',
+            'root' => storage_path('app/private/admin-documents'),
+            'visibility' => 'private',
+            'serve' => false,
+            'throw' => true,
+        ],
+
         'local' => [
             'driver' => 'local',
             'root' => storage_path('app'),
