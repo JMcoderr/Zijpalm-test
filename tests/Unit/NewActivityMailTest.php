@@ -34,7 +34,7 @@ it('creates valid Power Automate JSON when the activity description has line bre
         ->toContain('<p>Eerste regel')
         ->toContain('Tweede regel')
         ->and($payload['subject'])
-        ->toBe('Nieuwe activiteit #Z');
+        ->toBe('Nieuwe activiteit ' . $activity->title . ' #Z');
 
     expect(prepareMailHtml('<p class="text-base [&>a]:underline">Bekijk <a href="https://example.com">de route</a></p>'))
         ->toBe('<p>Bekijk <a href="https://example.com">de route</a></p>');

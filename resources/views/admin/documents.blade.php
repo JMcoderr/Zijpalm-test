@@ -1,4 +1,47 @@
-<x-page-wrapper page="Bestanden" x-data="{ search: '', uploadDocumentsModal: {{ $errors->any() ? 'true' : 'false' }}, chosenFiles: [], selectedFiles: [], uploadMode: 'files', uploading: false }">
+@php
+    $replacementDocument = $folderDocuments->firstWhere('id', old('replace_document_id'));
+@endphp
+<x-page-wrapper page="Bestanden" x-data="{
+    search: '',
+    uploadDocumentsModal: {{ $errors->any() && !$errors->has('file') ? 'true' : 'false' }},
+    replaceDocumentModal: {{ $errors->has('file') && $replacementDocument ? 'true' : 'false' }},
+    replacementAction: {{ \Illuminate\Support\Js::from($replacementDocument ? route('admin.documents.replace', $replacementDocument) : '') }},
+    replacementDocumentId: {{ \Illuminate\Support\Js::from($replacementDocument?->id ?? '') }},
+    replacementName: {{ \Illuminate\Support\Js::from($replacementDocument?->original_name ?? '') }},
+    replacementFolder: {{ \Illuminate\Support\Js::from($currentFolder === '' ? 'Alle bestanden' : str_replace('/', ' / ', $currentFolder)) }},
+    replacementFileSelected: false,
+    replacing: false,
+    targetFolder: {{ \Illuminate\Support\Js::from(old('current_folder', $currentFolder)) }},
+    chosenFiles: [],
+    selectedFiles: [],
+    skippedFiles: [],
+    uploadMode: 'files',
+    uploading: false,
+    openReplaceDocument(button) {
+        this.replacementAction = button.dataset.replaceUrl;
+        this.replacementDocumentId = button.dataset.documentId;
+        this.replacementName = button.dataset.documentName;
+        this.replacementFolder = button.dataset.folder;
+        this.replacementFileSelected = false;
+        this.replaceDocumentModal = true;
+    },
+    selectFiles(input, preserveFolders) {
+        const supportedExtensions = ['pdf', 'doc', 'docx', 'xls', 'xlsx'];
+        const pickedFiles = Array.from(input.files);
+        const supportedFiles = pickedFiles.filter(file => supportedExtensions.includes(file.name.split('.').pop().toLowerCase()));
+        const uploadFiles = supportedFiles.map(file => ({
+            file,
+            relativePath: preserveFolders ? (file.webkitRelativePath || file.name) : file.name,
+        }));
+        const transfer = new DataTransfer();
+
+        uploadFiles.forEach(item => transfer.items.add(item.file));
+        input.files = transfer.files;
+        selectedFiles = uploadFiles;
+        chosenFiles = uploadFiles.map(item => item.relativePath);
+        skippedFiles = pickedFiles.filter(file => !supportedExtensions.includes(file.name.split('.').pop().toLowerCase())).map(file => file.webkitRelativePath || file.name);
+    },
+} ">
     <x-zijpalm-div title="Bestanden" color="transparent" :editable="false" />
 
     <x-zijpalm-div color="light" :editable="false" width="w-full" padding="p-4 sm:p-6" class="min-w-0 text-left" data-document-explorer>
@@ -86,6 +129,9 @@
                                 <flux:tooltip content="Download bestand">
                                     <flux:button :href="route('admin.documents.download', $document)" :aria-label="'Download ' . $document->original_name" icon="arrow-down-tray" variant="ghost" square size="sm" class="text-zinc-700 hover:bg-zijpalm-50 hover:text-zijpalm-800" />
                                 </flux:tooltip>
+                                <flux:tooltip content="Vervang met bewerkte versie">
+                                    <flux:button type="button" :aria-label="'Vervang ' . $document->original_name" icon="arrow-path" variant="ghost" square size="sm" data-replace-url="{{ route('admin.documents.replace', $document) }}" data-document-id="{{ $document->id }}" data-document-name="{{ $document->original_name }}" data-folder="{{ $currentFolder === '' ? 'Alle bestanden' : str_replace('/', ' / ', $currentFolder) }}" x-on:click="openReplaceDocument($event.currentTarget)" class="text-zinc-700 hover:bg-sky-50 hover:text-sky-800" />
+                                </flux:tooltip>
                                 <form method="POST" action="{{ route('admin.documents.destroy', ['document' => $document, 'folder' => $currentFolder]) }}" onsubmit="return confirm('Weet je zeker dat je dit bestand wilt verwijderen?')">
                                     @csrf
                                     @method('DELETE')
@@ -122,41 +168,61 @@
 
     <x-zijpalm-modal modal="uploadDocumentsModal" width="w-[min(36rem,92vw)] max-w-[92vw]" role="dialog" aria-modal="true" aria-labelledby="document-upload-title" x-trap.inert.noscroll="uploadDocumentsModal" x-on:keydown.escape.window="uploadDocumentsModal = false">
         <h2 id="document-upload-title" class="mb-2 text-left text-xl font-bold">Bestanden of map uploaden</h2>
-        <p class="mb-4 text-left text-sm text-zinc-600">Doelmap: <span class="font-semibold text-zinc-900">{{ $currentFolder === '' ? 'Alle bestanden' : $currentFolder }}</span></p>
+        <p class="mb-4 text-left text-sm text-zinc-600">Download een Officebestand, bewerk het op je computer en upload de bewerkte versie om het bestaande bestand te vervangen.</p>
         @if($errors->any())
             <div role="alert" class="mb-4 border-l-4 border-red-600 bg-red-50 p-3 text-left text-sm text-red-900">
                 <ul class="list-disc pl-4">
-                    @foreach($errors->all() as $error)
-                        <li>{{ $error }}</li>
+                    @foreach(collect($errors->all())->countBy() as $error => $count)
+                        <li>{{ $error }}@if($count > 1) <span class="font-semibold">({{ $count }} bestanden)</span>@endif</li>
                     @endforeach
                 </ul>
             </div>
         @endif
         <form method="POST" action="{{ route('admin.documents.store') }}" enctype="multipart/form-data" x-on:submit="uploading = true" class="flex flex-col gap-4 text-left">
             @csrf
-            <input type="hidden" name="current_folder" value="{{ $currentFolder }}">
             <template x-for="(file, index) in selectedFiles" :key="index">
-                <input type="hidden" name="relative_paths[]" :value="uploadMode === 'folder' ? (file.webkitRelativePath || file.name) : file.name">
+                <input type="hidden" name="relative_paths[]" :value="file.relativePath">
             </template>
 
+            <div>
+                <label for="document-destination" class="mb-2 block text-sm font-semibold">Opslaan in map</label>
+                <select id="document-destination" name="current_folder" x-model="targetFolder" class="h-11 w-full rounded-md border border-zinc-300 bg-white px-3 text-sm text-zinc-900 focus:border-zijpalm-500 focus:outline-0 focus:ring-2 focus:ring-zijpalm-400">
+                    <option value="" @selected(old('current_folder', $currentFolder) === '')>Alle bestanden</option>
+                    @foreach($folderOptions as $folderOption)
+                        <option value="{{ $folderOption['path'] }}" @selected(old('current_folder', $currentFolder) === $folderOption['path'])>{{ $folderOption['label'] }}</option>
+                    @endforeach
+                </select>
+            </div>
+
             <div class="grid grid-cols-2 rounded-lg bg-zinc-100 p-1" role="group" aria-label="Uploadtype">
-                <button type="button" x-on:click="if (uploadMode !== 'files') { $refs.documentFolder.value = ''; selectedFiles = []; chosenFiles = [] }; uploadMode = 'files'" x-bind:aria-pressed="uploadMode === 'files'" x-bind:class="uploadMode === 'files' ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-600 hover:text-zinc-900'" class="flex min-h-10 items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-semibold transition-colors">
+                <button type="button" x-on:click="if (uploadMode !== 'files') { $refs.documentFolder.value = ''; selectedFiles = []; chosenFiles = []; skippedFiles = [] }; uploadMode = 'files'" x-bind:aria-pressed="uploadMode === 'files'" x-bind:class="uploadMode === 'files' ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-600 hover:text-zinc-900'" class="flex min-h-10 items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-semibold transition-colors">
                     <flux:icon.document-text class="size-4"/>Bestanden
                 </button>
-                <button type="button" x-on:click="if (uploadMode !== 'folder') { $refs.documentFiles.value = ''; selectedFiles = []; chosenFiles = [] }; uploadMode = 'folder'" x-bind:aria-pressed="uploadMode === 'folder'" x-bind:class="uploadMode === 'folder' ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-600 hover:text-zinc-900'" class="flex min-h-10 items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-semibold transition-colors">
+                <button type="button" x-on:click="if (uploadMode !== 'folder') { $refs.documentFiles.value = ''; selectedFiles = []; chosenFiles = []; skippedFiles = [] }; uploadMode = 'folder'" x-bind:aria-pressed="uploadMode === 'folder'" x-bind:class="uploadMode === 'folder' ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-600 hover:text-zinc-900'" class="flex min-h-10 items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-semibold transition-colors">
                     <flux:icon.folder class="size-4"/>Hele map
                 </button>
             </div>
 
             <div x-show="uploadMode === 'files'">
                 <label for="document-files" class="mb-2 block text-sm font-semibold">Selecteer bestanden</label>
-                <input id="document-files" x-ref="documentFiles" type="file" name="files[]" multiple required accept=".pdf,.doc,.docx,.xls,.xlsx" x-bind:disabled="uploadMode !== 'files'" x-on:change="selectedFiles = Array.from($event.target.files); chosenFiles = selectedFiles.map(file => file.name)" class="block w-full min-w-0 rounded-md border border-zinc-300 bg-white p-2 text-sm text-black file:mr-3 file:cursor-pointer file:rounded file:border-0 file:bg-zijpalm-100 file:px-3 file:py-2 file:text-zijpalm-800" aria-describedby="document-file-limits">
+                <input id="document-files" x-ref="documentFiles" type="file" name="files[]" multiple required accept=".pdf,.doc,.docx,.xls,.xlsx" x-bind:disabled="uploadMode !== 'files'" x-on:change="selectFiles($event.target, false)" class="block w-full min-w-0 rounded-md border border-zinc-300 bg-white p-2 text-sm text-black file:mr-3 file:cursor-pointer file:rounded file:border-0 file:bg-zijpalm-100 file:px-3 file:py-2 file:text-zijpalm-800" aria-describedby="document-file-limits">
             </div>
             <div x-show="uploadMode === 'folder'">
                 <label for="document-folder" class="mb-2 block text-sm font-semibold">Selecteer een complete map</label>
-                <input id="document-folder" x-ref="documentFolder" type="file" name="files[]" multiple webkitdirectory directory accept=".pdf,.doc,.docx,.xls,.xlsx" required x-bind:disabled="uploadMode !== 'folder'" x-on:change="selectedFiles = Array.from($event.target.files); chosenFiles = selectedFiles.map(file => file.webkitRelativePath || file.name)" class="block w-full min-w-0 rounded-md border border-zinc-300 bg-white p-2 text-sm text-black file:mr-3 file:cursor-pointer file:rounded file:border-0 file:bg-zijpalm-100 file:px-3 file:py-2 file:text-zijpalm-800" aria-describedby="document-file-limits">
+                <input id="document-folder" x-ref="documentFolder" type="file" name="files[]" multiple webkitdirectory directory accept=".pdf,.doc,.docx,.xls,.xlsx" required x-bind:disabled="uploadMode !== 'folder'" x-on:change="selectFiles($event.target, true)" class="block w-full min-w-0 rounded-md border border-zinc-300 bg-white p-2 text-sm text-black file:mr-3 file:cursor-pointer file:rounded file:border-0 file:bg-zijpalm-100 file:px-3 file:py-2 file:text-zijpalm-800" aria-describedby="document-file-limits">
             </div>
-            <p id="document-file-limits" class="-mt-2 text-xs text-zinc-600">PDF, DOC, DOCX, XLS en XLSX. Maximaal 100 bestanden per keer, 20 MB per bestand.</p>
+            <p id="document-file-limits" class="-mt-2 text-xs text-zinc-600">PDF, DOC, DOCX, XLS en XLSX. Maximaal 500 bestanden per keer, 20 MB per bestand.</p>
+            <div x-cloak x-show="skippedFiles.length" role="status" class="rounded-md border-l-4 border-amber-500 bg-amber-50 p-3 text-sm text-amber-950">
+                <p><span x-text="skippedFiles.length"></span> niet-ondersteunde bestanden worden overgeslagen.</p>
+                <ul class="mt-1 list-disc pl-5 text-xs">
+                    <template x-for="file in skippedFiles.slice(0, 5)" :key="file">
+                        <li x-text="file" class="break-all"></li>
+                    </template>
+                </ul>
+                <p x-show="skippedFiles.length > 5" class="mt-1 text-xs">En nog <span x-text="skippedFiles.length - 5"></span> andere.</p>
+            </div>
+            <p x-show="chosenFiles.length" class="text-xs font-medium text-zinc-700" aria-live="polite"><span x-text="chosenFiles.length"></span> bestanden klaar om te uploaden.</p>
+            <p x-show="chosenFiles.length > 500" role="alert" class="text-sm font-semibold text-red-800">Selecteer maximaal 500 ondersteunde bestanden per keer.</p>
             <ul x-cloak x-show="chosenFiles.length" class="max-h-40 list-disc overflow-y-auto rounded-md border border-zinc-200 bg-zinc-50 px-4 py-2 text-sm">
                 <template x-for="(file, index) in chosenFiles" :key="index">
                     <li x-text="file" class="break-words py-1"></li>
@@ -164,8 +230,35 @@
             </ul>
             <div class="flex flex-wrap justify-end gap-2">
                 <flux:button type="button" x-on:click="uploadDocumentsModal = false" x-bind:disabled="uploading">Annuleren</flux:button>
-                <flux:button type="submit" icon="arrow-up-tray" variant="primary" x-bind:disabled="uploading" class="min-w-32">
+                <flux:button type="submit" icon="arrow-up-tray" variant="primary" x-bind:disabled="uploading || chosenFiles.length === 0 || chosenFiles.length > 500" class="min-w-32">
                     <span x-text="uploading ? 'Uploaden...' : 'Uploaden'">Uploaden</span>
+                </flux:button>
+            </div>
+        </form>
+    </x-zijpalm-modal>
+
+    <x-zijpalm-modal modal="replaceDocumentModal" width="w-[min(32rem,92vw)] max-w-[92vw]" role="dialog" aria-modal="true" aria-labelledby="document-replace-title" x-trap.inert.noscroll="replaceDocumentModal" x-on:keydown.escape.window="replaceDocumentModal = false">
+        <h2 id="document-replace-title" class="mb-2 text-left text-xl font-bold">Bewerkte versie uploaden</h2>
+        <p class="mb-4 text-left text-sm text-zinc-600">Download het bestand, bewerk het op je computer en kies hier de nieuwe versie. De map blijft hetzelfde.</p>
+        @if($errors->has('file'))
+            <p role="alert" class="mb-4 border-l-4 border-red-600 bg-red-50 p-3 text-left text-sm text-red-900">{{ $errors->first('file') }}</p>
+        @endif
+        <form method="POST" x-bind:action="replacementAction" enctype="multipart/form-data" x-on:submit="replacing = true" class="flex flex-col gap-4 text-left">
+            @csrf
+            <input type="hidden" name="replace_document_id" x-bind:value="replacementDocumentId">
+            <div class="rounded-md border border-zinc-200 bg-zinc-50 p-3 text-sm">
+                <p class="break-words font-semibold text-zinc-900" x-text="replacementName"></p>
+                <p class="mt-1 text-xs text-zinc-600">Opslaan in: <span class="font-medium" x-text="replacementFolder"></span></p>
+            </div>
+            <div>
+                <label for="document-replacement-file" class="mb-2 block text-sm font-semibold">Selecteer de bewerkte versie</label>
+                <input id="document-replacement-file" type="file" name="file" required accept=".pdf,.doc,.docx,.xls,.xlsx" x-on:change="replacementFileSelected = $event.target.files.length > 0" class="block w-full min-w-0 rounded-md border border-zinc-300 bg-white p-2 text-sm text-black file:mr-3 file:cursor-pointer file:rounded file:border-0 file:bg-zijpalm-100 file:px-3 file:py-2 file:text-zijpalm-800">
+                <p class="mt-2 text-xs text-zinc-600">PDF, DOC, DOCX, XLS of XLSX. Maximaal 20 MB.</p>
+            </div>
+            <div class="flex flex-wrap justify-end gap-2">
+                <flux:button type="button" x-on:click="replaceDocumentModal = false" x-bind:disabled="replacing">Annuleren</flux:button>
+                <flux:button type="submit" icon="arrow-path" variant="primary" x-bind:disabled="replacing || !replacementFileSelected">
+                    <span x-text="replacing ? 'Vervangen...' : 'Bestand vervangen'">Bestand vervangen</span>
                 </flux:button>
             </div>
         </form>

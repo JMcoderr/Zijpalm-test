@@ -516,6 +516,9 @@ class ActivityController extends Controller
         $applications = $activity->applications()->with($applicationRelations)->whereNotIn('status', [ApplicationStatus::Cancelled])->get()->sortBy(fn($app) => array_search(ApplicationStatus::from($app->status->value), ApplicationStatus::cases()));
         $reserves = $activity->applications()->with($applicationRelations)->where('status', ApplicationStatus::Reserve)->get();
         $pending = $activity->applications()->with($applicationRelations)->where('status', ApplicationStatus::Pending)->get();
+        $cancelled = auth()->user()?->isAdmin()
+            ? $activity->applications()->with($applicationRelations)->where('status', ApplicationStatus::Cancelled)->orderByDesc('updated_at')->get()
+            : collect();
 
         $activity->setRelation('applications', $applications);
         $applications->each(fn ($application) => $application->setRelation('activity', $activity));
@@ -538,7 +541,7 @@ class ActivityController extends Controller
             ? $activity->participantApplications()->get()
             : collect();
 
-        return view('activities.read', compact('activity', 'applications', 'reserves', 'pending', 'assignableUsers', 'shopProduct', 'participantApplications'));
+        return view('activities.read', compact('activity', 'applications', 'reserves', 'pending', 'cancelled', 'assignableUsers', 'shopProduct', 'participantApplications'));
     }
 
     public function downloadParticipants(Activity $activity)

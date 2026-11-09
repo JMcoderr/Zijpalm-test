@@ -48,6 +48,7 @@ Veilige alternatieven:
 
 Upload voor deze wijziging:
 - `app/Http/Controllers/DocumentController.php`
+- `app/Http/Requests/ReplaceDocumentRequest.php`
 - `app/Http/Requests/StoreDocumentsRequest.php`
 - `app/Models/Document.php`
 - `config/filesystems.php`
@@ -65,10 +66,11 @@ De mapstructuur wordt in de database bewaard; de bestandsinhoud blijft onder wil
 Neem zowel de documents-tabel als deze privemap op in de backups. Overschrijf of verwijder de map niet bij updates.
 Er zijn geen nieuwe Composer-pakketten of `.env`-instellingen nodig.
 
-Alleen admins zien **Bestanden**, direct naast **Lief & Leed**, en mogen de pagina, downloads en verwijderacties gebruiken.
+Alleen admins zien **Bestanden**, direct naast **Lief & Leed**, en mogen de pagina, downloads, vervangacties en verwijderacties gebruiken.
 De pagina toont een mapverkenner met kruimelpad; bij mapuploads blijven de relatieve submappen behouden.
-Ondersteund: PDF, DOC, DOCX, XLS en XLSX; maximaal 100 bestanden per upload en 20 MB per bestand.
-Controleer de PHP-hostinglimieten: `upload_max_filesize` moet minimaal 20M zijn, `max_file_uploads` minimaal 100,
+Een bestand kan worden gedownload, lokaal bewerkt en als nieuwe versie in dezelfde map worden teruggezet. Direct bewerken in Office op de website vereist een aparte Microsoft 365-integratie.
+Ondersteund: PDF, DOC, DOCX, XLS en XLSX; maximaal 500 bestanden per upload en 20 MB per bestand.
+Controleer de PHP-hostinglimieten: `upload_max_filesize` moet minimaal 20M zijn, `max_file_uploads` minimaal 500,
 en `post_max_size` moet boven de totale grootte van een uploadbatch liggen. De hostingprovider kan lagere limieten opleggen.
 Mapselectie gebruikt de browserondersteunde `webkitdirectory`-bestandskiezer.
 Er is geen automatische import of synchronisatie met Teams/SharePoint. Download de bronbestanden en upload ze op deze pagina.
@@ -78,6 +80,7 @@ Controleer na de release:
 - Upload een PDF, Word- en Excel-bestand; ze verschijnen samen in de huidige map.
 - Upload een complete map met submappen en controleer de mappenstructuur en het kruimelpad.
 - Zoek in een map en download een bestand; de oorspronkelijke bestandsnaam blijft behouden.
+- Vervang een bestand met een bewerkte versie en controleer dat de map behouden blijft en de nieuwe download klopt.
 - Verwijder een testbestand en controleer dat alleen dat bestand verdwijnt.
-- Een niet-ondersteund of vermomd bestand, bestand groter dan 20 MB of batch groter dan 100 wordt geweigerd.
-- Een normaal lid en een uitgelogde bezoeker kunnen de pagina, download en verwijderactie ook niet via een directe URL bereiken.
+- Een niet-ondersteund of vermomd bestand, bestand groter dan 20 MB of batch groter dan 500 wordt geweigerd.
+- Een normaal lid en een uitgelogde bezoeker kunnen de pagina, download, vervang- en verwijderactie ook niet via een directe URL bereiken.

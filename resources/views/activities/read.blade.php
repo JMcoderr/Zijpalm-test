@@ -224,15 +224,16 @@
             @if(auth()->user()?->isAdmin() && $activity->type !== \App\ActivityType::Weekly)
                 @php
                     $registeredParticipantCount = $applications
-                        ->reject(fn ($application) => $application->status === App\ApplicationStatus::Reserve)
+                        ->where('status', App\ApplicationStatus::Active)
                         ->sum('participants');
+                    $pendingParticipantCount = $pending->sum('participants');
                     $reserveParticipantCount = $reserves->sum('participants');
                 @endphp
                 {{-- Registrations --}}
                 <x-zijpalm-div :editable="false" color="light" width="w-full" class="flex min-w-0 flex-col self-stretch max-h-[40rem] md:h-[40rem]">
                     <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
                         <h2 class="min-w-0 flex-1 text-left text-xl font-bold sm:text-2xl">
-                            Aanmeldingen ({{ $registeredParticipantCount }}{{$activity->maxParticipants ? '/' . $activity->maxParticipants : ''}}{{ $reserveParticipantCount > 0 ? ', ' . $reserveParticipantCount . ' ' . ($reserveParticipantCount === 1 ? 'reserve' : 'reserves') : '' }})
+                            Aanmeldingen ({{ $registeredParticipantCount }}{{$activity->maxParticipants ? '/' . $activity->maxParticipants : ''}}{{ $pendingParticipantCount > 0 ? ', ' . $pendingParticipantCount . ' ' . ($pendingParticipantCount === 1 ? 'afwachting' : 'afwachtingen') . ' van betaling' : '' }}{{ $reserveParticipantCount > 0 ? ', ' . $reserveParticipantCount . ' ' . ($reserveParticipantCount === 1 ? 'reserve' : 'reserves') : '' }})
                         </h2>
                         <div class="flex shrink-0 items-center gap-2">
                         {{-- Admins may add any member by hand, paid or not --}}
@@ -523,7 +524,7 @@
                         @endif
                     </x-zijpalm-modal>
 
-                    @if($applications->isEmpty())
+                    @if($applications->isEmpty() && $cancelled->isEmpty())
                         <div class="opacity-50"> Er zijn nog geen aanmeldingen voor deze activiteit </div>
                     @else
                         {{-- List of registered users --}}
@@ -531,7 +532,7 @@
 
                             {{-- List header --}}
                             <div class="flex font-bold">
-                                <span class="flex-1">Datum</span>
+                                <span class="flex-1">Aangemeld / betaald</span>
                                 <span class="flex-1">Naam</span>
                                 <span class="flex-1">Telefoon</span>
                                 <span class="flex-1 hidden md:flex">Mail</span>
@@ -542,6 +543,16 @@
 
                             {{-- List items --}}
                             @foreach($applications as $application)
+                                @php
+                                    $latestPaidPayment = $application->payments
+                                        ->where('status', App\PaymentStatus::paid)
+                                        ->sortByDesc('paidAt')
+                                        ->first();
+                                    $latestPendingPayment = $application->payments
+                                        ->whereIn('status', [App\PaymentStatus::open, App\PaymentStatus::pending, App\PaymentStatus::authorized])
+                                        ->sortByDesc('created_at')
+                                        ->first();
+                                @endphp
                                 {{-- If there are reserves, add a header before the first of them --}}
                                 @if($reserves->isNotEmpty() && $reserves->first() == $application)
                                     <flux:separator/>
@@ -551,16 +562,21 @@
                                     <div class="flex font-bold self-center">In afwachting van betaling</div>
                                 @endif
                                 <div class="bg-[rgba(0,0,0,0.05)] p-1 rounded-xl flex flex-col gap-y-1 {{$reserves->contains($application) ? 'opacity-50' : ''}} {{$pending->contains($application) ? 'opacity-75' : ''}}">
-
-                                    {{-- User data --}}
                                     <div class="flex items-center gap-x-1">
                                         <div class="flex flex-1 min-w-0 px-2 gap-x-2 rounded-full overflow-clip bg-linear-to-t from-zijpalm-500 to-zijpalm-300 inset-shadow-zijpalm-200 text-zinc-100">
-                                            <span class="flex-1 truncate">{{ $application->created_at?->format('d/m/Y') }}</span>
+                                            <span class="flex flex-1 min-w-0 flex-col justify-center truncate" title="Aangemeld {{ $application->created_at?->format('d/m/Y H:i') }}">
+                                                <time datetime="{{ $application->created_at?->toIso8601String() }}" class="truncate">{{ $application->created_at?->format('d/m/Y H:i') }}</time>
+                                                @if($latestPaidPayment?->paidAt)
+                                                    <time datetime="{{ $latestPaidPayment->paidAt->toIso8601String() }}" class="truncate text-[10px]">Betaald {{ $latestPaidPayment->paidAt->format('d/m/Y H:i') }}</time>
+                                                @endif
+                                                @if($latestPendingPayment)
+                                                    <time datetime="{{ $latestPendingPayment->created_at?->toIso8601String() }}" class="truncate text-[10px]">Betaalverzoek {{ $latestPendingPayment->created_at?->format('d/m/Y H:i') }}</time>
+                                                @endif
+                                            </span>
                                             <span class="flex-1 truncate">{{$application->user?->name ?? 'Onbekend lid'}}</span>
                                             <span class="flex-1 truncate">{{formatPhoneNumber($application->phone)}}</span>
                                             <span class="flex-1 hidden md:flex truncate">{{$application->email}}</span>
                                         </div>
-                                        {{-- Admins can take anyone off the list, paid or not --}}
                                         <form method="POST" action="{{route('application.destroy', $application)}}" class="shrink-0"
                                               onsubmit="return confirm('Weet je zeker dat je {{ $application->user?->name ?? 'deze deelnemer' }} van de deelnemerslijst wilt halen? Een eventuele betaling wordt teruggestort.')">
                                             @csrf
@@ -570,8 +586,6 @@
                                             </flux:tooltip>
                                         </form>
                                     </div>
-
-                                    {{-- Guest data --}}
                                     @if($application->shop_unit_price !== null && $application->participants > 1)
                                         <p class="px-2 text-sm">{{ $application->participants }} deelnemers; extra namen niet opgegeven.</p>
                                     @endif
@@ -588,6 +602,48 @@
                                     @endforeach
                                 </div>
                             @endforeach
+                            @if($cancelled->isNotEmpty())
+                                <flux:separator/>
+                                <div class="flex font-bold self-center">Afmeldingen ({{ $cancelled->sum('participants') }})</div>
+                                @foreach($cancelled as $application)
+                                    @php
+                                        $latestPaidPayment = $application->payments
+                                            ->where('status', App\PaymentStatus::paid)
+                                            ->sortByDesc('paidAt')
+                                            ->first();
+                                    @endphp
+                                    <div class="bg-[rgba(0,0,0,0.05)] p-1 rounded-xl flex flex-col gap-y-1 opacity-60">
+                                        <div class="flex items-center gap-x-1">
+                                            <div class="flex flex-1 min-w-0 px-2 gap-x-2 rounded-full overflow-clip bg-linear-to-t from-zijpalm-500 to-zijpalm-300 inset-shadow-zijpalm-200 text-zinc-100">
+                                                <span class="flex flex-1 min-w-0 flex-col justify-center truncate" title="Aangemeld {{ $application->created_at?->format('d/m/Y H:i') }}; afgemeld {{ $application->updated_at?->format('d/m/Y H:i') }}">
+                                                    <time datetime="{{ $application->created_at?->toIso8601String() }}" class="truncate">{{ $application->created_at?->format('d/m/Y H:i') }}</time>
+                                                    <span class="truncate text-[10px]">Afgemeld {{ $application->updated_at?->format('d/m/Y H:i') }}</span>
+                                                    @if($latestPaidPayment?->paidAt)
+                                                        <time datetime="{{ $latestPaidPayment->paidAt->toIso8601String() }}" class="truncate text-[10px]">Betaald {{ $latestPaidPayment->paidAt->format('d/m/Y H:i') }}</time>
+                                                    @endif
+                                                </span>
+                                                <span class="flex-1 truncate">{{ $application->user?->name ?? 'Onbekend lid' }}</span>
+                                                <span class="flex-1 truncate">{{ formatPhoneNumber($application->phone) }}</span>
+                                                <span class="hidden min-w-0 flex-1 truncate md:flex">{{ $application->email }}</span>
+                                            </div>
+                                            <span class="w-6 shrink-0"></span>
+                                        </div>
+                                        @if($application->guests->isNotEmpty())
+                                            @foreach($application->guests as $guest)
+                                                <div class="flex items-center gap-x-1">
+                                                    <div class="flex flex-1 min-w-0 px-2 gap-x-2 rounded-full overflow-clip bg-linear-to-t from-zinc-300 to-zinc-200 inset-shadow-zinc-50 border-b border-[rgba(0,0,0,0.15)]">
+                                                        <span class="flex-1 truncate">{{ $application->created_at?->format('d/m/Y') }}</span>
+                                                        <span class="flex-1 truncate">{{ $guest->name }}</span>
+                                                        <span class="flex-1 truncate">{{ formatPhoneNumber($guest->phone) }}</span>
+                                                        <span class="flex-1 hidden md:flex truncate">{{ $guest->email }}</span>
+                                                    </div>
+                                                    <span class="w-6 shrink-0"></span>
+                                                </div>
+                                            @endforeach
+                                        @endif
+                                    </div>
+                                @endforeach
+                            @endif
                         </div>
                     @endif
                 </x-zijpalm-div>

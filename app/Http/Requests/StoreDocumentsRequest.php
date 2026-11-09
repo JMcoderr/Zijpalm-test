@@ -16,10 +16,10 @@ class StoreDocumentsRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'files' => ['required', 'array', 'min:1', 'max:100'],
+            'files' => ['required', 'array', 'min:1', 'max:500'],
             'files.*' => ['required', File::types(['doc', 'docx', 'xls', 'xlsx', 'pdf'])->max(20480), 'extensions:doc,docx,xls,xlsx,pdf'],
             'current_folder' => ['nullable', 'string', 'max:255'],
-            'relative_paths' => ['sometimes', 'array', 'max:100'],
+            'relative_paths' => ['sometimes', 'array', 'max:500'],
             'relative_paths.*' => ['required', 'string', 'max:2048'],
         ];
     }
@@ -75,12 +75,12 @@ class StoreDocumentsRequest extends FormRequest
     {
         return [
             'files.required' => 'Kies minimaal een bestand.',
-            'files.max' => 'Upload maximaal 100 bestanden tegelijk.',
+            'files.max' => 'Upload maximaal 500 bestanden tegelijk.',
             'files.*.mimes' => 'Alleen PDF-, Word- en Excel-bestanden zijn toegestaan (pdf, doc, docx, xls, xlsx).',
             'files.*.extensions' => 'Alleen PDF-, Word- en Excel-bestanden zijn toegestaan (pdf, doc, docx, xls, xlsx).',
             'files.*.max' => 'Een bestand mag maximaal 20 MB groot zijn.',
             'files.*.uploaded' => 'Het bestand kon niet worden ontvangen. Controleer de bestandsgrootte.',
-            'relative_paths.max' => 'Upload maximaal 100 bestanden tegelijk.',
+            'relative_paths.max' => 'Upload maximaal 500 bestanden tegelijk.',
         ];
     }
 

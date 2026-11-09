@@ -69,7 +69,7 @@ class NewActivity extends Mailable
 
         $jsonBody = json_encode([
             'emails' => $this->emails->values()->all(),
-            'subject' => $this->withZSuffix((string) $this->content->title),
+            'subject' => $this->withZSuffix((string) $this->content->title . ' ' . $this->activity->title),
             'body' => prepareMailHtml($renderedContent),
             'batch_size' => $this->batchSize,
             'delay' => $this->delay,

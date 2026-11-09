@@ -235,6 +235,7 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->controller(AdminC
         Route::middleware('auth')->prefix('bestanden')->name('documents.')->controller(\App\Http\Controllers\DocumentController::class)->group(function () {
             Route::get('/', 'index')->name('index');
             Route::post('/', 'store')->name('store');
+            Route::post('{document}/vervangen', 'replace')->name('replace');
             Route::get('{document}/download', 'download')->name('download');
             Route::delete('{document}', 'destroy')->name('destroy');
         });

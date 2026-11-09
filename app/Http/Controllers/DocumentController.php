@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\ReplaceDocumentRequest;
 use App\Http\Requests\StoreDocumentsRequest;
 use App\Models\Document;
 use Illuminate\Http\Request;
@@ -27,6 +28,10 @@ class DocumentController extends Controller
         }
 
         $folderPaths = $folderPaths->unique()->values();
+        $folderOptions = $folderPaths
+            ->sort()
+            ->map(fn ($path) => ['path' => $path, 'label' => str_replace('/', ' / ', $path)])
+            ->values();
         $requestedFolder = $request->query('folder', '');
         abort_unless(is_string($requestedFolder), 404);
         $currentFolder = trim($requestedFolder, '/');
@@ -71,6 +76,7 @@ class DocumentController extends Controller
             'breadcrumbs' => $breadcrumbs,
             'currentFolder' => $currentFolder,
             'folderDocuments' => $folderDocuments,
+            'folderOptions' => $folderOptions,
             'folders' => $folders,
             'searchNames' => $searchNames,
             'totalFiles' => $documents->count(),
@@ -124,6 +130,41 @@ class DocumentController extends Controller
             'Cache-Control' => 'private, no-store',
             'X-Content-Type-Options' => 'nosniff',
         ]);
+    }
+
+    public function replace(ReplaceDocumentRequest $request, Document $document)
+    {
+        $file = $request->file('file');
+        $originalName = basename(str_replace('\\', '/', $file->getClientOriginalName()));
+        $extension = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+        $oldPath = $document->path;
+        $newPath = $file->store('', 'admin_documents');
+
+        if (!is_string($newPath)) {
+            return back()->withInput()->withErrors(['file' => 'Het bestand kon niet worden opgeslagen. Probeer het opnieuw.']);
+        }
+
+        try {
+            DB::transaction(function () use ($document, $request, $originalName, $extension, $newPath, $file) {
+                $document->update([
+                    'original_name' => $originalName,
+                    'path' => $newPath,
+                    'category' => in_array($extension, ['doc', 'docx'], true) ? 'word' : (in_array($extension, ['xls', 'xlsx'], true) ? 'excel' : 'pdf'),
+                    'size' => $file->getSize(),
+                    'user_id' => $request->user()->id,
+                ]);
+            });
+        } catch (Throwable $exception) {
+            Storage::disk('admin_documents')->delete($newPath);
+            report($exception);
+
+            return back()->withInput()->withErrors(['file' => 'Vervangen is niet gelukt. Probeer het opnieuw.']);
+        }
+
+        Storage::disk('admin_documents')->delete($oldPath);
+
+        return redirect()->route('admin.documents.index', $document->folder_path === '' ? [] : ['folder' => $document->folder_path])
+            ->with('success', 'Bestand vervangen.');
     }
 
     public function destroy(Request $request, Document $document)

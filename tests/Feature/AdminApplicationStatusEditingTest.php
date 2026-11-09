@@ -74,6 +74,60 @@ it('shows the editing button immediately after adding participants and hides it 
         ->assertDontSee('aria-label="Aanmeldingen bewerken"', false);
 });
 
+it('counts active participants separately from pending payments and shows cancellations and timestamps', function () {
+    $this->activity->update(['maxParticipants' => 36]);
+    $this->application->forceFill(['created_at' => now()->setDate(2026, 11, 1)->setTime(8, 15)])->saveQuietly();
+    $paidPayment = $this->application->payments()->create([
+        'mollieId' => 'tr_paid_timestamp',
+        'description' => 'Inschrijving',
+        'status' => PaymentStatus::paid,
+        'price' => 15,
+    ]);
+    $paidPayment->forceFill(['paidAt' => now()->setDate(2026, 11, 1)->setTime(8, 30)])->save();
+
+    for ($index = 0; $index < 33; $index++) {
+        Application::factory()->create([
+            'activity_id' => $this->activity->id,
+            'user_id' => User::factory()->create()->id,
+            'status' => ApplicationStatus::Active,
+        ]);
+    }
+
+    $pendingApplication = Application::factory()->create([
+        'activity_id' => $this->activity->id,
+        'user_id' => User::factory()->create()->id,
+        'status' => ApplicationStatus::Pending,
+    ]);
+    $pendingApplication->payments()->create([
+        'mollieId' => 'tr_pending_timestamp',
+        'description' => 'Betaalverzoek',
+        'status' => PaymentStatus::pending,
+        'price' => 15,
+    ]);
+    Application::factory()->create([
+        'activity_id' => $this->activity->id,
+        'user_id' => User::factory()->create()->id,
+        'status' => ApplicationStatus::Pending,
+    ]);
+    $cancelledUser = User::factory()->create(['firstName' => 'Afgemeld', 'lastName' => 'Lid']);
+    $cancelledApplication = Application::factory()->create([
+        'activity_id' => $this->activity->id,
+        'user_id' => $cancelledUser->id,
+        'status' => ApplicationStatus::Cancelled,
+    ]);
+
+    $this->actingAs($this->admin)->get(route('activity.show', $this->activity))
+        ->assertOk()
+        ->assertSee('Aanmeldingen (34/36, 2 afwachtingen van betaling)')
+        ->assertSee('Aangemeld / betaald')
+        ->assertSee('01/11/2026 08:15')
+        ->assertSee('Betaald 01/11/2026 08:30')
+        ->assertSee('Betaalverzoek ' . $pendingApplication->payments()->sole()->created_at->format('d/m/Y H:i'))
+        ->assertSeeInOrder(['Aangemeld / betaald', 'Afmeldingen (1)'])
+        ->assertSee('Afgemeld Lid')
+        ->assertSee('Afgemeld ' . $cancelledApplication->updated_at->format('d/m/Y H:i'));
+});
+
 it('shows complete activity card photos in a white widescreen frame', function () {
     $html = \Illuminate\Support\Facades\Blade::render(
         '<x-zijpalm-card :content="$activity" type="activity" />',

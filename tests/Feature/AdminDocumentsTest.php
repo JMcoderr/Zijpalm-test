@@ -83,6 +83,49 @@ it('stores PDF uploads in their folder hierarchy and browses nested folders', fu
     }
 });
 
+it('replaces an edited document in place and keeps its folder', function () {
+    Storage::disk('admin_documents')->put('old-offer.pdf', 'old version');
+    $document = Document::create([
+        'original_name' => 'Offerte.pdf', 'path' => 'old-offer.pdf', 'category' => 'pdf',
+        'folder_path' => 'Offertes/2026', 'size' => 12, 'user_id' => $this->admin->id,
+    ]);
+
+    $this->actingAs($this->admin)->post(route('admin.documents.replace', $document), [
+        'file' => UploadedFile::fake()->create('Offerte aangepast.pdf', 24, 'application/pdf'),
+    ])->assertSessionHasNoErrors()->assertRedirect(route('admin.documents.index', ['folder' => 'Offertes/2026']));
+
+    $document->refresh();
+    expect($document->original_name)->toBe('Offerte aangepast.pdf')
+        ->and($document->folder_path)->toBe('Offertes/2026')
+        ->and($document->category)->toBe('pdf')
+        ->and($document->path)->not->toBe('old-offer.pdf');
+    Storage::disk('admin_documents')->assertMissing('old-offer.pdf');
+    Storage::disk('admin_documents')->assertExists($document->path);
+});
+
+it('keeps the existing document when a replacement file is invalid', function () {
+    Storage::disk('admin_documents')->put('old-offer.pdf', 'old version');
+    $document = Document::create([
+        'original_name' => 'Offerte.pdf', 'path' => 'old-offer.pdf', 'category' => 'pdf',
+        'folder_path' => 'Offertes/2026', 'size' => 12, 'user_id' => $this->admin->id,
+    ]);
+    $folderUrl = route('admin.documents.index', ['folder' => $document->folder_path]);
+
+    $this->actingAs($this->admin)->from($folderUrl)->post(route('admin.documents.replace', $document), [
+        'replace_document_id' => $document->id,
+        'file' => UploadedFile::fake()->create('Niet toegestaan.txt', 12, 'text/plain'),
+    ])->assertRedirect($folderUrl)->assertSessionHasErrors('file');
+
+    $this->get($folderUrl)->assertOk()
+        ->assertSee('Alleen PDF-, Word- en Excel-bestanden zijn toegestaan.')
+        ->assertSee('replaceDocumentModal: true', false);
+
+    expect($document->fresh()->path)->toBe('old-offer.pdf')
+        ->and($document->fresh()->original_name)->toBe('Offerte.pdf');
+    Storage::disk('admin_documents')->assertExists('old-offer.pdf');
+    expect(Storage::disk('admin_documents')->allFiles())->toBe(['old-offer.pdf']);
+});
+
 it('rejects unsafe folder paths and mismatched folder upload metadata', function (string $relativePath) {
     $this->actingAs($this->admin)->from(route('admin.documents.index'))->post(route('admin.documents.store'), [
         'files' => [UploadedFile::fake()->create('Offerte.pdf', 16, 'application/pdf')],
@@ -125,6 +168,7 @@ it('denies members and guests all document routes and hides the navigation link'
         $this->get(route('admin.documents.index'))->assertRedirect($redirect);
         $this->get(route('admin.documents.download', $document))->assertRedirect($redirect);
         $this->post(route('admin.documents.store'), [])->assertRedirect($redirect);
+        $this->post(route('admin.documents.replace', $document), [])->assertRedirect($redirect);
         $this->delete(route('admin.documents.destroy', $document))->assertRedirect($redirect);
         $this->get(route('activity.index'))->assertOk()->assertDontSee(route('admin.documents.index'), false);
     }
@@ -193,9 +237,9 @@ it('rejects invalid files without keeping any part of the batch', function (stri
         ->and(Storage::disk('admin_documents')->allFiles())->toBe([]);
 })->with(['disguised', 'disguised-pdf', 'oversized', 'extension']);
 
-it('requires a file and rejects batches larger than one hundred', function () {
+it('requires a file and rejects batches larger than five hundred', function () {
     $this->actingAs($this->admin)->post(route('admin.documents.store'), [])->assertSessionHasErrors('files');
-    $files = array_map(fn ($index) => UploadedFile::fake()->create('Bestand-' . $index . '.doc', 1, 'application/msword'), range(1, 101));
+    $files = array_map(fn ($index) => UploadedFile::fake()->create('Bestand-' . $index . '.doc', 1, 'application/msword'), range(1, 501));
     $this->post(route('admin.documents.store'), ['files' => $files])->assertSessionHasErrors('files');
 
     expect(Document::count())->toBe(0);
